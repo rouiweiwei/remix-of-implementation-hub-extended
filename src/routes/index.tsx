@@ -3,7 +3,7 @@ import { useState } from "react";
 import { PhaseBanner } from "@/components/workbench/PhaseBanner";
 import { CoverSection, MissionControlSection } from "@/components/workbench/sections/CoverMission";
 import { TimelineSection, ImplementationPlanSection, Phase3Section, Phase4Section, TrainingScheduleSection } from "@/components/workbench/sections/Phases";
-import { SessionRegisterSection, AttendanceSection, SignOffSection, EmailLogSection, IssuesSection, StakeholdersSection, ChampionsSection, DefinitionOfDoneSection, IntranetSection, ContentLogSection, UserAccountsSection, ProjectDetailsSection, ContractorsSection, CostCodesSection, PostImplementationEmailSection } from "@/components/workbench/sections/Registers";
+import { SessionRegisterSection, AttendanceSection, SignOffSection, EmailLogSection, IssuesSection, StakeholdersSection, ChampionsSection, DefinitionOfDoneSection, IntranetSection, ContentLogSection, UserAccountsSection, ProjectDetailsSection, ContractorsSection, CostCodesSection, PostImplementationEmailSection, TemplatesLibrarySection } from "@/components/workbench/sections/Registers";
 import { cn } from "@/lib/utils";
 import type { PhaseId } from "@/lib/playbook-data";
 
