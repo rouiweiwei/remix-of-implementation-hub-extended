@@ -808,7 +808,7 @@ export function ContractorsSection() {
   return (
     <div className="space-y-5">
       <SectionHeader title="🔧 Contractor Database" subtitle="Every subcontractor — trade, contact, compliance.">
-        <ImportExport filename="contractor-database.csv" csv={csv} onImport={(t) => {
+        <ImportExport filename="contractor-database.csv" csv={csv} columns={COLS} sample={{ company: "ABC Electrical Pty Ltd", trade: "Electrical", contact: "Sam Jones", email: "sam@abcelec.com", phone: "0400 111 222", insurance: "2026-12-31", abn: "12 345 678 901", status: "Approved" }} onImport={(t) => {
           replace(fromCSV(t).map((r) => ({
             id: Math.random().toString(36).slice(2),
             company: r.company || "", trade: r.trade || "", contact: r.contact || "",
