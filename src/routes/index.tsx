@@ -73,7 +73,7 @@ function Workbench() {
         />
 
         <div className="mt-6 grid grid-cols-1 lg:grid-cols-[240px_1fr] gap-6">
-          <aside className="lg:sticky lg:top-20 self-start space-y-4">
+          <aside className="lg:sticky lg:top-20 self-start space-y-4 lg:max-h-[calc(100vh-6rem)] lg:overflow-y-auto pr-1">
             {groups.map((g) => (
               <div key={g}>
                 <div className="text-[10px] font-semibold uppercase tracking-[0.15em] text-muted-foreground px-2 mb-1">{g}</div>
