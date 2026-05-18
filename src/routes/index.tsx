@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
+import { useMemo, useState } from "react";
+import { ChevronDown } from "lucide-react";
 import { PhaseBanner } from "@/components/workbench/PhaseBanner";
 import { CoverSection, MissionControlSection } from "@/components/workbench/sections/CoverMission";
 import { TimelineSection, ImplementationPlanSection, Phase3Section, Phase4Section, TrainingScheduleSection } from "@/components/workbench/sections/Phases";
