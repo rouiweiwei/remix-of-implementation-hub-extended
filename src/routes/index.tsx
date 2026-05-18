@@ -37,6 +37,7 @@ const NAV = [
   { id: "project", label: "Project Details", icon: "🏗️", group: "Data" },
   { id: "contractors", label: "Contractor Database", icon: "🔧", group: "Data" },
   { id: "costcodes", label: "Cost Codes", icon: "💷", group: "Data" },
+  { id: "templates", label: "Templates Library", icon: "📁", group: "Data" },
   { id: "dod", label: "Definition of Done", icon: "📋", group: "Close-out" },
   { id: "intranet", label: "Client Intranet Pack", icon: "🌐", group: "Close-out" },
   { id: "handover", label: "Post-Impl Email", icon: "📨", group: "Close-out" },
