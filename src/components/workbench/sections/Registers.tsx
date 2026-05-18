@@ -705,7 +705,7 @@ export function UserAccountsSection() {
   return (
     <div className="space-y-5">
       <SectionHeader title="👤 User Accounts" subtitle="Name, email, phone, position, role — the complete login roster.">
-        <ImportExport filename="user-accounts.csv" csv={csv} onImport={(t) => {
+        <ImportExport filename="user-accounts.csv" csv={csv} columns={COLS} sample={{ name: "Jane Smith", email: "jane@client.com", phone: "0400 000 000", position: "Project Manager", role: "Standard", status: "Pending" }} onImport={(t) => {
           const parsed = fromCSV(t).map((r) => ({
             id: Math.random().toString(36).slice(2),
             name: r.name || "", email: r.email || "", phone: r.phone || "",
