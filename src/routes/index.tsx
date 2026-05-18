@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
+import { useMemo, useState } from "react";
+import { ChevronDown } from "lucide-react";
 import { PhaseBanner } from "@/components/workbench/PhaseBanner";
 import { CoverSection, MissionControlSection } from "@/components/workbench/sections/CoverMission";
 import { TimelineSection, ImplementationPlanSection, Phase3Section, Phase4Section, TrainingScheduleSection } from "@/components/workbench/sections/Phases";
@@ -49,7 +50,14 @@ function Workbench() {
   const [tab, setTab] = useState<TabId>("mission");
   const [phaseFilter, setPhaseFilter] = useState<PhaseId | null>(null);
 
-  const groups = Array.from(new Set(NAV.map((n) => n.group)));
+  const groups = useMemo(() => Array.from(new Set(NAV.map((n) => n.group))), []);
+  const activeGroup = NAV.find((n) => n.id === tab)?.group;
+  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>(() =>
+    Object.fromEntries(groups.map((g) => [g, true]))
+  );
+  // Make sure the group containing the active tab is always open
+  const isOpen = (g: string) => (g === activeGroup ? true : openGroups[g] !== false);
+  const toggleGroup = (g: string) => setOpenGroups((prev) => ({ ...prev, [g]: !(prev[g] ?? true) }));
 
   return (
     <div className="min-h-screen bg-background">
@@ -74,26 +82,40 @@ function Workbench() {
 
         <div className="mt-6 grid grid-cols-1 lg:grid-cols-[240px_1fr] gap-6">
           <aside className="lg:sticky lg:top-20 self-start space-y-4 lg:max-h-[calc(100vh-6rem)] lg:overflow-y-auto pr-1">
-            {groups.map((g) => (
-              <div key={g}>
-                <div className="text-[10px] font-semibold uppercase tracking-[0.15em] text-muted-foreground px-2 mb-1">{g}</div>
-                <nav className="space-y-0.5">
-                  {NAV.filter((n) => n.group === g).map((n) => (
-                    <button
-                      key={n.id}
-                      onClick={() => { setTab(n.id); if (n.id !== "plan") setPhaseFilter(null); }}
-                      className={cn(
-                        "w-full flex items-center gap-2 px-2.5 py-1.5 rounded-md text-sm text-left transition-colors",
-                        tab === n.id ? "bg-primary-soft text-primary font-semibold" : "text-foreground hover:bg-muted"
-                      )}
-                    >
-                      <span className="text-base leading-none">{n.icon}</span>
-                      <span className="truncate">{n.label}</span>
-                    </button>
-                  ))}
-                </nav>
-              </div>
-            ))}
+            {groups.map((g) => {
+              const open = isOpen(g);
+              const items = NAV.filter((n) => n.group === g);
+              return (
+                <div key={g}>
+                  <button
+                    type="button"
+                    onClick={() => toggleGroup(g)}
+                    className="w-full flex items-center justify-between gap-2 px-2 mb-1 text-[10px] font-semibold uppercase tracking-[0.15em] text-muted-foreground hover:text-foreground transition-colors"
+                    aria-expanded={open}
+                  >
+                    <span>{g}</span>
+                    <ChevronDown className={cn("h-3.5 w-3.5 transition-transform", !open && "-rotate-90")} />
+                  </button>
+                  {open && (
+                    <nav className="space-y-0.5">
+                      {items.map((n) => (
+                        <button
+                          key={n.id}
+                          onClick={() => { setTab(n.id); if (n.id !== "plan") setPhaseFilter(null); }}
+                          className={cn(
+                            "w-full flex items-center gap-2 px-2.5 py-1.5 rounded-md text-sm text-left transition-colors",
+                            tab === n.id ? "bg-primary-soft text-primary font-semibold" : "text-foreground hover:bg-muted"
+                          )}
+                        >
+                          <span className="text-base leading-none">{n.icon}</span>
+                          <span className="truncate">{n.label}</span>
+                        </button>
+                      ))}
+                    </nav>
+                  )}
+                </div>
+              );
+            })}
           </aside>
 
           <main className="min-w-0">
