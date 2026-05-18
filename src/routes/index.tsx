@@ -50,7 +50,14 @@ function Workbench() {
   const [tab, setTab] = useState<TabId>("mission");
   const [phaseFilter, setPhaseFilter] = useState<PhaseId | null>(null);
 
-  const groups = Array.from(new Set(NAV.map((n) => n.group)));
+  const groups = useMemo(() => Array.from(new Set(NAV.map((n) => n.group))), []);
+  const activeGroup = NAV.find((n) => n.id === tab)?.group;
+  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>(() =>
+    Object.fromEntries(groups.map((g) => [g, true]))
+  );
+  // Make sure the group containing the active tab is always open
+  const isOpen = (g: string) => (g === activeGroup ? true : openGroups[g] !== false);
+  const toggleGroup = (g: string) => setOpenGroups((prev) => ({ ...prev, [g]: !(prev[g] ?? true) }));
 
   return (
     <div className="min-h-screen bg-background">
