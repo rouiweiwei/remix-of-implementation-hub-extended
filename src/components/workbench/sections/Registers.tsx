@@ -755,7 +755,7 @@ export function ProjectDetailsSection() {
   return (
     <div className="space-y-5">
       <SectionHeader title="🏗️ Project Details" subtitle="Every project in scope — code, type, PM, dates, value, status.">
-        <ImportExport filename="project-details.csv" csv={csv} onImport={(t) => {
+        <ImportExport filename="project-details.csv" csv={csv} columns={COLS} sample={{ code: "P-1042", name: "Riverside Apartments", type: "Construction", client: "Acme Developments", pm: "John Doe", startDate: "2026-01-15", endDate: "2027-06-30", value: "$12,500,000", status: "Live" }} onImport={(t) => {
           replace(fromCSV(t).map((r) => ({
             id: Math.random().toString(36).slice(2),
             code: r.code || "", name: r.name || "", type: r.type || "", client: r.client || "", pm: r.pm || "",
@@ -808,7 +808,7 @@ export function ContractorsSection() {
   return (
     <div className="space-y-5">
       <SectionHeader title="🔧 Contractor Database" subtitle="Every subcontractor — trade, contact, compliance.">
-        <ImportExport filename="contractor-database.csv" csv={csv} onImport={(t) => {
+        <ImportExport filename="contractor-database.csv" csv={csv} columns={COLS} sample={{ company: "ABC Electrical Pty Ltd", trade: "Electrical", contact: "Sam Jones", email: "sam@abcelec.com", phone: "0400 111 222", insurance: "2026-12-31", abn: "12 345 678 901", status: "Approved" }} onImport={(t) => {
           replace(fromCSV(t).map((r) => ({
             id: Math.random().toString(36).slice(2),
             company: r.company || "", trade: r.trade || "", contact: r.contact || "",
@@ -859,7 +859,7 @@ export function CostCodesSection() {
   return (
     <div className="space-y-5">
       <SectionHeader title="💰 Company Cost Codes" subtitle="Company-wide cost code structure — synced into Plexa budgets.">
-        <ImportExport filename="cost-codes.csv" csv={csv} onImport={(t) => {
+        <ImportExport filename="cost-codes.csv" csv={csv} columns={COLS} sample={{ code: "01-100", name: "Site Preliminaries", category: "Preliminaries", unit: "LS", rate: "25000", notes: "Site setup, hoarding, temp services" }} onImport={(t) => {
           replace(fromCSV(t).map((r) => ({
             id: Math.random().toString(36).slice(2),
             code: r.code || "", name: r.name || "", category: r.category || "",
