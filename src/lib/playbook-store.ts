@@ -15,6 +15,7 @@ export type TimelineMode = "Quick (4 Weeks)" | "Medium (6 Weeks)" | "Enterprise 
 
 export interface ClientInfo {
   clientName: string;
+  /** comma-separated list of users — rendered as chips */
   plexaLead: string;
   clientLead: string;
   goLiveDate: string;
@@ -31,28 +32,38 @@ export interface TrainingModuleState {
   signOffDate: string;
 }
 
+export type SessionStatus = "Scheduled" | "In Progress" | "Completed" | "Blocked";
+
 export interface Session {
   id: string;
   type: "Workshop" | "Training";
   topic: string;
+  module: string;
   date: string;
   duration: string;
-  attendees: number;
-  status: "Scheduled" | "Held" | "Cancelled";
+  facilitator: string;
+  location: string;
+  status: SessionStatus;
 }
 
 export interface Attendee {
   id: string;
   sessionId: string;
   name: string;
+  jobTitle: string;
+  company: string;
+  signature: string;
   status: "Present" | "Absent" | "Rescheduled";
 }
 
 export interface SignOff {
   id: string;
   person: string;
+  jobTitle: string;
   module: string;
+  competency: "Novice" | "Capable" | "Proficient" | "Expert";
   status: TaskStatus;
+  signedBy: string;
   date: string;
 }
 
@@ -60,22 +71,29 @@ export interface EmailLog {
   id: string;
   week: number;
   date: string;
+  subject: string;
   recipients: string;
   status: "Green" | "Amber" | "Red";
   summary: string;
+  highlights: string;
+  blockers: string;
   sent: boolean;
 }
 
 export interface Issue {
   id: string;
+  ref: string;
   phase: string;
   type: "🐛 Bug" | "👤 User Error" | "✨ Feature" | "⚙️ Config" | "🔗 Integration" | "📋 Process Gap" | "🎓 Training Gap" | "❓ Question" | "📦 Data";
   description: string;
   owner: "PLEXA" | "CLIENT";
+  assignedTo: string;
   priority: "LOW" | "MEDIUM" | "HIGH" | "CRITICAL";
   raisedAt: string;
+  dueDate: string;
   status: "Open" | "In Progress" | "Closed";
   resolution: string;
+  closedDate: string;
 }
 
 export interface Stakeholder {
@@ -118,9 +136,61 @@ export interface DodItem {
   date: string;
 }
 
+export interface NoteHistoryEntry {
+  at: string;
+  by: string;
+  text: string;
+}
+
+export interface UserAccount {
+  id: string;
+  name: string;
+  email: string;
+  phone: string;
+  position: string;
+  role: string;
+  status: "Pending" | "Invited" | "Active" | "Disabled";
+}
+
+export interface ProjectDetail {
+  id: string;
+  code: string;
+  name: string;
+  type: string;
+  client: string;
+  pm: string;
+  startDate: string;
+  endDate: string;
+  value: string;
+  status: "Tender" | "Awarded" | "Live" | "Complete" | "Archived";
+}
+
+export interface Contractor {
+  id: string;
+  company: string;
+  trade: string;
+  contact: string;
+  email: string;
+  phone: string;
+  insurance: string;
+  abn: string;
+  status: "Pending" | "Approved" | "Rejected";
+}
+
+export interface CostCode {
+  id: string;
+  code: string;
+  name: string;
+  category: string;
+  unit: string;
+  rate: string;
+  notes: string;
+}
+
 interface PlaybookState {
   client: ClientInfo;
   tasks: Task[];
+  noteHistory: Record<string, NoteHistoryEntry[]>;
   timelineMode: TimelineMode;
   startDate: string;
   trainingModules: TrainingModuleState[];
@@ -133,11 +203,15 @@ interface PlaybookState {
   champions: Champion[];
   resistantUsers: ResistantUser[];
   dod: DodItem[];
+  userAccounts: UserAccount[];
+  projectDetails: ProjectDetail[];
+  contractors: Contractor[];
+  costCodes: CostCode[];
 
   // actions
   setClient: (c: Partial<ClientInfo>) => void;
   updateTaskStatus: (id: string, status: TaskStatus) => void;
-  updateTaskNotes: (id: string, notes: string) => void;
+  updateTaskNotes: (id: string, notes: string, by?: string) => void;
   setTimeline: (mode: TimelineMode, startDate: string) => void;
   updateModule: (id: string, patch: Partial<TrainingModuleState>) => void;
 
@@ -146,6 +220,7 @@ interface PlaybookState {
   deleteSession: (id: string) => void;
 
   addAttendee: (a: Omit<Attendee, "id">) => void;
+  updateAttendee: (id: string, patch: Partial<Attendee>) => void;
   deleteAttendee: (id: string) => void;
 
   addSignOff: (s: Omit<SignOff, "id">) => void;
@@ -173,6 +248,26 @@ interface PlaybookState {
 
   toggleDod: (id: number, by: string) => void;
 
+  addUser: (u: Omit<UserAccount, "id">) => void;
+  updateUser: (id: string, patch: Partial<UserAccount>) => void;
+  deleteUser: (id: string) => void;
+  replaceUsers: (rows: UserAccount[]) => void;
+
+  addProject: (p: Omit<ProjectDetail, "id">) => void;
+  updateProject: (id: string, patch: Partial<ProjectDetail>) => void;
+  deleteProject: (id: string) => void;
+  replaceProjects: (rows: ProjectDetail[]) => void;
+
+  addContractor: (c: Omit<Contractor, "id">) => void;
+  updateContractor: (id: string, patch: Partial<Contractor>) => void;
+  deleteContractor: (id: string) => void;
+  replaceContractors: (rows: Contractor[]) => void;
+
+  addCostCode: (c: Omit<CostCode, "id">) => void;
+  updateCostCode: (id: string, patch: Partial<CostCode>) => void;
+  deleteCostCode: (id: string) => void;
+  replaceCostCodes: (rows: CostCode[]) => void;
+
   resetAll: () => void;
 }
 
@@ -181,12 +276,13 @@ const uid = () => Math.random().toString(36).slice(2, 10);
 const initial = {
   client: {
     clientName: "Total Project Australia Pty Ltd",
-    plexaLead: "Travis, Tony & Ayman",
-    clientLead: "Travis, Bec, Lindsay & Phil",
+    plexaLead: "Travis, Tony, Ayman",
+    clientLead: "Travis, Bec, Lindsay, Phil",
     goLiveDate: "2026-06-30",
     accountManager: "Christian Lowe",
   } as ClientInfo,
   tasks: SEED_TASKS,
+  noteHistory: {} as Record<string, NoteHistoryEntry[]>,
   timelineMode: "Medium (6 Weeks)" as TimelineMode,
   startDate: new Date().toISOString().slice(0, 10),
   trainingModules: TRAINING_MODULES.map((m) => ({
@@ -205,9 +301,12 @@ const initial = {
     id: uid(),
     week: w,
     date: "",
+    subject: `Week ${w} — Plexa Implementation Update`,
     recipients: "CEO, CFO, IT Lead, Site Teams, Ops",
     status: "Green" as const,
     summary: "",
+    highlights: "",
+    blockers: "",
     sent: false,
   })),
   issues: [] as Issue[],
@@ -228,6 +327,10 @@ const initial = {
     by: "",
     date: "",
   })) as DodItem[],
+  userAccounts: [] as UserAccount[],
+  projectDetails: [] as ProjectDetail[],
+  contractors: [] as Contractor[],
+  costCodes: [] as CostCode[],
 };
 
 export const usePlaybook = create<PlaybookState>()(
@@ -237,8 +340,19 @@ export const usePlaybook = create<PlaybookState>()(
       setClient: (c) => set((s) => ({ client: { ...s.client, ...c } })),
       updateTaskStatus: (id, status) =>
         set((s) => ({ tasks: s.tasks.map((t) => (t.id === id ? { ...t, status } : t)) })),
-      updateTaskNotes: (id, notes) =>
-        set((s) => ({ tasks: s.tasks.map((t) => (t.id === id ? { ...t, notes } : t)) })),
+      updateTaskNotes: (id, notes, by = "You") =>
+        set((s) => {
+          const prev = s.tasks.find((t) => t.id === id)?.notes || "";
+          const history = { ...s.noteHistory };
+          if (notes !== prev) {
+            const entry: NoteHistoryEntry = { at: new Date().toISOString(), by, text: notes };
+            history[id] = [entry, ...(history[id] || [])].slice(0, 20);
+          }
+          return {
+            tasks: s.tasks.map((t) => (t.id === id ? { ...t, notes } : t)),
+            noteHistory: history,
+          };
+        }),
       setTimeline: (timelineMode, startDate) => set({ timelineMode, startDate }),
       updateModule: (id, patch) =>
         set((s) => ({ trainingModules: s.trainingModules.map((m) => (m.id === id ? { ...m, ...patch } : m)) })),
@@ -248,6 +362,7 @@ export const usePlaybook = create<PlaybookState>()(
       deleteSession: (id) => set((st) => ({ sessions: st.sessions.filter((x) => x.id !== id), attendees: st.attendees.filter(a => a.sessionId !== id) })),
 
       addAttendee: (a) => set((st) => ({ attendees: [...st.attendees, { id: uid(), ...a }] })),
+      updateAttendee: (id, patch) => set((st) => ({ attendees: st.attendees.map((x) => (x.id === id ? { ...x, ...patch } : x)) })),
       deleteAttendee: (id) => set((st) => ({ attendees: st.attendees.filter((x) => x.id !== id) })),
 
       addSignOff: (s) => set((st) => ({ signOffs: [...st.signOffs, { id: uid(), ...s }] })),
@@ -278,9 +393,29 @@ export const usePlaybook = create<PlaybookState>()(
           dod: s.dod.map((d) => (d.id === id ? { ...d, confirmed: !d.confirmed, by: !d.confirmed ? by || "Plexa" : "", date: !d.confirmed ? new Date().toISOString().slice(0, 10) : "" } : d)),
         })),
 
+      addUser: (u) => set((st) => ({ userAccounts: [...st.userAccounts, { id: uid(), ...u }] })),
+      updateUser: (id, patch) => set((st) => ({ userAccounts: st.userAccounts.map((x) => (x.id === id ? { ...x, ...patch } : x)) })),
+      deleteUser: (id) => set((st) => ({ userAccounts: st.userAccounts.filter((x) => x.id !== id) })),
+      replaceUsers: (rows) => set({ userAccounts: rows }),
+
+      addProject: (p) => set((st) => ({ projectDetails: [...st.projectDetails, { id: uid(), ...p }] })),
+      updateProject: (id, patch) => set((st) => ({ projectDetails: st.projectDetails.map((x) => (x.id === id ? { ...x, ...patch } : x)) })),
+      deleteProject: (id) => set((st) => ({ projectDetails: st.projectDetails.filter((x) => x.id !== id) })),
+      replaceProjects: (rows) => set({ projectDetails: rows }),
+
+      addContractor: (c) => set((st) => ({ contractors: [...st.contractors, { id: uid(), ...c }] })),
+      updateContractor: (id, patch) => set((st) => ({ contractors: st.contractors.map((x) => (x.id === id ? { ...x, ...patch } : x)) })),
+      deleteContractor: (id) => set((st) => ({ contractors: st.contractors.filter((x) => x.id !== id) })),
+      replaceContractors: (rows) => set({ contractors: rows }),
+
+      addCostCode: (c) => set((st) => ({ costCodes: [...st.costCodes, { id: uid(), ...c }] })),
+      updateCostCode: (id, patch) => set((st) => ({ costCodes: st.costCodes.map((x) => (x.id === id ? { ...x, ...patch } : x)) })),
+      deleteCostCode: (id) => set((st) => ({ costCodes: st.costCodes.filter((x) => x.id !== id) })),
+      replaceCostCodes: (rows) => set({ costCodes: rows }),
+
       resetAll: () => set(initial),
     }),
-    { name: "plexa-playbook-v1" }
+    { name: "plexa-playbook-v2" }
   )
 );
 
