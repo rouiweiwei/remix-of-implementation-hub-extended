@@ -755,7 +755,7 @@ export function ProjectDetailsSection() {
   return (
     <div className="space-y-5">
       <SectionHeader title="🏗️ Project Details" subtitle="Every project in scope — code, type, PM, dates, value, status.">
-        <ImportExport filename="project-details.csv" csv={csv} onImport={(t) => {
+        <ImportExport filename="project-details.csv" csv={csv} columns={COLS} sample={{ code: "P-1042", name: "Riverside Apartments", type: "Construction", client: "Acme Developments", pm: "John Doe", startDate: "2026-01-15", endDate: "2027-06-30", value: "$12,500,000", status: "Live" }} onImport={(t) => {
           replace(fromCSV(t).map((r) => ({
             id: Math.random().toString(36).slice(2),
             code: r.code || "", name: r.name || "", type: r.type || "", client: r.client || "", pm: r.pm || "",
