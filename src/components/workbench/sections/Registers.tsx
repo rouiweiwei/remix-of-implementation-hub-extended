@@ -1,13 +1,12 @@
 import { useState, useRef } from "react";
 import * as XLSX from "xlsx";
-import { usePlaybook, type SessionStatus } from "@/lib/playbook-store";
+import { usePlaybook } from "@/lib/playbook-store";
 import { SectionHeader, StatusBadge } from "../shared";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Plus, Trash2, Check, Download, Upload, Send, Sparkles, FileSpreadsheet } from "lucide-react";
-import { TRAINING_MODULES } from "@/lib/playbook-data";
 import { cn } from "@/lib/utils";
 
 import { SESSIONS, CONTENT_TOPICS, COMPETENCY_MODULES, ATTENDEES_PER_SESSION, COMPETENCY_ROWS, ISSUE_ROWS, EMAIL_WEEKS } from "@/lib/registers-data";
