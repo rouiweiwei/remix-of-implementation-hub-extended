@@ -1,301 +1,462 @@
 import { useState, useRef } from "react";
 import * as XLSX from "xlsx";
-import { usePlaybook, type SessionStatus } from "@/lib/playbook-store";
+import { usePlaybook } from "@/lib/playbook-store";
 import { SectionHeader, StatusBadge } from "../shared";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Plus, Trash2, Check, Download, Upload, Send, Sparkles, FileSpreadsheet } from "lucide-react";
-import { TRAINING_MODULES } from "@/lib/playbook-data";
 import { cn } from "@/lib/utils";
 
+import { SESSIONS, CONTENT_TOPICS, COMPETENCY_MODULES, ATTENDEES_PER_SESSION, COMPETENCY_ROWS, ISSUE_ROWS, EMAIL_WEEKS } from "@/lib/registers-data";
+
 // =============== SESSION REGISTER ===============
-const SESSION_STATUS_CLS: Record<SessionStatus, string> = {
-  "Scheduled": "bg-primary/15 text-primary border-primary/30",
-  "In Progress": "bg-warning/20 text-warning-foreground border-warning/40",
-  "Completed": "bg-success/15 text-success border-success/30",
-  "Blocked": "bg-destructive/15 text-destructive border-destructive/30",
+type SessionRow = { date: string; facilitator: string; status: string; location: string };
+const SESSION_STATUSES = ["SCHEDULED", "IN PROGRESS", "COMPLETE", "BLOCKED"] as const;
+const SESSION_STATUS_CLS: Record<string, string> = {
+  "SCHEDULED": "bg-primary/15 text-primary border-primary/30",
+  "IN PROGRESS": "bg-yellow-400/20 text-yellow-700 dark:text-yellow-300 border-yellow-400/40",
+  "COMPLETE": "bg-success/15 text-success border-success/30",
+  "BLOCKED": "bg-destructive/15 text-destructive border-destructive/30",
 };
 
 export function SessionRegisterSection() {
-  const sessions = usePlaybook((s) => s.sessions);
-  const stakeholders = usePlaybook((s) => s.stakeholders);
-  const add = usePlaybook((s) => s.addSession);
-  const update = usePlaybook((s) => s.updateSession);
-  const del = usePlaybook((s) => s.deleteSession);
+  const [rows, setRows] = useState<Record<string, SessionRow>>(() =>
+    Object.fromEntries(SESSIONS.map((s) => [s.id, { date: "", facilitator: "", status: "SCHEDULED", location: "" }]))
+  );
+  const upd = (id: string, patch: Partial<SessionRow>) => setRows((p) => ({ ...p, [id]: { ...p[id], ...patch } }));
 
-  const facilitators = Array.from(new Set([
-    ...stakeholders.map((s) => s.name).filter(Boolean),
-    "Travis", "Tony", "Ayman", "Christian Lowe",
-  ]));
+  const total = SESSIONS.length;
+  const complete = Object.values(rows).filter((r) => r.status === "COMPLETE").length;
+  const scheduled = Object.values(rows).filter((r) => r.status === "SCHEDULED").length;
+  const workshops = SESSIONS.filter((s) => s.type === "Workshop").length;
+  const trainings = SESSIONS.filter((s) => s.type === "Training").length;
 
   return (
     <div className="space-y-5">
-      <SectionHeader title="📅 Session Register" subtitle="Every workshop and training session — facilitator, date, status, location.">
-        <Button onClick={() => add({ type: "Workshop", topic: "New session", module: "", date: new Date().toISOString().slice(0, 10), duration: "60 min", facilitator: facilitators[0] || "", location: "", status: "Scheduled" })}>
-          <Plus className="h-4 w-4" /> Add session
-        </Button>
-      </SectionHeader>
+      <SectionHeader title="📅 Session Register" subtitle="All Workshops & Training Sessions — every session, every date, every facilitator. Nothing unlogged." />
+
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-2 text-center">
+        {[
+          { label: "TOTAL SESSIONS", value: total },
+          { label: "COMPLETE", value: complete, tone: "text-success" },
+          { label: "SCHEDULED", value: scheduled, tone: "text-primary" },
+          { label: "WORKSHOPS", value: workshops },
+          { label: "TRAINING", value: trainings },
+        ].map((t) => (
+          <div key={t.label} className="rounded-lg border bg-card px-3 py-2">
+            <div className="text-[9px] font-semibold uppercase tracking-wider text-muted-foreground">{t.label}</div>
+            <div className={cn("text-lg font-bold tabular-nums", t.tone)}>{t.value}</div>
+          </div>
+        ))}
+      </div>
 
       <div className="rounded-xl border bg-card overflow-x-auto">
-        <div className="min-w-[1200px]">
-          <div className="grid grid-cols-[110px_1.5fr_120px_130px_90px_160px_1fr_140px_40px] gap-2 px-3 py-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground bg-muted/30 border-b">
-            <div>Type</div><div>Topic / Session</div><div>Module</div><div>Date</div><div>Duration</div><div>Facilitator</div><div>Location / Link</div><div>Status</div><div></div>
-          </div>
-          {sessions.length === 0 && <div className="px-4 py-8 text-center text-sm text-muted-foreground">No sessions yet — add your first.</div>}
-          {sessions.map((s) => (
-            <div key={s.id} className="grid grid-cols-[110px_1.5fr_120px_130px_90px_160px_1fr_140px_40px] gap-2 px-3 py-2 items-center border-b last:border-0">
-              <Select value={s.type} onValueChange={(v) => update(s.id, { type: v as "Workshop" | "Training" })}>
-                <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
-                <SelectContent><SelectItem value="Workshop">Workshop</SelectItem><SelectItem value="Training">Training</SelectItem></SelectContent>
-              </Select>
-              <Input className="h-8 text-sm" value={s.topic} onChange={(e) => update(s.id, { topic: e.target.value })} />
-              <Select value={s.module || "none"} onValueChange={(v) => update(s.id, { module: v === "none" ? "" : v })}>
-                <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="—" /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">—</SelectItem>
-                  {TRAINING_MODULES.map((m) => <SelectItem key={m.id} value={m.id}>{m.id}</SelectItem>)}
-                </SelectContent>
-              </Select>
-              <Input className="h-8 text-xs" type="date" value={s.date} onChange={(e) => update(s.id, { date: e.target.value })} />
-              <Input className="h-8 text-xs" value={s.duration} onChange={(e) => update(s.id, { duration: e.target.value })} />
-              <Select value={s.facilitator || "unassigned"} onValueChange={(v) => update(s.id, { facilitator: v === "unassigned" ? "" : v })}>
-                <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Pick" /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="unassigned">— Unassigned —</SelectItem>
-                  {facilitators.map((f) => <SelectItem key={f} value={f}>{f}</SelectItem>)}
-                </SelectContent>
-              </Select>
-              <Input className="h-8 text-xs" value={s.location} onChange={(e) => update(s.id, { location: e.target.value })} placeholder="Teams link / address…" />
-              <Select value={s.status} onValueChange={(v) => update(s.id, { status: v as SessionStatus })}>
-                <SelectTrigger className={cn("h-8 text-xs font-semibold border", SESSION_STATUS_CLS[s.status])}><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Scheduled">🔵 Scheduled</SelectItem>
-                  <SelectItem value="In Progress">🟠 In Progress</SelectItem>
-                  <SelectItem value="Completed">🟢 Completed</SelectItem>
-                  <SelectItem value="Blocked">🔴 Blocked</SelectItem>
-                </SelectContent>
-              </Select>
-              <Button size="icon" variant="ghost" onClick={() => del(s.id)}><Trash2 className="h-4 w-4 text-muted-foreground" /></Button>
-            </div>
-          ))}
-        </div>
+        <table className="w-full text-xs min-w-[1100px]">
+          <thead className="bg-muted/30 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+            <tr>
+              <th className="px-2 py-2 text-left w-12">ID</th>
+              <th className="px-2 py-2 text-left">Session Name</th>
+              <th className="px-2 py-2 text-left w-24">Type</th>
+              <th className="px-2 py-2 text-left w-20">Module</th>
+              <th className="px-2 py-2 text-left w-32">Date</th>
+              <th className="px-2 py-2 text-left w-40">Facilitator</th>
+              <th className="px-2 py-2 text-left w-32">Status</th>
+              <th className="px-2 py-2 text-left w-48">Location / Link</th>
+              <th className="px-2 py-2 text-left w-36">Attendance Sheet</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y">
+            {SESSIONS.map((s) => {
+              const r = rows[s.id];
+              return (
+                <tr key={s.id} className="hover:bg-muted/20">
+                  <td className="px-2 py-1.5 font-mono font-semibold">{s.id}</td>
+                  <td className="px-2 py-1.5">{s.name}</td>
+                  <td className="px-2 py-1.5">
+                    <span className={cn("inline-flex px-2 py-0.5 rounded-full text-[10px] font-semibold border",
+                      s.type === "Workshop" ? "bg-primary-soft text-primary border-primary/30" : "bg-accent text-foreground border-border")}>
+                      {s.type}
+                    </span>
+                  </td>
+                  <td className="px-2 py-1.5 font-mono">{s.module || "—"}</td>
+                  <td className="px-2 py-1.5"><Input type="date" className="h-7 text-xs" value={r.date} onChange={(e) => upd(s.id, { date: e.target.value })} /></td>
+                  <td className="px-2 py-1.5"><Input className="h-7 text-xs" value={r.facilitator} onChange={(e) => upd(s.id, { facilitator: e.target.value })} placeholder="Name…" /></td>
+                  <td className="px-2 py-1.5">
+                    <Select value={r.status} onValueChange={(v) => upd(s.id, { status: v })}>
+                      <SelectTrigger className={cn("h-7 text-[11px] font-semibold border", SESSION_STATUS_CLS[r.status])}><SelectValue /></SelectTrigger>
+                      <SelectContent>{SESSION_STATUSES.map((x) => <SelectItem key={x} value={x}>{x}</SelectItem>)}</SelectContent>
+                    </Select>
+                  </td>
+                  <td className="px-2 py-1.5"><Input className="h-7 text-xs" value={r.location} onChange={(e) => upd(s.id, { location: e.target.value })} placeholder="Address or video link" /></td>
+                  <td className="px-2 py-1.5 text-[11px] text-primary">→ Attendance: {s.id}</td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
       </div>
     </div>
   );
 }
 
-// =============== ATTENDANCE ===============
+// =============== ATTENDANCE REGISTER ===============
+type AttendeeRow = { name: string; role: string; department: string; attendance: string; signed: string; notes: string };
+const ATTENDANCE_STATES = ["✅ Present", "❌ Absent", "📅 Rescheduled"] as const;
+const SIGNED_STATES = ["⏳ Pending", "✅ Signed", "❌ Not Signed"] as const;
+
 export function AttendanceSection() {
-  const sessions = usePlaybook((s) => s.sessions);
-  const attendees = usePlaybook((s) => s.attendees);
-  const add = usePlaybook((s) => s.addAttendee);
-  const update = usePlaybook((s) => s.updateAttendee);
-  const del = usePlaybook((s) => s.deleteAttendee);
-  const [sessionId, setSessionId] = useState<string>("");
-
-  const rows = sessionId ? attendees.filter((a) => a.sessionId === sessionId) : attendees;
+  const [meta, setMeta] = useState<Record<string, { date: string; facilitator: string; location: string }>>(() =>
+    Object.fromEntries(SESSIONS.map((s) => [s.id, { date: "", facilitator: "", location: "" }]))
+  );
+  const [rows, setRows] = useState<Record<string, AttendeeRow[]>>(() =>
+    Object.fromEntries(SESSIONS.map((s) => [s.id, Array.from({ length: ATTENDEES_PER_SESSION }, () => ({ name: "", role: "", department: "", attendance: "✅ Present", signed: "⏳ Pending", notes: "" }))]))
+  );
+  const updMeta = (id: string, patch: Partial<{ date: string; facilitator: string; location: string }>) =>
+    setMeta((p) => ({ ...p, [id]: { ...p[id], ...patch } }));
+  const updRow = (id: string, idx: number, patch: Partial<AttendeeRow>) =>
+    setRows((p) => ({ ...p, [id]: p[id].map((r, i) => i === idx ? { ...r, ...patch } : r) }));
 
   return (
     <div className="space-y-5">
-      <SectionHeader title="✅ Attendance Register" subtitle="Who attended every session — name, job title, company, signature.">
-        <Button disabled={!sessionId} onClick={() => add({ sessionId, name: "", jobTitle: "", company: "", signature: "", status: "Present" })}><Plus className="h-4 w-4" /> Add attendee</Button>
-      </SectionHeader>
+      <SectionHeader title="✅ Attendance Register" subtitle="Every session · Every person. Absent = rescheduled before sign-off. No sign-off without attendance. This register is kept on file and delivered to client." />
 
-      <div className="rounded-xl border bg-card p-4 flex flex-wrap items-end gap-3">
-        <div className="flex-1 min-w-64">
-          <label className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Session</label>
-          <Select value={sessionId} onValueChange={setSessionId}>
-            <SelectTrigger className="mt-1"><SelectValue placeholder="Pick session" /></SelectTrigger>
-            <SelectContent>
-              {sessions.length === 0 ? <div className="px-2 py-2 text-xs text-muted-foreground">No sessions — add one in Session Register</div> :
-                sessions.map((s) => <SelectItem key={s.id} value={s.id}>{s.topic} ({s.date})</SelectItem>)}
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
-
-      <div className="rounded-xl border bg-card overflow-x-auto">
-        <div className="min-w-[1100px]">
-          <div className="grid grid-cols-[1fr_1fr_160px_180px_160px_140px_40px] gap-2 px-3 py-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground bg-muted/30 border-b">
-            <div>Session</div><div>Name</div><div>Job Title</div><div>Company</div><div>Signature</div><div>Status</div><div></div>
+      {SESSIONS.map((s) => (
+        <div key={s.id} className="rounded-xl border bg-card overflow-hidden">
+          <div className="px-4 py-2 bg-primary/10 border-b border-primary/30">
+            <div className="text-sm font-bold">
+              <span className="font-mono text-primary mr-2">{s.id}</span>
+              <span className="text-[10px] uppercase tracking-wider mr-2 text-muted-foreground">{s.type}:</span>
+              {s.name}
+            </div>
           </div>
-          {rows.length === 0 && <div className="px-4 py-8 text-center text-sm text-muted-foreground">No attendance yet. Pick a session and add attendees.</div>}
-          {rows.map((a) => {
-            const sess = sessions.find((s) => s.id === a.sessionId);
-            return (
-              <div key={a.id} className="grid grid-cols-[1fr_1fr_160px_180px_160px_140px_40px] gap-2 px-3 py-2 items-center border-b last:border-0 text-sm">
-                <div className="truncate text-xs text-muted-foreground">{sess?.topic || "—"}</div>
-                <Input className="h-8 text-sm" value={a.name} onChange={(e) => update(a.id, { name: e.target.value })} />
-                <Input className="h-8 text-xs" value={a.jobTitle} onChange={(e) => update(a.id, { jobTitle: e.target.value })} />
-                <Input className="h-8 text-xs" value={a.company} onChange={(e) => update(a.id, { company: e.target.value })} />
-                <Input className="h-8 text-xs italic" value={a.signature} onChange={(e) => update(a.id, { signature: e.target.value })} placeholder="Type to sign" />
-                <Select value={a.status} onValueChange={(v) => update(a.id, { status: v as "Present" | "Absent" | "Rescheduled" })}>
-                  <SelectTrigger className={cn("h-8 text-xs", a.status === "Present" && "text-success", a.status === "Absent" && "text-destructive")}><SelectValue /></SelectTrigger>
-                  <SelectContent><SelectItem value="Present">Present</SelectItem><SelectItem value="Absent">Absent</SelectItem><SelectItem value="Rescheduled">Rescheduled</SelectItem></SelectContent>
-                </Select>
-                <Button size="icon" variant="ghost" onClick={() => del(a.id)}><Trash2 className="h-4 w-4 text-muted-foreground" /></Button>
-              </div>
-            );
-          })}
+          <div className="px-3 py-2 bg-muted/20 border-b grid grid-cols-1 md:grid-cols-4 gap-2 items-center text-xs">
+            <label className="flex items-center gap-2"><span className="font-semibold w-20">Date:</span><Input type="date" className="h-7 text-xs" value={meta[s.id].date} onChange={(e) => updMeta(s.id, { date: e.target.value })} /></label>
+            <label className="flex items-center gap-2"><span className="font-semibold w-20">Facilitator:</span><Input className="h-7 text-xs" value={meta[s.id].facilitator} onChange={(e) => updMeta(s.id, { facilitator: e.target.value })} /></label>
+            <label className="flex items-center gap-2 md:col-span-2"><span className="font-semibold w-20">Location:</span><Input className="h-7 text-xs" value={meta[s.id].location} onChange={(e) => updMeta(s.id, { location: e.target.value })} /></label>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-xs min-w-[1000px]">
+              <thead className="bg-muted/30 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                <tr>
+                  <th className="px-2 py-2 text-left w-20">Ref</th>
+                  <th className="px-2 py-2 text-left">Full Name</th>
+                  <th className="px-2 py-2 text-left w-40">Role / Title</th>
+                  <th className="px-2 py-2 text-left w-32">Department</th>
+                  <th className="px-2 py-2 text-left w-36">Attendance</th>
+                  <th className="px-2 py-2 text-left w-40">Signed Training Form?</th>
+                  <th className="px-2 py-2 text-left">Notes</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y">
+                {rows[s.id].map((r, i) => {
+                  const ref = `${s.id}-${String(i + 1).padStart(2, "0")}`;
+                  return (
+                    <tr key={ref} className="hover:bg-muted/20">
+                      <td className="px-2 py-1 font-mono">{ref}</td>
+                      <td className="px-2 py-1"><Input className="h-7 text-xs" value={r.name} onChange={(e) => updRow(s.id, i, { name: e.target.value })} /></td>
+                      <td className="px-2 py-1"><Input className="h-7 text-xs" value={r.role} onChange={(e) => updRow(s.id, i, { role: e.target.value })} /></td>
+                      <td className="px-2 py-1"><Input className="h-7 text-xs" value={r.department} onChange={(e) => updRow(s.id, i, { department: e.target.value })} /></td>
+                      <td className="px-2 py-1">
+                        <Select value={r.attendance} onValueChange={(v) => updRow(s.id, i, { attendance: v })}>
+                          <SelectTrigger className={cn("h-7 text-[11px] font-semibold",
+                            r.attendance === "✅ Present" && "text-success",
+                            r.attendance === "❌ Absent" && "text-destructive",
+                            r.attendance === "📅 Rescheduled" && "text-warning-foreground")}><SelectValue /></SelectTrigger>
+                          <SelectContent>{ATTENDANCE_STATES.map((x) => <SelectItem key={x} value={x}>{x}</SelectItem>)}</SelectContent>
+                        </Select>
+                      </td>
+                      <td className="px-2 py-1">
+                        <Select value={r.signed} onValueChange={(v) => updRow(s.id, i, { signed: v })}>
+                          <SelectTrigger className={cn("h-7 text-[11px] font-semibold",
+                            r.signed === "✅ Signed" && "text-success",
+                            r.signed === "❌ Not Signed" && "text-destructive")}><SelectValue /></SelectTrigger>
+                          <SelectContent>{SIGNED_STATES.map((x) => <SelectItem key={x} value={x}>{x}</SelectItem>)}</SelectContent>
+                        </Select>
+                      </td>
+                      <td className="px-2 py-1"><Input className="h-7 text-xs" value={r.notes} onChange={(e) => updRow(s.id, i, { notes: e.target.value })} /></td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
         </div>
-      </div>
+      ))}
     </div>
   );
 }
 
-// =============== COMPETENCY (was Sign-Off) ===============
-const COMPETENCY = ["Novice", "Capable", "Proficient", "Expert"] as const;
+// =============== TRAINING COMPETENCY (Sign-Off) ===============
+const MODULE_STATES = ["❌ Not Started", "🟡 In Progress", "✅ Signed Off"] as const;
+type CompetencyRow = { name: string; role: string; department: string; modules: Record<string, string> };
 
 export function SignOffSection() {
-  const signOffs = usePlaybook((s) => s.signOffs);
-  const add = usePlaybook((s) => s.addSignOff);
-  const update = usePlaybook((s) => s.updateSignOff);
-  const del = usePlaybook((s) => s.deleteSignOff);
+  const [rows, setRows] = useState<CompetencyRow[]>(() =>
+    Array.from({ length: COMPETENCY_ROWS }, () => ({
+      name: "", role: "", department: "",
+      modules: Object.fromEntries(COMPETENCY_MODULES.map((m) => [m.id, "❌ Not Started"])),
+    }))
+  );
+  const upd = (i: number, patch: Partial<CompetencyRow>) => setRows((p) => p.map((r, idx) => idx === i ? { ...r, ...patch } : r));
+  const updMod = (i: number, modId: string, v: string) => setRows((p) => p.map((r, idx) => idx === i ? { ...r, modules: { ...r.modules, [modId]: v } } : r));
+
+  const overall = (r: CompetencyRow) => {
+    const vals = Object.values(r.modules);
+    if (vals.every((v) => v === "✅ Signed Off")) return "COMPLETE";
+    if (vals.every((v) => v === "❌ Not Started")) return "NOT STARTED";
+    return "IN PROGRESS";
+  };
+
+  const total = rows.length;
+  const inProg = rows.filter((r) => overall(r) === "IN PROGRESS").length;
+  const complete = rows.filter((r) => overall(r) === "COMPLETE").length;
+  const notStarted = rows.filter((r) => overall(r) === "NOT STARTED").length;
 
   return (
     <div className="space-y-5">
-      <SectionHeader title="🖊️ Training Competency" subtitle="Per-person competency record — who's trained, what level, signed off by whom.">
-        <Button onClick={() => add({ person: "", jobTitle: "", module: TRAINING_MODULES[0].id, competency: "Novice", status: "NOT STARTED", signedBy: "", date: "" })}><Plus className="h-4 w-4" /> Add</Button>
-      </SectionHeader>
+      <SectionHeader title="🖊️ Training Sign-Off Register" subtitle="Individual Competency Record — each person confirms training on every module. This is the legal record, kept on file and delivered in the Client Intranet Pack." />
+
+      <div className="rounded-xl border bg-warning/10 border-warning/40 px-4 py-2 text-xs">
+        <span className="font-semibold">HOW TO USE:</span> One row per trained person. Mark each module ✅ Signed Off once Part 3 (Observe) is complete AND the paper training form is signed.
+      </div>
+
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-center">
+        {[
+          { label: "TOTAL PEOPLE", value: total },
+          { label: "IN PROGRESS", value: inProg, tone: "text-yellow-600 dark:text-yellow-400" },
+          { label: "COMPLETE", value: complete, tone: "text-success" },
+          { label: "NOT STARTED", value: notStarted, tone: "text-warning-foreground" },
+        ].map((t) => (
+          <div key={t.label} className="rounded-lg border bg-card px-3 py-2">
+            <div className="text-[9px] font-semibold uppercase tracking-wider text-muted-foreground">{t.label}</div>
+            <div className={cn("text-lg font-bold tabular-nums", t.tone)}>{t.value}</div>
+          </div>
+        ))}
+      </div>
 
       <div className="rounded-xl border bg-card overflow-x-auto">
-        <div className="min-w-[1150px]">
-          <div className="grid grid-cols-[1fr_180px_220px_140px_160px_180px_130px_40px] gap-2 px-3 py-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground bg-muted/30 border-b">
-            <div>Person</div><div>Job Title</div><div>Module</div><div>Competency</div><div>Status</div><div>Signed Off By</div><div>Date</div><div></div>
-          </div>
-          {signOffs.length === 0 && <div className="px-4 py-8 text-center text-sm text-muted-foreground">No competency records yet.</div>}
-          {signOffs.map((s) => (
-            <div key={s.id} className="grid grid-cols-[1fr_180px_220px_140px_160px_180px_130px_40px] gap-2 px-3 py-2 items-center border-b last:border-0">
-              <Input className="h-8 text-sm" value={s.person} onChange={(e) => update(s.id, { person: e.target.value })} placeholder="Name…" />
-              <Input className="h-8 text-xs" value={s.jobTitle} onChange={(e) => update(s.id, { jobTitle: e.target.value })} placeholder="Title" />
-              <Select value={s.module} onValueChange={(v) => update(s.id, { module: v })}>
-                <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
-                <SelectContent>{TRAINING_MODULES.map((m) => <SelectItem key={m.id} value={m.id}>{m.id} — {m.name}</SelectItem>)}</SelectContent>
-              </Select>
-              <Select value={s.competency} onValueChange={(v) => update(s.id, { competency: v as typeof COMPETENCY[number] })}>
-                <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
-                <SelectContent>{COMPETENCY.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
-              </Select>
-              <Select value={s.status} onValueChange={(v) => update(s.id, { status: v as "NOT STARTED" | "IN PROGRESS" | "COMPLETE" | "BLOCKED" })}>
-                <SelectTrigger className={cn("h-8 text-xs font-semibold border",
-                  s.status === "NOT STARTED" && "bg-warning/15 text-warning-foreground border-warning/30",
-                  s.status === "IN PROGRESS" && "bg-yellow-400/20 text-yellow-700 dark:text-yellow-300 border-yellow-400/40",
-                  s.status === "COMPLETE" && "bg-success/15 text-success border-success/30",
-                  s.status === "BLOCKED" && "bg-destructive/15 text-destructive border-destructive/30",
-                )}><SelectValue /></SelectTrigger>
-                <SelectContent>{(["NOT STARTED", "IN PROGRESS", "COMPLETE", "BLOCKED"] as const).map((x) => <SelectItem key={x} value={x}>{x}</SelectItem>)}</SelectContent>
-              </Select>
-              <Input className="h-8 text-xs" value={s.signedBy} onChange={(e) => update(s.id, { signedBy: e.target.value })} placeholder="Trainer / signer" />
-              <Input className="h-8 text-xs" type="date" value={s.date} onChange={(e) => update(s.id, { date: e.target.value })} />
-              <Button size="icon" variant="ghost" onClick={() => del(s.id)}><Trash2 className="h-4 w-4 text-muted-foreground" /></Button>
-            </div>
-          ))}
-        </div>
+        <table className="w-full text-xs min-w-[1300px]">
+          <thead className="bg-muted/30 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+            <tr>
+              <th className="px-2 py-2 text-left w-10">#</th>
+              <th className="px-2 py-2 text-left">Full Name</th>
+              <th className="px-2 py-2 text-left w-40">Role</th>
+              <th className="px-2 py-2 text-left w-32">Department</th>
+              <th className="px-2 py-2 text-left w-32">Overall Status</th>
+              {COMPETENCY_MODULES.map((m) => (
+                <th key={m.id} className="px-2 py-2 text-center w-28">
+                  <div className="font-mono">{m.id}</div>
+                  <div className="text-[9px] normal-case font-medium text-muted-foreground">{m.name}</div>
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody className="divide-y">
+            {rows.map((r, i) => {
+              const ov = overall(r);
+              return (
+                <tr key={i} className="hover:bg-muted/20">
+                  <td className="px-2 py-1 font-mono tabular-nums text-muted-foreground">{i + 1}</td>
+                  <td className="px-2 py-1"><Input className="h-7 text-xs" value={r.name} onChange={(e) => upd(i, { name: e.target.value })} /></td>
+                  <td className="px-2 py-1"><Input className="h-7 text-xs" value={r.role} onChange={(e) => upd(i, { role: e.target.value })} /></td>
+                  <td className="px-2 py-1"><Input className="h-7 text-xs" value={r.department} onChange={(e) => upd(i, { department: e.target.value })} /></td>
+                  <td className="px-2 py-1">
+                    <span className={cn("inline-flex px-2 py-0.5 rounded text-[10px] font-bold border",
+                      ov === "COMPLETE" && "bg-success/15 text-success border-success/40",
+                      ov === "IN PROGRESS" && "bg-yellow-400/20 text-yellow-700 dark:text-yellow-300 border-yellow-400/40",
+                      ov === "NOT STARTED" && "bg-warning/15 text-warning-foreground border-warning/40")}>{ov}</span>
+                  </td>
+                  {COMPETENCY_MODULES.map((m) => {
+                    const v = r.modules[m.id];
+                    return (
+                      <td key={m.id} className="px-1 py-1">
+                        <Select value={v} onValueChange={(nv) => updMod(i, m.id, nv)}>
+                          <SelectTrigger className={cn("h-7 text-[10px] font-semibold",
+                            v === "✅ Signed Off" && "text-success",
+                            v === "🟡 In Progress" && "text-yellow-600 dark:text-yellow-400",
+                            v === "❌ Not Started" && "text-warning-foreground")}><SelectValue /></SelectTrigger>
+                          <SelectContent>{MODULE_STATES.map((x) => <SelectItem key={x} value={x}>{x}</SelectItem>)}</SelectContent>
+                        </Select>
+                      </td>
+                    );
+                  })}
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
       </div>
     </div>
   );
 }
 
-// =============== EMAIL LOG ===============
+// =============== WEEKLY EMAIL LOG ===============
+type EmailRow = { dateSent: string; phase: string; completed: string; planned: string; openIssues: string; sentTo: string; status: string };
+const EMAIL_STATUSES = ["PENDING", "DRAFTED", "SENT"] as const;
+
 export function EmailLogSection() {
-  const emails = usePlaybook((s) => s.emails);
-  const update = usePlaybook((s) => s.updateEmail);
-  const add = usePlaybook((s) => s.addEmail);
+  const [rows, setRows] = useState<EmailRow[]>(() =>
+    Array.from({ length: EMAIL_WEEKS }, () => ({ dateSent: "", phase: "", completed: "", planned: "", openIssues: "", sentTo: "CEO, CFO, IT Lead, Site Teams, Ops Managers", status: "PENDING" }))
+  );
+  const upd = (i: number, patch: Partial<EmailRow>) => setRows((p) => p.map((r, idx) => idx === i ? { ...r, ...patch } : r));
 
   return (
     <div className="space-y-5">
-      <SectionHeader title="📧 Weekly Email Log" subtitle="Every Friday client communication — subject, RAG, highlights, blockers.">
-        <Button onClick={() => add({ week: emails.length + 1, date: "", subject: `Week ${emails.length + 1} — Plexa Implementation Update`, recipients: "CEO, CFO, IT Lead, Site Teams, Ops", status: "Green", summary: "", highlights: "", blockers: "", sent: false })}><Plus className="h-4 w-4" /> Add week</Button>
-      </SectionHeader>
+      <SectionHeader title="📧 Weekly Client Email Log" subtitle="Every hold-point communication. Every Friday. No exceptions. Distribution: CEO, CFO, IT Lead, Site Teams, Ops Managers." />
 
-      <div className="space-y-3">
-        {emails.map((e) => (
-          <div key={e.id} className="rounded-xl border bg-card p-4">
-            <div className="grid md:grid-cols-[70px_130px_1fr_120px_120px] gap-2 items-center">
-              <div className="text-xs font-semibold uppercase tracking-wider text-primary">Week {e.week}</div>
-              <Input type="date" className="h-9 text-xs" value={e.date} onChange={(ev) => update(e.id, { date: ev.target.value })} />
-              <Input className="h-9 text-sm font-medium" value={e.subject} onChange={(ev) => update(e.id, { subject: ev.target.value })} placeholder="Subject line" />
-              <Select value={e.status} onValueChange={(v) => update(e.id, { status: v as "Green" | "Amber" | "Red" })}>
-                <SelectTrigger className={cn("h-9 text-xs font-semibold",
-                  e.status === "Green" && "text-success",
-                  e.status === "Amber" && "text-warning-foreground",
-                  e.status === "Red" && "text-destructive",
-                )}><SelectValue /></SelectTrigger>
-                <SelectContent><SelectItem value="Green">🟢 Green</SelectItem><SelectItem value="Amber">🟠 Amber</SelectItem><SelectItem value="Red">🔴 Red</SelectItem></SelectContent>
-              </Select>
-              <Button variant={e.sent ? "default" : "outline"} size="sm" onClick={() => update(e.id, { sent: !e.sent })}>
-                {e.sent ? <><Check className="h-4 w-4" /> Sent</> : <><Send className="h-4 w-4" /> Mark sent</>}
-              </Button>
-            </div>
-            <Input className="mt-2 h-8 text-xs" value={e.recipients} onChange={(ev) => update(e.id, { recipients: ev.target.value })} placeholder="Recipients" />
-            <div className="grid md:grid-cols-3 gap-2 mt-2">
-              <Textarea rows={2} className="text-xs" value={e.summary} onChange={(ev) => update(e.id, { summary: ev.target.value })} placeholder="Summary / what we did this week…" />
-              <Textarea rows={2} className="text-xs" value={e.highlights} onChange={(ev) => update(e.id, { highlights: ev.target.value })} placeholder="Highlights & wins…" />
-              <Textarea rows={2} className="text-xs" value={e.blockers} onChange={(ev) => update(e.id, { blockers: ev.target.value })} placeholder="Blockers & risks…" />
-            </div>
-          </div>
-        ))}
+      <div className="rounded-xl border bg-primary-soft px-4 py-3 text-xs">
+        <div className="font-semibold mb-1">TEMPLATE — Subject: Weekly Implementation Update — [CLIENT] | Week of [DATE]</div>
+        <div className="text-muted-foreground">STATUS: [GREEN/AMBER/RED]  |  ✅ DONE THIS WEEK: [bullet list]  |  📅 NEXT WEEK: [bullet list]  |  ⚠️ OPEN ISSUES: [from Issues Register]  |  📸 PHOTOS / SIGNED SHEETS: [attached]</div>
+      </div>
+
+      <div className="rounded-xl border bg-card overflow-x-auto">
+        <table className="w-full text-xs min-w-[1300px]">
+          <thead className="bg-muted/30 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+            <tr>
+              <th className="px-2 py-2 text-left w-12">Wk</th>
+              <th className="px-2 py-2 text-left w-32">Date Sent</th>
+              <th className="px-2 py-2 text-left w-32">Phase</th>
+              <th className="px-2 py-2 text-left">Completed This Week</th>
+              <th className="px-2 py-2 text-left">Planned Next Week</th>
+              <th className="px-2 py-2 text-left">Open Issues</th>
+              <th className="px-2 py-2 text-left w-44">Sent To</th>
+              <th className="px-2 py-2 text-left w-28">Status</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y">
+            {rows.map((r, i) => (
+              <tr key={i} className="hover:bg-muted/20 align-top">
+                <td className="px-2 py-1.5 font-mono font-semibold">W{i + 1}</td>
+                <td className="px-2 py-1.5"><Input type="date" className="h-7 text-xs" value={r.dateSent} onChange={(e) => upd(i, { dateSent: e.target.value })} /></td>
+                <td className="px-2 py-1.5"><Input className="h-7 text-xs" value={r.phase} onChange={(e) => upd(i, { phase: e.target.value })} placeholder="Phase 1A…" /></td>
+                <td className="px-2 py-1.5"><Textarea className="text-xs min-h-[28px]" rows={1} value={r.completed} onChange={(e) => upd(i, { completed: e.target.value })} /></td>
+                <td className="px-2 py-1.5"><Textarea className="text-xs min-h-[28px]" rows={1} value={r.planned} onChange={(e) => upd(i, { planned: e.target.value })} /></td>
+                <td className="px-2 py-1.5"><Textarea className="text-xs min-h-[28px]" rows={1} value={r.openIssues} onChange={(e) => upd(i, { openIssues: e.target.value })} /></td>
+                <td className="px-2 py-1.5"><Input className="h-7 text-xs" value={r.sentTo} onChange={(e) => upd(i, { sentTo: e.target.value })} /></td>
+                <td className="px-2 py-1.5">
+                  <Select value={r.status} onValueChange={(v) => upd(i, { status: v })}>
+                    <SelectTrigger className={cn("h-7 text-[11px] font-semibold",
+                      r.status === "SENT" && "text-success",
+                      r.status === "DRAFTED" && "text-yellow-600 dark:text-yellow-400",
+                      r.status === "PENDING" && "text-warning-foreground")}><SelectValue /></SelectTrigger>
+                    <SelectContent>{EMAIL_STATUSES.map((x) => <SelectItem key={x} value={x}>{x}</SelectItem>)}</SelectContent>
+                  </Select>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </div>
     </div>
   );
 }
 
-// =============== ISSUES ===============
-const ISSUE_TYPES = ["🐛 Bug", "👤 User Error", "✨ Feature", "⚙️ Config", "🔗 Integration", "📋 Process Gap", "🎓 Training Gap", "❓ Question", "📦 Data"] as const;
+// =============== ISSUES REGISTER ===============
+const ISSUE_TYPES = ["🐛 Bug/Defect", "👤 User Error", "✨ Feature Request", "⚙️ Configuration", "🔗 Integration", "📋 Process Gap", "🎓 Training Gap", "❓ Question", "📦 Data"] as const;
 const PRIORITIES = ["LOW", "MEDIUM", "HIGH", "CRITICAL"] as const;
+const ISSUE_STATUSES = ["Open", "In Progress", "Closed"] as const;
+type IssueRow = { phase: string; type: string; description: string; reportedBy: string; owner: string; priority: string; dateRaised: string; status: string; resolution: string };
 
 export function IssuesSection() {
-  const issues = usePlaybook((s) => s.issues);
-  const add = usePlaybook((s) => s.addIssue);
-  const update = usePlaybook((s) => s.updateIssue);
-  const del = usePlaybook((s) => s.deleteIssue);
+  const [rows, setRows] = useState<IssueRow[]>(() =>
+    Array.from({ length: ISSUE_ROWS }, () => ({ phase: "Phase 4", type: "👤 User Error", description: "", reportedBy: "", owner: "PLEXA", priority: "MEDIUM", dateRaised: "", status: "Open", resolution: "" }))
+  );
+  const upd = (i: number, patch: Partial<IssueRow>) => setRows((p) => p.map((r, idx) => idx === i ? { ...r, ...patch } : r));
+
+  const counts = {
+    bug: rows.filter((r) => r.type.includes("Bug")).length,
+    user: rows.filter((r) => r.type.includes("User Error")).length,
+    feature: rows.filter((r) => r.type.includes("Feature")).length,
+    training: rows.filter((r) => r.type.includes("Training")).length,
+    open: rows.filter((r) => r.status === "Open" || r.status === "In Progress").length,
+    closed: rows.filter((r) => r.status === "Closed").length,
+  };
 
   return (
     <div className="space-y-5">
-      <SectionHeader title="⚠️ Issues Register" subtitle="Every issue logged, typed, owned, dated. Nothing sits open silently.">
-        <Button onClick={() => add({ ref: `ISS-${String(issues.length + 1).padStart(3, "0")}`, phase: "Phase 1A", type: "🐛 Bug", description: "", owner: "PLEXA", assignedTo: "", priority: "MEDIUM", raisedAt: new Date().toISOString().slice(0, 10), dueDate: "", status: "Open", resolution: "", closedDate: "" })}><Plus className="h-4 w-4" /> Log issue</Button>
-      </SectionHeader>
+      <SectionHeader title="⚠️ Issues Register" subtitle="All types · implementation + training. Every issue logged, typed, owned. Feature Requests go to the product roadmap. User Errors feed back into training. Nothing slips." />
 
-      <div className="space-y-3">
-        {issues.length === 0 && <div className="rounded-xl border bg-card p-8 text-center text-sm text-muted-foreground">No issues logged.</div>}
-        {issues.map((i) => (
-          <div key={i.id} className="rounded-xl border bg-card p-3">
-            <div className="grid md:grid-cols-[90px_110px_150px_1fr_120px_140px_110px_120px_120px_40px] gap-2 items-center">
-              <Input className="h-8 text-xs font-mono" value={i.ref} onChange={(e) => update(i.id, { ref: e.target.value })} placeholder="REF" />
-              <Input className="h-8 text-xs" value={i.phase} onChange={(e) => update(i.id, { phase: e.target.value })} />
-              <Select value={i.type} onValueChange={(v) => update(i.id, { type: v as typeof ISSUE_TYPES[number] })}>
-                <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
-                <SelectContent>{ISSUE_TYPES.map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent>
-              </Select>
-              <Input className="h-8 text-sm" value={i.description} onChange={(e) => update(i.id, { description: e.target.value })} placeholder="Description" />
-              <Select value={i.owner} onValueChange={(v) => update(i.id, { owner: v as "PLEXA" | "CLIENT" })}>
-                <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
-                <SelectContent><SelectItem value="PLEXA">PLEXA</SelectItem><SelectItem value="CLIENT">CLIENT</SelectItem></SelectContent>
-              </Select>
-              <Input className="h-8 text-xs" value={i.assignedTo} onChange={(e) => update(i.id, { assignedTo: e.target.value })} placeholder="Assigned to" />
-              <Select value={i.priority} onValueChange={(v) => update(i.id, { priority: v as typeof PRIORITIES[number] })}>
-                <SelectTrigger className={cn("h-8 text-xs font-semibold",
-                  i.priority === "CRITICAL" && "text-destructive",
-                  i.priority === "HIGH" && "text-warning-foreground",
-                )}><SelectValue /></SelectTrigger>
-                <SelectContent>{PRIORITIES.map((p) => <SelectItem key={p} value={p}>{p}</SelectItem>)}</SelectContent>
-              </Select>
-              <Input className="h-8 text-xs" type="date" value={i.dueDate} onChange={(e) => update(i.id, { dueDate: e.target.value })} />
-              <Select value={i.status} onValueChange={(v) => update(i.id, { status: v as "Open" | "In Progress" | "Closed", closedDate: v === "Closed" ? new Date().toISOString().slice(0, 10) : i.closedDate })}>
-                <SelectTrigger className={cn("h-8 text-xs font-semibold",
-                  i.status === "Open" && "text-warning-foreground",
-                  i.status === "Closed" && "text-success",
-                )}><SelectValue /></SelectTrigger>
-                <SelectContent><SelectItem value="Open">Open</SelectItem><SelectItem value="In Progress">In Progress</SelectItem><SelectItem value="Closed">Closed</SelectItem></SelectContent>
-              </Select>
-              <Button size="icon" variant="ghost" onClick={() => del(i.id)}><Trash2 className="h-4 w-4 text-muted-foreground" /></Button>
-            </div>
-            <Textarea className="mt-2 text-sm" rows={1} value={i.resolution} onChange={(e) => update(i.id, { resolution: e.target.value })} placeholder="Resolution / notes…" />
-            <div className="text-[10px] text-muted-foreground mt-1">Raised {i.raisedAt}{i.closedDate && ` · Closed ${i.closedDate}`}</div>
+      <div className="rounded-xl border bg-muted/30 px-4 py-2 text-xs">
+        <span className="font-semibold">TYPES:</span> 🐛 Bug/Defect · 👤 User Error · ✨ Feature Request · ⚙️ Configuration · 🔗 Integration · 📋 Process Gap · 🎓 Training Gap · ❓ Question · 📦 Data
+      </div>
+
+      <div className="grid grid-cols-2 md:grid-cols-6 gap-2 text-center">
+        {[
+          { label: "🐛 BUG", value: counts.bug },
+          { label: "👤 USER ERR", value: counts.user },
+          { label: "✨ FEATURE", value: counts.feature },
+          { label: "🎓 TRAINING", value: counts.training },
+          { label: "OPEN", value: counts.open, tone: "text-warning-foreground" },
+          { label: "CLOSED", value: counts.closed, tone: "text-success" },
+        ].map((t) => (
+          <div key={t.label} className="rounded-lg border bg-card px-3 py-2">
+            <div className="text-[9px] font-semibold uppercase tracking-wider text-muted-foreground">{t.label}</div>
+            <div className={cn("text-lg font-bold tabular-nums", t.tone)}>{t.value}</div>
           </div>
         ))}
+      </div>
+
+      <div className="rounded-xl border bg-card overflow-x-auto">
+        <table className="w-full text-xs min-w-[1400px]">
+          <thead className="bg-muted/30 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+            <tr>
+              <th className="px-2 py-2 text-left w-10">#</th>
+              <th className="px-2 py-2 text-left w-24">Phase</th>
+              <th className="px-2 py-2 text-left w-40">Issue Type</th>
+              <th className="px-2 py-2 text-left">Description</th>
+              <th className="px-2 py-2 text-left w-32">Reported By</th>
+              <th className="px-2 py-2 text-left w-28">Owner</th>
+              <th className="px-2 py-2 text-left w-28">Priority</th>
+              <th className="px-2 py-2 text-left w-32">Date Raised</th>
+              <th className="px-2 py-2 text-left w-32">Status</th>
+              <th className="px-2 py-2 text-left">Resolution / Notes</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y">
+            {rows.map((r, i) => (
+              <tr key={i} className="hover:bg-muted/20">
+                <td className="px-2 py-1 font-mono tabular-nums text-muted-foreground">{i + 1}</td>
+                <td className="px-2 py-1"><Input className="h-7 text-xs" value={r.phase} onChange={(e) => upd(i, { phase: e.target.value })} /></td>
+                <td className="px-2 py-1">
+                  <Select value={r.type} onValueChange={(v) => upd(i, { type: v })}>
+                    <SelectTrigger className="h-7 text-[11px]"><SelectValue /></SelectTrigger>
+                    <SelectContent>{ISSUE_TYPES.map((x) => <SelectItem key={x} value={x}>{x}</SelectItem>)}</SelectContent>
+                  </Select>
+                </td>
+                <td className="px-2 py-1"><Input className="h-7 text-xs" value={r.description} onChange={(e) => upd(i, { description: e.target.value })} /></td>
+                <td className="px-2 py-1"><Input className="h-7 text-xs" value={r.reportedBy} onChange={(e) => upd(i, { reportedBy: e.target.value })} /></td>
+                <td className="px-2 py-1">
+                  <Select value={r.owner} onValueChange={(v) => upd(i, { owner: v })}>
+                    <SelectTrigger className="h-7 text-[11px]"><SelectValue /></SelectTrigger>
+                    <SelectContent><SelectItem value="PLEXA">PLEXA</SelectItem><SelectItem value="CLIENT">CLIENT</SelectItem></SelectContent>
+                  </Select>
+                </td>
+                <td className="px-2 py-1">
+                  <Select value={r.priority} onValueChange={(v) => upd(i, { priority: v })}>
+                    <SelectTrigger className={cn("h-7 text-[11px] font-semibold",
+                      r.priority === "CRITICAL" && "text-destructive",
+                      r.priority === "HIGH" && "text-warning-foreground",
+                      r.priority === "MEDIUM" && "text-yellow-600 dark:text-yellow-400")}><SelectValue /></SelectTrigger>
+                    <SelectContent>{PRIORITIES.map((p) => <SelectItem key={p} value={p}>{p}</SelectItem>)}</SelectContent>
+                  </Select>
+                </td>
+                <td className="px-2 py-1"><Input type="date" className="h-7 text-xs" value={r.dateRaised} onChange={(e) => upd(i, { dateRaised: e.target.value })} /></td>
+                <td className="px-2 py-1">
+                  <Select value={r.status} onValueChange={(v) => upd(i, { status: v })}>
+                    <SelectTrigger className={cn("h-7 text-[11px] font-semibold",
+                      r.status === "Open" && "text-warning-foreground",
+                      r.status === "Closed" && "text-success",
+                      r.status === "In Progress" && "text-yellow-600 dark:text-yellow-400")}><SelectValue /></SelectTrigger>
+                    <SelectContent>{ISSUE_STATUSES.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
+                  </Select>
+                </td>
+                <td className="px-2 py-1"><Input className="h-7 text-xs" value={r.resolution} onChange={(e) => upd(i, { resolution: e.target.value })} /></td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </div>
     </div>
   );
@@ -566,44 +727,84 @@ export function IntranetSection() {
 }
 
 // =============== SESSION CONTENT LOG ===============
-export function ContentLogSection() {
-  const sessions = usePlaybook((s) => s.sessions);
-  const [active, setActive] = useState<string | null>(null);
-  const [topics, setTopics] = useState<Record<string, { id: string; topic: string; notes: string; covered: boolean }[]>>({});
+type TopicRow = { topic: string; notes: string; covered: string; duration: string; followUp: string; followUpAction: string };
+const COVERED_STATES = ["Covered", "Partially", "Not Covered"] as const;
 
-  const list = active ? topics[active] || [] : [];
-  const update = (id: string, patch: Partial<{ topic: string; notes: string; covered: boolean }>) =>
-    setTopics({ ...topics, [active!]: list.map((x) => x.id === id ? { ...x, ...patch } : x) });
+export function ContentLogSection() {
+  const [state, setState] = useState<Record<string, TopicRow[]>>(() =>
+    Object.fromEntries(SESSIONS.map((s) => {
+      const seeded = CONTENT_TOPICS[s.id] || [];
+      const len = Math.max(seeded.length, 3);
+      return [s.id, Array.from({ length: len }, (_, i) => ({
+        topic: seeded[i] || "",
+        notes: "", covered: "Covered", duration: "", followUp: "NO", followUpAction: "",
+      }))];
+    }))
+  );
+  const upd = (id: string, i: number, patch: Partial<TopicRow>) =>
+    setState((p) => ({ ...p, [id]: p[id].map((r, idx) => idx === i ? { ...r, ...patch } : r) }));
+  const addRow = (id: string) =>
+    setState((p) => ({ ...p, [id]: [...p[id], { topic: "", notes: "", covered: "Covered", duration: "", followUp: "NO", followUpAction: "" }] }));
 
   return (
     <div className="space-y-5">
-      <SectionHeader title="📚 Session Content Log" subtitle="Every topic per session. Feeds the intranet handover pack." />
-      <div className="grid md:grid-cols-[260px_1fr] gap-4">
-        <div className="rounded-xl border bg-card p-2 max-h-[600px] overflow-y-auto">
-          {sessions.length === 0 && <div className="p-4 text-xs text-muted-foreground text-center">Add sessions first.</div>}
-          {sessions.map((s) => (
-            <button key={s.id} onClick={() => setActive(s.id)} className={cn("w-full text-left px-3 py-2 rounded-md text-sm", active === s.id ? "bg-primary-soft text-primary" : "hover:bg-muted")}>
-              <div className="font-semibold truncate">{s.topic}</div>
-              <div className="text-[10px] text-muted-foreground uppercase tracking-wider">{s.type} · {s.date}</div>
-            </button>
-          ))}
-        </div>
-        <div className="rounded-xl border bg-card p-4">
-          {!active && <div className="text-sm text-muted-foreground text-center py-8">Pick a session to log topics covered.</div>}
-          {active && (
-            <div className="space-y-2">
-              {list.map((t) => (
-                <div key={t.id} className="grid grid-cols-[24px_1fr_2fr] gap-2 items-center">
-                  <input type="checkbox" checked={t.covered} onChange={() => update(t.id, { covered: !t.covered })} className="h-4 w-4 accent-[oklch(0.55_0.22_258)]" />
-                  <Input className="h-8 text-sm" value={t.topic} onChange={(e) => update(t.id, { topic: e.target.value })} placeholder="Topic / agenda item" />
-                  <Input className="h-8 text-xs" value={t.notes} onChange={(e) => update(t.id, { notes: e.target.value })} placeholder="Notes & follow-ups" />
-                </div>
-              ))}
-              <Button size="sm" variant="outline" className="w-full" onClick={() => setTopics({ ...topics, [active]: [...list, { id: Math.random().toString(36).slice(2), topic: "", notes: "", covered: false }] })}><Plus className="h-4 w-4" /> Add topic</Button>
+      <SectionHeader title="📚 Session Content Log" subtitle="What was covered in every session. Every topic per session logged here. Feeds directly into the Client Intranet Handover Pack." />
+
+      {SESSIONS.map((s) => (
+        <div key={s.id} className="rounded-xl border bg-card overflow-hidden">
+          <div className="px-4 py-2 bg-primary/10 border-b border-primary/30">
+            <div className="text-sm font-bold">
+              <span className="font-mono text-primary mr-2">{s.id}</span>
+              <span className="text-[10px] uppercase tracking-wider mr-2 text-muted-foreground">{s.type}:</span>
+              {s.name}
             </div>
-          )}
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-xs min-w-[1100px]">
+              <thead className="bg-muted/30 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                <tr>
+                  <th className="px-2 py-2 text-left w-10">#</th>
+                  <th className="px-2 py-2 text-left">Topic / Agenda Item</th>
+                  <th className="px-2 py-2 text-left">Notes</th>
+                  <th className="px-2 py-2 text-left w-32">Covered?</th>
+                  <th className="px-2 py-2 text-left w-28">Duration (min)</th>
+                  <th className="px-2 py-2 text-left w-24">Follow-Up?</th>
+                  <th className="px-2 py-2 text-left">Follow-Up Action</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y">
+                {state[s.id].map((r, i) => (
+                  <tr key={i} className="hover:bg-muted/20">
+                    <td className="px-2 py-1 font-mono tabular-nums text-muted-foreground">{i + 1}</td>
+                    <td className="px-2 py-1"><Input className="h-7 text-xs" value={r.topic} onChange={(e) => upd(s.id, i, { topic: e.target.value })} /></td>
+                    <td className="px-2 py-1"><Input className="h-7 text-xs" value={r.notes} onChange={(e) => upd(s.id, i, { notes: e.target.value })} /></td>
+                    <td className="px-2 py-1">
+                      <Select value={r.covered} onValueChange={(v) => upd(s.id, i, { covered: v })}>
+                        <SelectTrigger className={cn("h-7 text-[11px] font-semibold",
+                          r.covered === "Covered" && "text-success",
+                          r.covered === "Partially" && "text-yellow-600 dark:text-yellow-400",
+                          r.covered === "Not Covered" && "text-destructive")}><SelectValue /></SelectTrigger>
+                        <SelectContent>{COVERED_STATES.map((x) => <SelectItem key={x} value={x}>{x}</SelectItem>)}</SelectContent>
+                      </Select>
+                    </td>
+                    <td className="px-2 py-1"><Input type="number" className="h-7 text-xs" value={r.duration} onChange={(e) => upd(s.id, i, { duration: e.target.value })} /></td>
+                    <td className="px-2 py-1">
+                      <Select value={r.followUp} onValueChange={(v) => upd(s.id, i, { followUp: v })}>
+                        <SelectTrigger className={cn("h-7 text-[11px] font-semibold", r.followUp === "YES" && "text-warning-foreground")}><SelectValue /></SelectTrigger>
+                        <SelectContent><SelectItem value="NO">NO</SelectItem><SelectItem value="YES">YES</SelectItem></SelectContent>
+                      </Select>
+                    </td>
+                    <td className="px-2 py-1"><Input className="h-7 text-xs" value={r.followUpAction} onChange={(e) => upd(s.id, i, { followUpAction: e.target.value })} /></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <div className="border-t px-3 py-2 bg-muted/10">
+            <Button size="sm" variant="outline" onClick={() => addRow(s.id)}><Plus className="h-4 w-4" /> Add topic</Button>
+          </div>
         </div>
-      </div>
+      ))}
     </div>
   );
 }
