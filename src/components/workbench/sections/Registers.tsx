@@ -1,11 +1,12 @@
 import { useState, useRef } from "react";
+import * as XLSX from "xlsx";
 import { usePlaybook, type SessionStatus } from "@/lib/playbook-store";
 import { SectionHeader, StatusBadge } from "../shared";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { Plus, Trash2, Check, Download, Upload, Send, Sparkles } from "lucide-react";
+import { Plus, Trash2, Check, Download, Upload, Send, Sparkles, FileSpreadsheet } from "lucide-react";
 import { TRAINING_MODULES } from "@/lib/playbook-data";
 import { cn } from "@/lib/utils";
 
@@ -648,15 +649,44 @@ function downloadCSV(filename: string, csv: string) {
   a.href = url; a.download = filename; a.click(); URL.revokeObjectURL(url);
 }
 
-function ImportExport({ filename, csv, onImport }: { filename: string; csv: string; onImport: (text: string) => void }) {
+function downloadXLSXTemplate(filename: string, columns: string[], sample?: Record<string, string>) {
+  const headerRow = columns.reduce((acc, c) => ({ ...acc, [c]: c }), {} as Record<string, string>);
+  const rows: Record<string, string>[] = [headerRow];
+  if (sample) rows.push(sample);
+  // Add blank rows so the grid is visible & ready to fill
+  for (let i = 0; i < 20; i++) rows.push(columns.reduce((a, c) => ({ ...a, [c]: "" }), {}));
+  const ws = XLSX.utils.json_to_sheet(rows, { header: columns, skipHeader: true });
+  ws["!cols"] = columns.map((c) => ({ wch: Math.max(14, c.length + 4) }));
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, "Template");
+  XLSX.writeFile(wb, filename);
+}
+
+function ImportExport({ filename, csv, columns, sample, onImport }: { filename: string; csv: string; columns?: string[]; sample?: Record<string, string>; onImport: (text: string) => void }) {
   const ref = useRef<HTMLInputElement>(null);
+  const xlsxName = filename.replace(/\.csv$/i, "-template.xlsx");
   return (
-    <div className="flex gap-2">
+    <div className="flex gap-2 flex-wrap">
+      {columns && (
+        <Button variant="outline" size="sm" onClick={() => downloadXLSXTemplate(xlsxName, columns, sample)}>
+          <FileSpreadsheet className="h-4 w-4" /> Template
+        </Button>
+      )}
       <Button variant="outline" size="sm" onClick={() => downloadCSV(filename, csv)}><Download className="h-4 w-4" /> Export</Button>
       <Button variant="outline" size="sm" onClick={() => ref.current?.click()}><Upload className="h-4 w-4" /> Import</Button>
-      <input ref={ref} type="file" accept=".csv,text/csv" className="hidden" onChange={async (e) => {
+      <input ref={ref} type="file" accept=".csv,text/csv,.xlsx,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" className="hidden" onChange={async (e) => {
         const f = e.target.files?.[0]; if (!f) return;
-        const text = await f.text(); onImport(text); e.target.value = "";
+        const isExcel = /\.(xlsx|xls)$/i.test(f.name);
+        if (isExcel) {
+          const buf = await f.arrayBuffer();
+          const wb = XLSX.read(buf);
+          const ws = wb.Sheets[wb.SheetNames[0]];
+          const csvText = XLSX.utils.sheet_to_csv(ws);
+          onImport(csvText);
+        } else {
+          const text = await f.text(); onImport(text);
+        }
+        e.target.value = "";
       }} />
     </div>
   );
@@ -675,7 +705,7 @@ export function UserAccountsSection() {
   return (
     <div className="space-y-5">
       <SectionHeader title="👤 User Accounts" subtitle="Name, email, phone, position, role — the complete login roster.">
-        <ImportExport filename="user-accounts.csv" csv={csv} onImport={(t) => {
+        <ImportExport filename="user-accounts.csv" csv={csv} columns={COLS} sample={{ name: "Jane Smith", email: "jane@client.com", phone: "0400 000 000", position: "Project Manager", role: "Standard", status: "Pending" }} onImport={(t) => {
           const parsed = fromCSV(t).map((r) => ({
             id: Math.random().toString(36).slice(2),
             name: r.name || "", email: r.email || "", phone: r.phone || "",
