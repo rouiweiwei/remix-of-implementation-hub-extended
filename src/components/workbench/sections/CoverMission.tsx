@@ -2,7 +2,7 @@ import { usePlaybook, overallProgress, phaseProgress, calcEndDate } from "@/lib/
 import { PHASES, COMMANDMENTS } from "@/lib/playbook-data";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { MetricCard, SectionHeader, StatusBadge } from "./shared";
+import { MetricCard, SectionHeader, StatusBadge } from "../shared";
 
 export function CoverSection() {
   const client = usePlaybook((s) => s.client);
