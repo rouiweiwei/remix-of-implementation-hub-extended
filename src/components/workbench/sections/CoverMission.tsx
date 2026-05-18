@@ -2,7 +2,9 @@ import { usePlaybook, overallProgress, phaseProgress, calcEndDate } from "@/lib/
 import { PHASES, COMMANDMENTS } from "@/lib/playbook-data";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { MetricCard, SectionHeader, StatusBadge } from "../shared";
+import { SectionHeader, StatusBadge } from "../shared";
+import { cn } from "@/lib/utils";
+import { AlertTriangle, CheckCircle2, Clock, Flag, ShieldCheck, Target, TrendingUp, Users } from "lucide-react";
 
 export function CoverSection() {
   const client = usePlaybook((s) => s.client);
@@ -86,38 +88,146 @@ export function MissionControlSection() {
   const timelineMode = usePlaybook((s) => s.timelineMode);
 
   const overall = overallProgress(tasks);
-  const openIssues = issues.filter((i) => i.status !== "Closed").length;
-  const closedIssues = issues.filter((i) => i.status === "Closed").length;
+  const openIssues = issues.filter((i) => i.status !== "Closed");
+  const criticalIssues = openIssues.filter((i) => i.priority === "CRITICAL" || i.priority === "HIGH");
+  const blockedTasks = tasks.filter((t) => t.status === "BLOCKED");
   const dodDone = dod.filter((d) => d.confirmed).length;
-  const trainingHeld = sessions.filter((s) => s.type === "Training" && s.status === "Held").length;
-  const workshopsHeld = sessions.filter((s) => s.type === "Workshop" && s.status === "Held").length;
+
+  // Where we are
+  const currentPhase = PHASES.find((p) => {
+    const pr = phaseProgress(tasks, p.id);
+    return pr.status === "IN PROGRESS" || pr.status === "BLOCKED";
+  }) ?? PHASES.find((p) => phaseProgress(tasks, p.id).status === "NOT STARTED") ?? PHASES[PHASES.length - 1];
+  const currentProg = phaseProgress(tasks, currentPhase.id);
+
+  // Next-up tasks (not started/in progress in current or next phase, top 6)
+  const phaseOrder = PHASES.map((p) => p.id);
+  const currentIdx = phaseOrder.indexOf(currentPhase.id);
+  const focusPhases = phaseOrder.slice(currentIdx, currentIdx + 2);
+  const nextTasks = tasks
+    .filter((t) => focusPhases.includes(t.phase) && t.status !== "COMPLETE" && t.status !== "BLOCKED")
+    .slice(0, 6);
+
+  // Timeline math
+  const goLiveTarget = client.goLiveDate || calcEndDate(startDate, timelineMode);
+  const today = new Date();
+  const target = new Date(goLiveTarget);
+  const daysToGoLive = Math.ceil((target.getTime() - today.getTime()) / 86400000);
+  const start = new Date(startDate);
+  const totalDays = Math.max(1, Math.ceil((target.getTime() - start.getTime()) / 86400000));
+  const elapsed = Math.max(0, Math.ceil((today.getTime() - start.getTime()) / 86400000));
+  const timeElapsedPct = Math.min(100, Math.round((elapsed / totalDays) * 100));
+  const workPct = overall.pct;
+  const onTrack = workPct >= timeElapsedPct - 5;
+  const drift = timeElapsedPct - workPct;
+
+  // Risk score / banner
+  const risks: { level: "danger" | "warning"; text: string }[] = [];
+  if (blockedTasks.length > 0) risks.push({ level: "danger", text: `${blockedTasks.length} blocked task${blockedTasks.length > 1 ? "s" : ""} holding up delivery` });
+  if (criticalIssues.length > 0) risks.push({ level: "danger", text: `${criticalIssues.length} high/critical issue${criticalIssues.length > 1 ? "s" : ""} open` });
+  if (drift > 10) risks.push({ level: "warning", text: `Delivery is ${drift}% behind schedule (work vs. time elapsed)` });
+  if (daysToGoLive < 14 && workPct < 80) risks.push({ level: "danger", text: `Go-live in ${daysToGoLive} days but only ${workPct}% of work complete` });
+  const pendingEmails = emails.filter((e) => !e.sent).length;
+  if (pendingEmails >= 2) risks.push({ level: "warning", text: `${pendingEmails} weekly status emails not sent — communication slipping` });
+
+  const healthLabel = risks.some((r) => r.level === "danger") ? "AT RISK" : risks.length > 0 ? "WATCH" : "ON TRACK";
+  const healthTone = healthLabel === "AT RISK" ? "danger" : healthLabel === "WATCH" ? "warning" : "success";
 
   return (
     <div className="space-y-6">
-      <SectionHeader title="🎯 Mission Control" subtitle="Live implementation health · auto-updating from every sheet." />
+      <SectionHeader title="Mission Control" subtitle="Where we are, what's blocking us, what's next." />
 
-      <div className="grid grid-cols-2 md:grid-cols-6 gap-3">
-        <MetricCard label="Tasks Total" value={overall.total} />
-        <MetricCard label="Complete" value={overall.complete} tone="success" />
-        <MetricCard label="In Progress" value={overall.inProgress} tone="brand" />
-        <MetricCard label="Blocked" value={overall.blocked} tone={overall.blocked > 0 ? "danger" : undefined} />
-        <MetricCard label="% Complete" value={`${overall.pct}%`} tone="brand" />
-        <MetricCard label="DoD Met" value={`${dodDone}/${dod.length}`} />
+      {/* Hero status card */}
+      <div className={cn(
+        "rounded-2xl border p-6 relative overflow-hidden",
+        healthTone === "danger" && "bg-destructive/5 border-destructive/30",
+        healthTone === "warning" && "bg-warning/10 border-warning/40",
+        healthTone === "success" && "bg-success/5 border-success/30",
+      )}>
+        <div className="flex flex-wrap items-start justify-between gap-6">
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-2">
+              <span className={cn(
+                "inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-bold uppercase tracking-wider",
+                healthTone === "danger" && "bg-destructive text-destructive-foreground",
+                healthTone === "warning" && "bg-warning text-warning-foreground",
+                healthTone === "success" && "bg-success text-success-foreground",
+              )}>
+                {healthTone === "danger" ? <AlertTriangle className="h-3.5 w-3.5" /> : healthTone === "success" ? <CheckCircle2 className="h-3.5 w-3.5" /> : <Flag className="h-3.5 w-3.5" />}
+                {healthLabel}
+              </span>
+              <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Current step</span>
+            </div>
+            <h3 className="mt-2 text-3xl font-bold tracking-tight">Phase {currentPhase.name} — {currentPhase.short}</h3>
+            <p className="text-sm text-muted-foreground mt-1">{currentProg.complete} of {currentProg.total} tasks complete in this phase · {currentProg.inProgress} active · {currentProg.blocked} blocked</p>
+          </div>
+          <div className="flex gap-6">
+            <HeroStat icon={<Clock className="h-4 w-4" />} label="Days to go-live" value={daysToGoLive >= 0 ? daysToGoLive.toString() : "Overdue"} hint={goLiveTarget} tone={daysToGoLive < 14 ? "danger" : daysToGoLive < 30 ? "warning" : undefined} />
+            <HeroStat icon={<TrendingUp className="h-4 w-4" />} label="Complete" value={`${workPct}%`} hint={`${overall.complete} / ${overall.total} tasks`} tone="brand" />
+            <HeroStat icon={<Target className="h-4 w-4" />} label="Time elapsed" value={`${timeElapsedPct}%`} hint={onTrack ? "On schedule" : `${drift}% behind`} tone={onTrack ? "success" : "danger"} />
+          </div>
+        </div>
+
+        {/* Pace bar */}
+        <div className="mt-5">
+          <div className="flex items-center justify-between text-[11px] font-semibold uppercase tracking-wider text-muted-foreground mb-1.5">
+            <span>Work complete</span><span>Time elapsed</span>
+          </div>
+          <div className="relative h-3 rounded-full bg-muted overflow-hidden">
+            <div className="absolute inset-y-0 left-0 bg-primary" style={{ width: `${workPct}%` }} />
+            <div className="absolute inset-y-0 w-0.5 bg-foreground" style={{ left: `${timeElapsedPct}%` }} title="Time elapsed" />
+          </div>
+          <div className="flex items-center justify-between text-[11px] tabular-nums text-muted-foreground mt-1">
+            <span>{workPct}% work</span><span>{timeElapsedPct}% time</span>
+          </div>
+        </div>
       </div>
 
+      {/* Timeline risks banner */}
+      {risks.length > 0 && (
+        <div className="rounded-xl border border-destructive/30 bg-destructive/5 p-4">
+          <div className="flex items-center gap-2 mb-2">
+            <AlertTriangle className="h-4 w-4 text-destructive" />
+            <div className="text-[11px] font-bold uppercase tracking-[0.15em] text-destructive">Threats to the timeline</div>
+          </div>
+          <ul className="space-y-1.5">
+            {risks.map((r, i) => (
+              <li key={i} className="flex items-start gap-2 text-sm">
+                <span className={cn(
+                  "mt-1 h-1.5 w-1.5 rounded-full flex-none",
+                  r.level === "danger" ? "bg-destructive" : "bg-warning"
+                )} />
+                <span>{r.text}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {/* Phase progress + next up */}
       <div className="grid lg:grid-cols-3 gap-5">
         <div className="rounded-xl border bg-card p-5 lg:col-span-2">
-          <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-primary mb-3">Phase Status</div>
-          <div className="space-y-2">
+          <div className="flex items-center justify-between mb-4">
+            <div className="text-[11px] font-bold uppercase tracking-[0.15em] text-primary">Phase progress</div>
+            <div className="text-[11px] text-muted-foreground">{overall.complete}/{overall.total} tasks · {overall.pct}%</div>
+          </div>
+          <div className="space-y-2.5">
             {PHASES.map((p) => {
               const prog = phaseProgress(tasks, p.id);
+              const isCurrent = p.id === currentPhase.id;
               return (
-                <div key={p.id} className="flex items-center gap-3">
-                  <div className="w-24 text-sm font-semibold">{p.name}</div>
-                  <div className="flex-1 h-2.5 rounded-full bg-muted overflow-hidden">
-                    <div className="h-full bg-primary" style={{ width: `${prog.pct}%` }} />
+                <div key={p.id} className={cn("flex items-center gap-3 rounded-lg px-2 py-1.5", isCurrent && "bg-primary-soft")}>
+                  <div className="w-20 text-sm font-semibold flex items-center gap-1.5">
+                    {isCurrent && <span className="h-1.5 w-1.5 rounded-full bg-primary animate-pulse" />}
+                    {p.name}
                   </div>
-                  <div className="w-16 text-right text-xs text-muted-foreground tabular-nums">{prog.complete}/{prog.total}</div>
+                  <div className="flex-1 h-2 rounded-full bg-muted overflow-hidden">
+                    <div className={cn(
+                      "h-full",
+                      prog.status === "BLOCKED" ? "bg-destructive" : prog.status === "COMPLETE" ? "bg-success" : "bg-primary"
+                    )} style={{ width: `${prog.pct}%` }} />
+                  </div>
+                  <div className="w-14 text-right text-xs text-muted-foreground tabular-nums">{prog.complete}/{prog.total}</div>
                   <StatusBadge status={prog.status} />
                 </div>
               );
@@ -125,51 +235,151 @@ export function MissionControlSection() {
           </div>
         </div>
 
-        <div className="space-y-3">
-          <div className="rounded-xl border bg-card p-5">
-            <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-primary mb-3">Sessions & Training</div>
-            <div className="grid grid-cols-2 gap-3 text-center">
-              <div><div className="text-2xl font-bold">{sessions.length}</div><div className="text-[10px] uppercase tracking-wider text-muted-foreground">Total</div></div>
-              <div><div className="text-2xl font-bold">{workshopsHeld}</div><div className="text-[10px] uppercase tracking-wider text-muted-foreground">Workshops</div></div>
-              <div><div className="text-2xl font-bold">{trainingHeld}</div><div className="text-[10px] uppercase tracking-wider text-muted-foreground">Training</div></div>
-              <div><div className="text-2xl font-bold">{champions.length}</div><div className="text-[10px] uppercase tracking-wider text-muted-foreground">Champions</div></div>
-            </div>
+        <div className="rounded-xl border bg-card p-5">
+          <div className="flex items-center justify-between mb-4">
+            <div className="text-[11px] font-bold uppercase tracking-[0.15em] text-primary">What's next</div>
+            <div className="text-[11px] text-muted-foreground">Phase {currentPhase.name}</div>
           </div>
-
-          <div className="rounded-xl border bg-card p-5">
-            <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-primary mb-3">Issues</div>
-            <div className="grid grid-cols-3 text-center">
-              <div><div className="text-2xl font-bold">{issues.length}</div><div className="text-[10px] uppercase tracking-wider text-muted-foreground">Total</div></div>
-              <div><div className="text-2xl font-bold text-destructive">{openIssues}</div><div className="text-[10px] uppercase tracking-wider text-muted-foreground">Open</div></div>
-              <div><div className="text-2xl font-bold text-success">{closedIssues}</div><div className="text-[10px] uppercase tracking-wider text-muted-foreground">Closed</div></div>
-            </div>
-          </div>
+          {nextTasks.length === 0 ? (
+            <div className="text-sm text-muted-foreground text-center py-6">No upcoming tasks. Nice work.</div>
+          ) : (
+            <ul className="space-y-2">
+              {nextTasks.map((t) => (
+                <li key={t.id} className="flex items-start gap-2.5 text-sm">
+                  <span className={cn(
+                    "mt-0.5 inline-flex h-5 w-5 flex-none items-center justify-center rounded text-[10px] font-bold",
+                    t.status === "IN PROGRESS" ? "bg-primary/15 text-primary" : "bg-muted text-muted-foreground"
+                  )}>{t.phase}</span>
+                  <div className="min-w-0">
+                    <div className="truncate">{t.title}</div>
+                    <div className="text-[11px] text-muted-foreground">{t.owner}</div>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
         </div>
       </div>
 
-      <div className="grid md:grid-cols-2 gap-5">
+      {/* Blockers + Issues */}
+      <div className="grid lg:grid-cols-2 gap-5">
         <div className="rounded-xl border bg-card p-5">
-          <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-primary mb-3">Timeline</div>
-          <div className="flex items-center justify-between text-sm">
-            <div><div className="text-xs text-muted-foreground">Mode</div><div className="font-semibold">{timelineMode}</div></div>
-            <div><div className="text-xs text-muted-foreground">Start</div><div className="font-semibold">{startDate}</div></div>
-            <div><div className="text-xs text-muted-foreground">Go-live</div><div className="font-semibold">{calcEndDate(startDate, timelineMode)}</div></div>
-            <div><div className="text-xs text-muted-foreground">Client target</div><div className="font-semibold">{client.goLiveDate}</div></div>
+          <div className="flex items-center justify-between mb-3">
+            <div className="text-[11px] font-bold uppercase tracking-[0.15em] text-destructive">Blocked tasks</div>
+            <div className="text-[11px] text-muted-foreground">{blockedTasks.length}</div>
           </div>
+          {blockedTasks.length === 0 ? (
+            <div className="text-sm text-muted-foreground text-center py-6 flex items-center justify-center gap-2">
+              <CheckCircle2 className="h-4 w-4 text-success" />
+              Nothing blocked. Keep it flowing.
+            </div>
+          ) : (
+            <ul className="space-y-2">
+              {blockedTasks.slice(0, 5).map((t) => (
+                <li key={t.id} className="flex items-start gap-2 text-sm border-l-2 border-destructive pl-3">
+                  <div className="min-w-0 flex-1">
+                    <div className="truncate font-medium">{t.title}</div>
+                    <div className="text-[11px] text-muted-foreground">Phase {t.phase} · {t.owner}</div>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
         </div>
 
         <div className="rounded-xl border bg-card p-5">
-          <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-primary mb-3">Weekly Email Compliance</div>
-          <div className="flex gap-1.5">
+          <div className="flex items-center justify-between mb-3">
+            <div className="text-[11px] font-bold uppercase tracking-[0.15em] text-warning-foreground">Open issues</div>
+            <div className="text-[11px] text-muted-foreground">{openIssues.length} open · {criticalIssues.length} critical</div>
+          </div>
+          {openIssues.length === 0 ? (
+            <div className="text-sm text-muted-foreground text-center py-6 flex items-center justify-center gap-2">
+              <ShieldCheck className="h-4 w-4 text-success" />
+              No open issues raised.
+            </div>
+          ) : (
+            <ul className="space-y-2">
+              {openIssues.slice(0, 5).map((i) => (
+                <li key={i.id} className={cn(
+                  "flex items-start gap-2 text-sm border-l-2 pl-3",
+                  i.priority === "CRITICAL" ? "border-destructive" : i.priority === "HIGH" ? "border-warning" : "border-muted-foreground/30"
+                )}>
+                  <div className="min-w-0 flex-1">
+                    <div className="truncate">{i.description || "(no description)"}</div>
+                    <div className="text-[11px] text-muted-foreground">{i.type} · {i.owner} · Phase {i.phase}</div>
+                  </div>
+                  <span className={cn(
+                    "text-[10px] font-bold uppercase tracking-wider rounded px-1.5 py-0.5",
+                    i.priority === "CRITICAL" && "bg-destructive text-destructive-foreground",
+                    i.priority === "HIGH" && "bg-warning text-warning-foreground",
+                    i.priority === "MEDIUM" && "bg-muted text-muted-foreground",
+                    i.priority === "LOW" && "bg-muted text-muted-foreground",
+                  )}>{i.priority}</span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      </div>
+
+      {/* Footer strip: people + comms + DoD */}
+      <div className="grid md:grid-cols-3 gap-5">
+        <div className="rounded-xl border bg-card p-5">
+          <div className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.15em] text-primary mb-3"><Users className="h-3.5 w-3.5" />People & training</div>
+          <div className="grid grid-cols-3 gap-2 text-center">
+            <Mini label="Sessions" value={sessions.length} />
+            <Mini label="Held" value={sessions.filter((s) => s.status === "Held").length} />
+            <Mini label="Champions" value={champions.length} />
+          </div>
+        </div>
+        <div className="rounded-xl border bg-card p-5">
+          <div className="text-[11px] font-bold uppercase tracking-[0.15em] text-primary mb-3">Weekly comms</div>
+          <div className="flex gap-1">
             {emails.map((e) => (
-              <div key={e.id} className={`flex-1 rounded-md py-2 text-center text-[10px] font-semibold ${e.sent ? "bg-success/15 text-success border border-success/30" : "bg-muted text-muted-foreground border border-border"}`}>
-                W{e.week}
-                <div className="mt-0.5 font-normal">{e.sent ? "SENT" : "PENDING"}</div>
-              </div>
+              <div key={e.id} className={cn(
+                "flex-1 rounded-md py-1.5 text-center text-[10px] font-bold",
+                e.sent ? "bg-success/15 text-success" : "bg-muted text-muted-foreground"
+              )}>W{e.week}</div>
             ))}
           </div>
+          <div className="text-[11px] text-muted-foreground mt-2">{emails.filter((e) => e.sent).length} of {emails.length} weekly updates sent</div>
+        </div>
+        <div className="rounded-xl border bg-card p-5">
+          <div className="text-[11px] font-bold uppercase tracking-[0.15em] text-primary mb-3">Definition of done</div>
+          <div className="flex items-baseline gap-2">
+            <div className="text-3xl font-bold tabular-nums">{dodDone}</div>
+            <div className="text-sm text-muted-foreground">of {dod.length} confirmed</div>
+          </div>
+          <div className="mt-2 h-2 rounded-full bg-muted overflow-hidden">
+            <div className="h-full bg-success" style={{ width: `${dod.length ? (dodDone / dod.length) * 100 : 0}%` }} />
+          </div>
         </div>
       </div>
+    </div>
+  );
+}
+
+function HeroStat({ icon, label, value, hint, tone }: { icon: React.ReactNode; label: string; value: string; hint?: string; tone?: "brand" | "success" | "warning" | "danger" }) {
+  return (
+    <div className="text-right min-w-[90px]">
+      <div className="flex items-center justify-end gap-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">{icon}{label}</div>
+      <div className={cn(
+        "text-3xl font-bold tabular-nums mt-0.5",
+        tone === "brand" && "text-primary",
+        tone === "success" && "text-success",
+        tone === "warning" && "text-warning-foreground",
+        tone === "danger" && "text-destructive",
+      )}>{value}</div>
+      {hint && <div className="text-[10px] text-muted-foreground mt-0.5">{hint}</div>}
+    </div>
+  );
+}
+
+function Mini({ label, value }: { label: string; value: number }) {
+  return (
+    <div>
+      <div className="text-2xl font-bold tabular-nums">{value}</div>
+      <div className="text-[10px] uppercase tracking-wider text-muted-foreground">{label}</div>
     </div>
   );
 }
