@@ -112,7 +112,14 @@ export function MissionControlSection() {
   const goLiveTarget = client.goLiveDate || calcEndDate(startDate, timelineMode);
   const today = new Date();
   const target = new Date(goLiveTarget);
-  const daysToGoLive = Math.ceil((target.getTime() - today.getTime()) / 86400000);
+  const msToGoLive = target.getTime() - today.getTime();
+  const daysToGoLive = Math.ceil(msToGoLive / 86400000);
+  const absMs = Math.max(0, msToGoLive);
+  const cdWeeks = Math.floor(absMs / (7 * 86400000));
+  const cdDays = Math.floor((absMs % (7 * 86400000)) / 86400000);
+  const cdHours = Math.floor((absMs % 86400000) / 3600000);
+  const cdMinutes = Math.floor((absMs % 3600000) / 60000);
+  const goLivePast = msToGoLive < 0;
   const start = new Date(startDate);
   const totalDays = Math.max(1, Math.ceil((target.getTime() - start.getTime()) / 86400000));
   const elapsed = Math.max(0, Math.ceil((today.getTime() - start.getTime()) / 86400000));
@@ -203,6 +210,40 @@ export function MissionControlSection() {
           </ul>
         </div>
       )}
+
+      {/* Go-Live countdown */}
+      <div className={cn(
+        "rounded-xl border p-5 relative overflow-hidden",
+        goLivePast ? "bg-success/5 border-success/30" :
+        daysToGoLive < 14 ? "bg-destructive/5 border-destructive/30" :
+        daysToGoLive < 30 ? "bg-warning/10 border-warning/40" :
+        "bg-primary-soft border-primary/30"
+      )}>
+        <div className="flex flex-wrap items-center justify-between gap-5">
+          <div className="min-w-0">
+            <div className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.15em] text-primary">
+              <Clock className="h-3.5 w-3.5" />
+              {goLivePast ? "Go-Live reached" : "Countdown to Go-Live"}
+            </div>
+            <div className="mt-1 text-sm text-muted-foreground">
+              Target · <span className="font-semibold text-foreground">{new Date(goLiveTarget).toLocaleDateString(undefined, { weekday: "long", day: "numeric", month: "long", year: "numeric" })}</span>
+            </div>
+          </div>
+          {goLivePast ? (
+            <div className="text-2xl font-bold text-success">Live for {Math.abs(daysToGoLive)} day{Math.abs(daysToGoLive) === 1 ? "" : "s"}</div>
+          ) : (
+            <div className="flex items-end gap-3">
+              <CountdownUnit value={cdWeeks} label={cdWeeks === 1 ? "Week" : "Weeks"} />
+              <span className="text-2xl font-bold text-muted-foreground pb-2">:</span>
+              <CountdownUnit value={cdDays} label="Days" />
+              <span className="text-2xl font-bold text-muted-foreground pb-2">:</span>
+              <CountdownUnit value={cdHours} label="Hrs" />
+              <span className="text-2xl font-bold text-muted-foreground pb-2">:</span>
+              <CountdownUnit value={cdMinutes} label="Min" />
+            </div>
+          )}
+        </div>
+      </div>
 
       {/* Phase progress + next up */}
       <div className="grid lg:grid-cols-3 gap-5">
@@ -371,6 +412,15 @@ function HeroStat({ icon, label, value, hint, tone }: { icon: React.ReactNode; l
         tone === "danger" && "text-destructive",
       )}>{value}</div>
       {hint && <div className="text-[10px] text-muted-foreground mt-0.5">{hint}</div>}
+    </div>
+  );
+}
+
+function CountdownUnit({ value, label }: { value: number; label: string }) {
+  return (
+    <div className="text-center min-w-[56px]">
+      <div className="text-3xl md:text-4xl font-bold tabular-nums leading-none">{String(value).padStart(2, "0")}</div>
+      <div className="text-[10px] uppercase tracking-wider text-muted-foreground mt-1">{label}</div>
     </div>
   );
 }
