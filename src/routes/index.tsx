@@ -113,6 +113,11 @@ function Workbench() {
             {tab === "champions" && <ChampionsSection />}
             {tab === "dod" && <DefinitionOfDoneSection />}
             {tab === "intranet" && <IntranetSection />}
+            {tab === "users" && <UserAccountsSection />}
+            {tab === "project" && <ProjectDetailsSection />}
+            {tab === "contractors" && <ContractorsSection />}
+            {tab === "costcodes" && <CostCodesSection />}
+            {tab === "handover" && <PostImplementationEmailSection />}
           </main>
         </div>
       </div>
