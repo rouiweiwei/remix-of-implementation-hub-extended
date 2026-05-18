@@ -3,12 +3,12 @@
 export type SessionDef = { id: string; name: string; type: "Workshop" | "Training"; module: string };
 
 export const SESSIONS: SessionDef[] = [
-  { id: "W1", name: "HOD Workshop — Site, Safety & Quality", type: "Workshop", module: "" },
-  { id: "W2", name: "HOD Workshop — Document Control", type: "Workshop", module: "" },
-  { id: "W3", name: "HOD Workshop — Finance & AP", type: "Workshop", module: "" },
-  { id: "W4", name: "HOD Workshop — Procurement", type: "Workshop", module: "" },
-  { id: "W5", name: "HOD Workshop — Program & Scheduling", type: "Workshop", module: "" },
-  { id: "W6", name: "HOD Workshop — Rollout Planning", type: "Workshop", module: "" },
+  { id: "W1", name: "HOD Workshop — Site, Safety & Quality", type: "Workshop", module: "1B" },
+  { id: "W2", name: "HOD Workshop — Document Control", type: "Workshop", module: "1B" },
+  { id: "W3", name: "HOD Workshop — Finance & AP", type: "Workshop", module: "1B" },
+  { id: "W4", name: "HOD Workshop — Procurement", type: "Workshop", module: "1B" },
+  { id: "W5", name: "HOD Workshop — Program & Scheduling", type: "Workshop", module: "1B" },
+  { id: "W6", name: "HOD Workshop — Rollout Planning", type: "Workshop", module: "1B" },
   { id: "T1", name: "Training — 4A Site, Safety & Quality", type: "Training", module: "4A" },
   { id: "T2", name: "Training — 4B Document Control", type: "Training", module: "4B" },
   { id: "T3", name: "Training — 4C Email & Correspondence", type: "Training", module: "4C" },
