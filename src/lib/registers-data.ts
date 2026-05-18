@@ -48,3 +48,22 @@ export const ATTENDEES_PER_SESSION = 20;
 export const COMPETENCY_ROWS = 40;
 export const ISSUE_ROWS = 60;
 export const EMAIL_WEEKS = 20;
+
+export type DirectoryUser = { firstName: string; lastName: string; role: string; department: string };
+
+// Mocked user directory — would normally be pulled from the auth/user-accounts system.
+export const USER_DIRECTORY: DirectoryUser[] = [
+  { firstName: "Sarah", lastName: "Mitchell", role: "Project Manager", department: "Construction" },
+  { firstName: "James", lastName: "O'Connor", role: "Site Engineer", department: "Construction" },
+  { firstName: "Priya", lastName: "Patel", role: "HSEQ Manager", department: "HSEQ" },
+  { firstName: "Liam", lastName: "Nguyen", role: "Document Controller", department: "Document Control" },
+  { firstName: "Emma", lastName: "Thompson", role: "Finance Manager", department: "Finance" },
+  { firstName: "David", lastName: "Kowalski", role: "AP Officer", department: "Finance" },
+  { firstName: "Aisha", lastName: "Rahman", role: "Procurement Lead", department: "Procurement" },
+  { firstName: "Tom", lastName: "Bennett", role: "Scheduler", department: "Program" },
+  { firstName: "Hannah", lastName: "Clarke", role: "Contracts Admin", department: "Commercial" },
+  { firstName: "Marco", lastName: "Rossi", role: "Site Supervisor", department: "Construction" },
+  { firstName: "Olivia", lastName: "Wright", role: "O&M Coordinator", department: "Operations" },
+  { firstName: "Ethan", lastName: "Singh", role: "Estimator", department: "Commercial" },
+];
+

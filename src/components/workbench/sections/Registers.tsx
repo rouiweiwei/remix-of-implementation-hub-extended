@@ -9,7 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Plus, Trash2, Check, Download, Upload, Send, Sparkles, FileSpreadsheet } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-import { SESSIONS, CONTENT_TOPICS, COMPETENCY_MODULES, ATTENDEES_PER_SESSION, COMPETENCY_ROWS, ISSUE_ROWS, EMAIL_WEEKS } from "@/lib/registers-data";
+import { SESSIONS, CONTENT_TOPICS, COMPETENCY_MODULES, ATTENDEES_PER_SESSION, COMPETENCY_ROWS, ISSUE_ROWS, EMAIL_WEEKS, USER_DIRECTORY } from "@/lib/registers-data";
 
 // =============== SESSION REGISTER ===============
 type SessionRow = { date: string; facilitator: string; status: string; location: string };
@@ -102,33 +102,141 @@ export function SessionRegisterSection() {
 }
 
 // =============== ATTENDANCE REGISTER ===============
-type AttendeeRow = { name: string; role: string; department: string; attendance: string; signed: string; notes: string };
+type AttendeeRow = { firstName: string; lastName: string; role: string; department: string; attendance: string; signed: string; notes: string };
 const ATTENDANCE_STATES = ["✅ Present", "❌ Absent", "📅 Rescheduled"] as const;
 const SIGNED_STATES = ["⏳ Pending", "✅ Signed", "❌ Not Signed"] as const;
+const emptyAttendee = (): AttendeeRow => ({ firstName: "", lastName: "", role: "", department: "", attendance: "✅ Present", signed: "⏳ Pending", notes: "" });
+
+function splitFullName(full: string): { firstName: string; lastName: string } {
+  const parts = String(full || "").trim().split(/\s+/);
+  if (parts.length === 0 || parts[0] === "") return { firstName: "", lastName: "" };
+  if (parts.length === 1) return { firstName: parts[0], lastName: "" };
+  return { firstName: parts[0], lastName: parts.slice(1).join(" ") };
+}
 
 export function AttendanceSection() {
   const [meta, setMeta] = useState<Record<string, { date: string; facilitator: string; location: string }>>(() =>
     Object.fromEntries(SESSIONS.map((s) => [s.id, { date: "", facilitator: "", location: "" }]))
   );
   const [rows, setRows] = useState<Record<string, AttendeeRow[]>>(() =>
-    Object.fromEntries(SESSIONS.map((s) => [s.id, Array.from({ length: ATTENDEES_PER_SESSION }, () => ({ name: "", role: "", department: "", attendance: "✅ Present", signed: "⏳ Pending", notes: "" }))]))
+    Object.fromEntries(SESSIONS.map((s) => [s.id, Array.from({ length: ATTENDEES_PER_SESSION }, emptyAttendee)]))
   );
+  const fileRefs = useRef<Record<string, HTMLInputElement | null>>({});
+
   const updMeta = (id: string, patch: Partial<{ date: string; facilitator: string; location: string }>) =>
     setMeta((p) => ({ ...p, [id]: { ...p[id], ...patch } }));
   const updRow = (id: string, idx: number, patch: Partial<AttendeeRow>) =>
     setRows((p) => ({ ...p, [id]: p[id].map((r, i) => i === idx ? { ...r, ...patch } : r) }));
+  const addRow = (id: string) =>
+    setRows((p) => ({ ...p, [id]: [...p[id], emptyAttendee()] }));
+  const deleteRow = (id: string, idx: number) =>
+    setRows((p) => ({ ...p, [id]: p[id].filter((_, i) => i !== idx) }));
+
+  const mergeImported = (id: string, imported: AttendeeRow[]) => {
+    if (!imported.length) return;
+    setRows((p) => {
+      const existing = p[id];
+      // fill blank rows first, then append remainder
+      const out = [...existing];
+      let i = 0;
+      for (const row of imported) {
+        while (i < out.length && (out[i].firstName || out[i].lastName)) i++;
+        if (i < out.length) { out[i] = row; i++; } else { out.push(row); }
+      }
+      return { ...p, [id]: out };
+    });
+  };
+
+  const downloadTemplate = () => {
+    const ws = XLSX.utils.aoa_to_sheet([
+      ["Full Name", "Role", "Department"],
+      ["Jane Doe", "Site Engineer", "Construction"],
+      ["John Smith", "HSEQ Manager", "HSEQ"],
+    ]);
+    ws["!cols"] = [{ wch: 28 }, { wch: 24 }, { wch: 22 }];
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Attendees");
+    XLSX.writeFile(wb, "attendance-template.xlsx");
+  };
+
+  const handleImport = async (id: string, file: File) => {
+    const buf = await file.arrayBuffer();
+    const wb = XLSX.read(buf, { type: "array" });
+    const ws = wb.Sheets[wb.SheetNames[0]];
+    const data = XLSX.utils.sheet_to_json<Record<string, unknown>>(ws, { defval: "" });
+    const imported: AttendeeRow[] = data.map((r) => {
+      const fullKey = Object.keys(r).find((k) => /full\s*name|name/i.test(k));
+      const roleKey = Object.keys(r).find((k) => /role|title|position/i.test(k));
+      const deptKey = Object.keys(r).find((k) => /department|dept|team/i.test(k));
+      const full = fullKey ? String(r[fullKey] ?? "") : "";
+      const { firstName, lastName } = splitFullName(full);
+      return {
+        firstName,
+        lastName,
+        role: roleKey ? String(r[roleKey] ?? "") : "",
+        department: deptKey ? String(r[deptKey] ?? "") : "",
+        attendance: "✅ Present",
+        signed: "⏳ Pending",
+        notes: "",
+      };
+    }).filter((r) => r.firstName || r.lastName);
+    mergeImported(id, imported);
+  };
+
+  const importFromUsers = (id: string) => {
+    const imported = USER_DIRECTORY.map((u) => ({
+      firstName: u.firstName,
+      lastName: u.lastName,
+      role: u.role,
+      department: u.department,
+      attendance: "✅ Present",
+      signed: "⏳ Pending",
+      notes: "",
+    }));
+    mergeImported(id, imported);
+  };
 
   return (
     <div className="space-y-5">
       <SectionHeader title="✅ Attendance Register" subtitle="Every session · Every person. Absent = rescheduled before sign-off. No sign-off without attendance. This register is kept on file and delivered to client." />
 
+      <div className="rounded-lg border bg-muted/20 px-3 py-2 flex flex-wrap items-center gap-2 text-xs">
+        <span className="font-semibold mr-1">Bulk tools:</span>
+        <Button size="sm" variant="outline" className="h-7 text-xs gap-1" onClick={downloadTemplate}>
+          <Download className="h-3 w-3" /> Download Excel template
+        </Button>
+        <span className="text-[10px] text-muted-foreground">Template columns: Full Name · Role · Department. Per-session Import / Add Row / Auto-fill from User Accounts below.</span>
+      </div>
+
       {SESSIONS.map((s) => (
         <div key={s.id} className="rounded-xl border bg-card overflow-hidden">
-          <div className="px-4 py-2 bg-primary/10 border-b border-primary/30">
+          <div className="px-4 py-2 bg-primary/10 border-b border-primary/30 flex flex-wrap items-center justify-between gap-2">
             <div className="text-sm font-bold">
               <span className="font-mono text-primary mr-2">{s.id}</span>
               <span className="text-[10px] uppercase tracking-wider mr-2 text-muted-foreground">{s.type}:</span>
               {s.name}
+            </div>
+            <div className="flex flex-wrap items-center gap-1.5">
+              <input
+                ref={(el) => { fileRefs.current[s.id] = el; }}
+                type="file"
+                accept=".xlsx,.xls,.csv"
+                className="hidden"
+                onChange={(e) => {
+                  const f = e.target.files?.[0];
+                  if (f) handleImport(s.id, f);
+                  e.target.value = "";
+                }}
+              />
+              <Button size="sm" variant="outline" className="h-7 text-[11px] gap-1" onClick={() => fileRefs.current[s.id]?.click()}>
+                <Upload className="h-3 w-3" /> Import Excel
+              </Button>
+              <Button size="sm" variant="outline" className="h-7 text-[11px] gap-1" onClick={() => importFromUsers(s.id)}>
+                <Sparkles className="h-3 w-3" /> Auto-fill from User Accounts
+              </Button>
+              <Button size="sm" variant="outline" className="h-7 text-[11px] gap-1" onClick={() => addRow(s.id)}>
+                <Plus className="h-3 w-3" /> Add Row
+              </Button>
             </div>
           </div>
           <div className="px-3 py-2 bg-muted/20 border-b grid grid-cols-1 md:grid-cols-4 gap-2 items-center text-xs">
@@ -137,16 +245,18 @@ export function AttendanceSection() {
             <label className="flex items-center gap-2 md:col-span-2"><span className="font-semibold w-20">Location:</span><Input className="h-7 text-xs" value={meta[s.id].location} onChange={(e) => updMeta(s.id, { location: e.target.value })} /></label>
           </div>
           <div className="overflow-x-auto">
-            <table className="w-full text-xs min-w-[1000px]">
+            <table className="w-full text-xs min-w-[1100px]">
               <thead className="bg-muted/30 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
                 <tr>
                   <th className="px-2 py-2 text-left w-20">Ref</th>
-                  <th className="px-2 py-2 text-left">Full Name</th>
+                  <th className="px-2 py-2 text-left">First Name</th>
+                  <th className="px-2 py-2 text-left">Last Name</th>
                   <th className="px-2 py-2 text-left w-40">Role / Title</th>
                   <th className="px-2 py-2 text-left w-32">Department</th>
                   <th className="px-2 py-2 text-left w-36">Attendance</th>
                   <th className="px-2 py-2 text-left w-40">Signed Training Form?</th>
                   <th className="px-2 py-2 text-left">Notes</th>
+                  <th className="px-2 py-2 w-8"></th>
                 </tr>
               </thead>
               <tbody className="divide-y">
@@ -155,7 +265,8 @@ export function AttendanceSection() {
                   return (
                     <tr key={ref} className="hover:bg-muted/20">
                       <td className="px-2 py-1 font-mono">{ref}</td>
-                      <td className="px-2 py-1"><Input className="h-7 text-xs" value={r.name} onChange={(e) => updRow(s.id, i, { name: e.target.value })} /></td>
+                      <td className="px-2 py-1"><Input className="h-7 text-xs" value={r.firstName} onChange={(e) => updRow(s.id, i, { firstName: e.target.value })} /></td>
+                      <td className="px-2 py-1"><Input className="h-7 text-xs" value={r.lastName} onChange={(e) => updRow(s.id, i, { lastName: e.target.value })} /></td>
                       <td className="px-2 py-1"><Input className="h-7 text-xs" value={r.role} onChange={(e) => updRow(s.id, i, { role: e.target.value })} /></td>
                       <td className="px-2 py-1"><Input className="h-7 text-xs" value={r.department} onChange={(e) => updRow(s.id, i, { department: e.target.value })} /></td>
                       <td className="px-2 py-1">
@@ -176,6 +287,16 @@ export function AttendanceSection() {
                         </Select>
                       </td>
                       <td className="px-2 py-1"><Input className="h-7 text-xs" value={r.notes} onChange={(e) => updRow(s.id, i, { notes: e.target.value })} /></td>
+                      <td className="px-2 py-1">
+                        <button
+                          type="button"
+                          onClick={() => deleteRow(s.id, i)}
+                          className="text-muted-foreground hover:text-destructive p-1"
+                          title="Delete row"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </button>
+                      </td>
                     </tr>
                   );
                 })}
@@ -187,6 +308,7 @@ export function AttendanceSection() {
     </div>
   );
 }
+
 
 // =============== TRAINING COMPETENCY (Sign-Off) ===============
 const MODULE_STATES = ["❌ Not Started", "🟡 In Progress", "✅ Signed Off"] as const;
