@@ -1001,3 +1001,102 @@ function Snap({ label, value, sub, tone }: { label: string; value: string; sub?:
     </div>
   );
 }
+
+// =============== TEMPLATES LIBRARY ===============
+const TEMPLATE_LIBRARY: { id: string; name: string; description: string; columns: string[]; sample: Record<string, string> }[] = [
+  {
+    id: "folder-structure",
+    name: "Folder Structure Template",
+    description: "Standard project folder hierarchy for Plexa document management.",
+    columns: ["Level", "Folder Name", "Parent Folder", "Purpose", "Access Group"],
+    sample: { Level: "1", "Folder Name": "01 - Contracts", "Parent Folder": "/", Purpose: "Executed contracts & variations", "Access Group": "PM, Commercial" },
+  },
+  {
+    id: "workflow",
+    name: "Workflow Templates",
+    description: "Approval and notification workflows for RFIs, variations, invoices, etc.",
+    columns: ["Workflow Name", "Module", "Trigger", "Step #", "Step Action", "Assignee Role", "SLA (days)", "Notification"],
+    sample: { "Workflow Name": "RFI Approval", Module: "RFIs", Trigger: "On Submit", "Step #": "1", "Step Action": "Review", "Assignee Role": "Project Manager", "SLA (days)": "2", Notification: "Email + In-app" },
+  },
+  {
+    id: "budget",
+    name: "Budget Template",
+    description: "Project budget structure aligned to cost codes.",
+    columns: ["Cost Code", "Description", "Category", "Quantity", "Unit", "Rate", "Total", "Notes"],
+    sample: { "Cost Code": "02-200", Description: "Concrete slab", Category: "Substructure", Quantity: "120", Unit: "m³", Rate: "350", Total: "42000", Notes: "Incl. pump hire" },
+  },
+  {
+    id: "equipment",
+    name: "Equipment Checklist",
+    description: "Plant & equipment register with servicing schedule.",
+    columns: ["Item", "Serial #", "Category", "Owner", "Location", "Last Service", "Next Service", "Status"],
+    sample: { Item: "Excavator 5T", "Serial #": "EX-2042", Category: "Plant", Owner: "Self-owned", Location: "Site A", "Last Service": "2026-03-15", "Next Service": "2026-09-15", Status: "Operational" },
+  },
+  {
+    id: "swms",
+    name: "SWMS Review Checklist",
+    description: "Safe Work Method Statement review register.",
+    columns: ["SWMS Ref", "Activity", "Contractor", "Hazard", "Risk Level", "Controls", "Reviewer", "Review Date", "Status"],
+    sample: { "SWMS Ref": "SWMS-014", Activity: "Working at heights", Contractor: "ABC Roofing", Hazard: "Falls >2m", "Risk Level": "High", Controls: "Harness, edge protection", Reviewer: "Site Manager", "Review Date": "2026-05-10", Status: "Approved" },
+  },
+  {
+    id: "incident",
+    name: "Injury & Incident Forms",
+    description: "Capture injuries, near-misses, and incidents on site.",
+    columns: ["Incident #", "Date", "Time", "Project", "Person Involved", "Type", "Severity", "Description", "Immediate Action", "Reported To", "Status"],
+    sample: { "Incident #": "INC-2026-007", Date: "2026-05-12", Time: "10:45", Project: "Riverside Apartments", "Person Involved": "J. Doe", Type: "Near Miss", Severity: "Low", Description: "Tool dropped from scaffold", "Immediate Action": "Area cleared, toolbox talk", "Reported To": "Site Manager", Status: "Closed" },
+  },
+  {
+    id: "meetings",
+    name: "Meetings & Inspections Templates",
+    description: "Site meetings, toolbox talks, and inspection records.",
+    columns: ["Date", "Type", "Project", "Location", "Chair", "Attendees", "Agenda / Items", "Actions", "Action Owner", "Due Date"],
+    sample: { Date: "2026-05-18", Type: "Site Meeting", Project: "Riverside Apartments", Location: "Site Office", Chair: "J. Doe", Attendees: "PM, SM, Foreman", "Agenda / Items": "Programme review", Actions: "Update look-ahead", "Action Owner": "PM", "Due Date": "2026-05-22" },
+  },
+  {
+    id: "itp",
+    name: "ITPs & ITCs",
+    description: "Inspection & Test Plans and Inspection & Test Checklists.",
+    columns: ["ITP/ITC Ref", "Activity", "Spec / Standard", "Inspection Point", "Hold / Witness", "Inspector", "Date", "Result", "Comments"],
+    sample: { "ITP/ITC Ref": "ITP-005", Activity: "Concrete pour Level 2", "Spec / Standard": "AS 3600", "Inspection Point": "Pre-pour reo check", "Hold / Witness": "Hold", Inspector: "Engineer", Date: "2026-06-04", Result: "Pass", Comments: "Approved to pour" },
+  },
+  {
+    id: "permits",
+    name: "Permit Templates",
+    description: "Hot works, confined space, and access permits.",
+    columns: ["Permit #", "Type", "Project", "Issued To", "Issued By", "Valid From", "Valid To", "Conditions", "Status"],
+    sample: { "Permit #": "PMT-031", Type: "Hot Works", Project: "Riverside Apartments", "Issued To": "ABC Welding", "Issued By": "Site Manager", "Valid From": "2026-05-20 07:00", "Valid To": "2026-05-20 17:00", Conditions: "Fire watch + extinguisher", Status: "Active" },
+  },
+];
+
+export function TemplatesLibrarySection() {
+  return (
+    <div className="space-y-5">
+      <SectionHeader title="📁 Templates Library" subtitle="Download ready-to-use Excel templates for every Plexa workflow — pre-formatted with the right columns and a sample row." />
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+        {TEMPLATE_LIBRARY.map((t) => (
+          <div key={t.id} className="rounded-xl border bg-card p-4 flex flex-col gap-3 hover:shadow-md transition-shadow">
+            <div className="flex items-start gap-3">
+              <div className="h-10 w-10 rounded-lg bg-primary-soft text-primary flex items-center justify-center shrink-0">
+                <FileSpreadsheet className="h-5 w-5" />
+              </div>
+              <div className="min-w-0">
+                <div className="font-semibold leading-tight">{t.name}</div>
+                <div className="text-xs text-muted-foreground mt-1">{t.description}</div>
+              </div>
+            </div>
+            <div className="flex flex-wrap gap-1">
+              {t.columns.slice(0, 5).map((c) => (
+                <span key={c} className="text-[10px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground">{c}</span>
+              ))}
+              {t.columns.length > 5 && <span className="text-[10px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground">+{t.columns.length - 5} more</span>}
+            </div>
+            <Button size="sm" variant="outline" className="self-start" onClick={() => downloadXLSXTemplate(`${t.id}-template.xlsx`, t.columns, t.sample)}>
+              <Download className="h-4 w-4" /> Download Excel
+            </Button>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
