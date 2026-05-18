@@ -435,18 +435,19 @@ export function TrainingScheduleSection() {
                               <Input className="h-7 text-xs" value={s.facilitator} onChange={(e) => update(it.n, { facilitator: e.target.value })} placeholder="Name…" />
                             </td>
                             {(["teach","practice","observe"] as const).map((k) => (
-                              <td key={k} className="px-2 py-1.5 text-center">
+                              <td key={k} className="px-1 py-1.5 text-center">
                                 <button
                                   type="button"
                                   onClick={() => update(it.n, { [k]: !s[k] } as Partial<ItemState>)}
                                   className={cn(
-                                    "h-7 w-full rounded border-2 text-[11px] font-bold transition-colors",
+                                    "inline-flex items-center justify-center h-7 w-7 rounded-md border-2 text-sm font-bold transition-colors",
                                     s[k]
                                       ? "bg-success/20 text-success border-success/50 hover:bg-success/30"
                                       : "bg-destructive/15 text-destructive border-destructive/40 hover:bg-destructive/25"
                                   )}
+                                  title={s[k] ? "Done — click to undo" : "Not done — click to mark done"}
                                 >
-                                  {s[k] ? "✓ Done" : "✗ Not Done"}
+                                  {s[k] ? "✓" : "✗"}
                                 </button>
                               </td>
                             ))}
