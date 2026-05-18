@@ -322,112 +322,166 @@ export function Phase4Section() {
 }
 
 // =================== TRAINING SCHEDULE ===================
-// Per-item T/P/O = RED by default, GREEN when clicked. No add/delete.
-const SCHEDULE_ITEMS: Record<string, { id: string; text: string }[]> = {
-  "4A": [
-    { id: "1", text: "Site sign-in / sign-out walk-through" },
-    { id: "2", text: "SWMS upload & approval workflow" },
-    { id: "3", text: "Equipment inductions & checklists" },
-    { id: "4", text: "Permit creation & approval" },
-    { id: "5", text: "ITP / ITC creation & sign-off" },
-    { id: "6", text: "Incident / observation reporting" },
-  ],
-  "4B": [
-    { id: "1", text: "Folder structure navigation" },
-    { id: "2", text: "Document upload & transmittals" },
-    { id: "3", text: "Drawing markups & approvals" },
-    { id: "4", text: "Workflow creation & assignment" },
-    { id: "5", text: "Task management & tracking" },
-  ],
-  "4C": [
-    { id: "1", text: "Email inbox routing" },
-    { id: "2", text: "Reply & link to project" },
-    { id: "3", text: "Correspondence templates" },
-    { id: "4", text: "Search & retrieval" },
-  ],
-  "4D": [
-    { id: "1", text: "Program upload & milestones" },
-    { id: "2", text: "Daily diary entries" },
-    { id: "3", text: "Schedule updates & EOT" },
-  ],
-  "4E": [
-    { id: "1", text: "Budget setup & cost codes" },
-    { id: "2", text: "Commitments & variations" },
-    { id: "3", text: "Invoice approval & AP" },
-    { id: "4", text: "Head Contract claims" },
-    { id: "5", text: "Forecasting & CTC" },
-    { id: "6", text: "ERP integration sync" },
-  ],
-  "4F": [
-    { id: "1", text: "O&M document compilation" },
-    { id: "2", text: "Handover register" },
-    { id: "3", text: "Defects liability tracking" },
-  ],
-  "4G": [
-    { id: "1", text: "Tender package creation" },
-    { id: "2", text: "Bid comparison" },
-    { id: "3", text: "Award & contract issuance" },
-    { id: "4", text: "Procurement schedule" },
-  ],
-};
+// Mirrors the "🎓 Training Schedule" tab from the Plexa Excel workbook.
+import { TRAINING_SCHEDULE } from "@/lib/training-schedule";
+
+type ItemState = { teach: boolean; practice: boolean; observe: boolean; owner: string; status: TaskStatus; date: string; facilitator: string };
+const blankItem = (): ItemState => ({ teach: false, practice: false, observe: false, owner: "PLEXA", status: "NOT STARTED", date: "", facilitator: "" });
 
 export function TrainingScheduleSection() {
+  const allItems = TRAINING_SCHEDULE.flatMap((m) => m.subs.flatMap((s) => s.items));
+  const [state, setState] = useState<Record<number, ItemState>>(() =>
+    Object.fromEntries(allItems.map((i) => [i.n, blankItem()]))
+  );
+  const update = (n: number, patch: Partial<ItemState>) =>
+    setState((p) => ({ ...p, [n]: { ...p[n], ...patch } }));
+
+  const total = allItems.length;
+  const complete = Object.values(state).filter((s) => s.status === "COMPLETE").length;
+  const inProgress = Object.values(state).filter((s) => s.status === "IN PROGRESS").length;
+  const notStarted = Object.values(state).filter((s) => s.status === "NOT STARTED").length;
+  const signedOff = Object.values(state).filter((s) => s.teach && s.practice && s.observe).length;
+  const pctDone = total ? Math.round((signedOff / total) * 100) : 0;
+
   return (
     <div className="space-y-6">
-      <SectionHeader title="🎓 Training Schedule" subtitle="Every training item across all modules. Click T / P / O to mark complete (red → green)." />
-      <div className="rounded-xl border bg-card p-5">
-        <p className="text-sm text-muted-foreground mb-4">Each item starts red. Click each Teach / Practice / Observe cell to mark it as covered. Items are fixed — they cannot be edited or added.</p>
-        <div className="space-y-4">
-          {TRAINING_MODULES.map((mod) => (
-            <ModuleScheduleBlock key={mod.id} moduleId={mod.id} moduleName={mod.name} />
-          ))}
-        </div>
-      </div>
-    </div>
-  );
-}
+      <SectionHeader
+        title="🎓 Training Schedule"
+        subtitle="Phase 4 Complete Training Register — every training item across all 8 modules. 3-part sign-off per item: TEACH → PRACTICE → OBSERVE. Nothing is complete until all three parts are signed off."
+      />
 
-function ModuleScheduleBlock({ moduleId, moduleName }: { moduleId: string; moduleName: string }) {
-  const seed = SCHEDULE_ITEMS[moduleId] || [];
-  const [state, setState] = useState<Record<string, { teach: boolean; practice: boolean; observe: boolean }>>(
-    Object.fromEntries(seed.map((s) => [s.id, { teach: false, practice: false, observe: false }]))
-  );
-  const toggle = (id: string, k: "teach" | "practice" | "observe") =>
-    setState((prev) => ({ ...prev, [id]: { ...prev[id], [k]: !prev[id][k] } }));
-
-  return (
-    <div className="rounded-lg border bg-background overflow-hidden">
-      <div className="px-3 py-2 bg-primary-soft border-b flex items-center justify-between">
-        <div className="text-sm font-semibold">{moduleId} — {moduleName}</div>
-        <div className="flex gap-1.5 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-          <span>T</span><span>P</span><span>O</span>
-        </div>
+      {/* Totals strip */}
+      <div className="grid grid-cols-2 md:grid-cols-6 gap-2 text-center">
+        {[
+          { label: "TOTAL ITEMS", value: total, tone: "text-foreground" },
+          { label: "COMPLETE", value: complete, tone: "text-success" },
+          { label: "IN PROGRESS", value: inProgress, tone: "text-yellow-600 dark:text-yellow-400" },
+          { label: "NOT STARTED", value: notStarted, tone: "text-warning-foreground" },
+          { label: "SIGNED OFF", value: signedOff, tone: "text-primary" },
+          { label: "% DONE", value: `${pctDone}%`, tone: "text-primary" },
+        ].map((t) => (
+          <div key={t.label} className="rounded-lg border bg-card px-3 py-2">
+            <div className="text-[9px] font-semibold uppercase tracking-wider text-muted-foreground">{t.label}</div>
+            <div className={cn("text-lg font-bold tabular-nums", t.tone)}>{t.value}</div>
+          </div>
+        ))}
       </div>
-      <div className="divide-y">
-        {seed.map((it) => {
-          const v = state[it.id];
-          return (
-            <div key={it.id} className="grid grid-cols-[1fr_64px_64px_64px] gap-3 px-3 py-2 items-center text-sm">
-              <div>{it.text}</div>
-              {(["teach", "practice", "observe"] as const).map((k) => (
-                <button
-                  key={k}
-                  onClick={() => toggle(it.id, k)}
-                  className={cn(
-                    "h-8 rounded-md border-2 text-xs font-bold uppercase transition-colors",
-                    v[k]
-                      ? "bg-success/20 text-success border-success/50 hover:bg-success/30"
-                      : "bg-destructive/15 text-destructive border-destructive/40 hover:bg-destructive/25"
-                  )}
-                  title={`${k} — click to toggle`}
-                >
-                  {k[0].toUpperCase()}
-                </button>
-              ))}
+
+      {/* Training model legend */}
+      <div className="rounded-xl border bg-primary-soft px-4 py-3 text-sm">
+        <span className="font-bold">🎓 TRAINING MODEL:</span>{" "}
+        <span className="font-semibold">PART 1 — TEACH</span> (Trainer demonstrates) ·{" "}
+        <span className="font-semibold">PART 2 — PRACTICE</span> (Do it together with real data) ·{" "}
+        <span className="font-semibold">PART 3 — OBSERVE</span> (Team works independently, trainer watches)
+      </div>
+
+      {TRAINING_SCHEDULE.map((mod) => (
+        <div key={mod.title} className="space-y-3">
+          <div className="rounded-xl border-2 border-primary/40 bg-primary/10 px-4 py-3">
+            <div className="text-[10px] font-semibold uppercase tracking-wider text-primary">▸ Module</div>
+            <div className="text-lg font-bold tracking-tight">{mod.title}</div>
+          </div>
+
+          {mod.subs.map((sub) => {
+            const showSubHeader = mod.subs.length > 1 || sub.title !== mod.title;
+            return (
+              <div key={sub.title} className="rounded-xl border bg-card overflow-hidden">
+                {showSubHeader && (
+                  <div className="px-4 py-2 bg-muted/40 border-b">
+                    <div className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">◈ Sub-module</div>
+                    <div className="text-sm font-semibold">{sub.title}</div>
+                  </div>
+                )}
+                <div className="px-4 py-2 text-xs text-muted-foreground border-b bg-background">
+                  3-Part Training: TEACH → PRACTICE → OBSERVE · All three parts must be signed off before this sub-module is complete
+                </div>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-xs">
+                    <thead className="bg-muted/30 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                      <tr>
+                        <th className="px-2 py-2 text-left w-10">#</th>
+                        <th className="px-2 py-2 text-left">Training Item</th>
+                        <th className="px-2 py-2 text-left w-24">Owner</th>
+                        <th className="px-2 py-2 text-left w-32">Status</th>
+                        <th className="px-2 py-2 text-left w-32">Session Date</th>
+                        <th className="px-2 py-2 text-left w-32">Facilitator</th>
+                        <th className="px-2 py-2 text-center w-20">Pt 1 Teach</th>
+                        <th className="px-2 py-2 text-center w-20">Pt 2 Practice</th>
+                        <th className="px-2 py-2 text-center w-20">Pt 3 Observe</th>
+                        <th className="px-2 py-2 text-center w-20">Sign-Off</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y">
+                      {sub.items.map((it) => {
+                        const s = state[it.n];
+                        const allDone = s.teach && s.practice && s.observe;
+                        return (
+                          <tr key={it.n} className="hover:bg-muted/20">
+                            <td className="px-2 py-1.5 font-mono tabular-nums text-muted-foreground">{it.n}</td>
+                            <td className="px-2 py-1.5">{it.text}</td>
+                            <td className="px-2 py-1.5">
+                              <Input className="h-7 text-xs" value={s.owner} onChange={(e) => update(it.n, { owner: e.target.value })} />
+                            </td>
+                            <td className="px-2 py-1.5">
+                              <Select value={s.status} onValueChange={(v) => update(it.n, { status: v as TaskStatus })}>
+                                <SelectTrigger className={cn("h-7 text-[11px] font-semibold border", STATUS_SELECT_CLS[s.status])}><SelectValue /></SelectTrigger>
+                                <SelectContent>{(["NOT STARTED","IN PROGRESS","COMPLETE","BLOCKED"] as TaskStatus[]).map((x) => <SelectItem key={x} value={x}>{x}</SelectItem>)}</SelectContent>
+                              </Select>
+                            </td>
+                            <td className="px-2 py-1.5">
+                              <Input type="date" className="h-7 text-xs" value={s.date} onChange={(e) => update(it.n, { date: e.target.value })} />
+                            </td>
+                            <td className="px-2 py-1.5">
+                              <Input className="h-7 text-xs" value={s.facilitator} onChange={(e) => update(it.n, { facilitator: e.target.value })} placeholder="Name…" />
+                            </td>
+                            {(["teach","practice","observe"] as const).map((k) => (
+                              <td key={k} className="px-2 py-1.5 text-center">
+                                <button
+                                  type="button"
+                                  onClick={() => update(it.n, { [k]: !s[k] } as Partial<ItemState>)}
+                                  className={cn(
+                                    "h-7 w-full rounded border-2 text-[11px] font-bold transition-colors",
+                                    s[k]
+                                      ? "bg-success/20 text-success border-success/50 hover:bg-success/30"
+                                      : "bg-destructive/15 text-destructive border-destructive/40 hover:bg-destructive/25"
+                                  )}
+                                >
+                                  {s[k] ? "✓ Done" : "✗ Not Done"}
+                                </button>
+                              </td>
+                            ))}
+                            <td className="px-2 py-1.5 text-center">
+                              <span className={cn(
+                                "inline-flex items-center justify-center h-7 w-full rounded border text-[11px] font-bold",
+                                allDone
+                                  ? "bg-primary/15 text-primary border-primary/40"
+                                  : "bg-muted text-muted-foreground border-border"
+                              )}>
+                                {allDone ? "✓ Signed Off" : "⏳ Pending"}
+                              </span>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            );
+          })}
+
+          {mod.holdpoint && (
+            <div className="rounded-lg border-2 border-destructive/40 bg-destructive/10 px-4 py-2 text-xs font-semibold text-destructive">
+              {mod.holdpoint}
             </div>
-          );
-        })}
-      </div>
+          )}
+          {mod.email && (
+            <div className="rounded-lg border border-primary/30 bg-primary-soft px-4 py-2 text-xs text-primary">
+              {mod.email}
+            </div>
+          )}
+        </div>
+      ))}
     </div>
   );
 }
