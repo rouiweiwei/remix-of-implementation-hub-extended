@@ -112,7 +112,14 @@ export function MissionControlSection() {
   const goLiveTarget = client.goLiveDate || calcEndDate(startDate, timelineMode);
   const today = new Date();
   const target = new Date(goLiveTarget);
-  const daysToGoLive = Math.ceil((target.getTime() - today.getTime()) / 86400000);
+  const msToGoLive = target.getTime() - today.getTime();
+  const daysToGoLive = Math.ceil(msToGoLive / 86400000);
+  const absMs = Math.max(0, msToGoLive);
+  const cdWeeks = Math.floor(absMs / (7 * 86400000));
+  const cdDays = Math.floor((absMs % (7 * 86400000)) / 86400000);
+  const cdHours = Math.floor((absMs % 86400000) / 3600000);
+  const cdMinutes = Math.floor((absMs % 3600000) / 60000);
+  const goLivePast = msToGoLive < 0;
   const start = new Date(startDate);
   const totalDays = Math.max(1, Math.ceil((target.getTime() - start.getTime()) / 86400000));
   const elapsed = Math.max(0, Math.ceil((today.getTime() - start.getTime()) / 86400000));
