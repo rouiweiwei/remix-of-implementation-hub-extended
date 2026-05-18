@@ -728,44 +728,84 @@ export function IntranetSection() {
 }
 
 // =============== SESSION CONTENT LOG ===============
-export function ContentLogSection() {
-  const sessions = usePlaybook((s) => s.sessions);
-  const [active, setActive] = useState<string | null>(null);
-  const [topics, setTopics] = useState<Record<string, { id: string; topic: string; notes: string; covered: boolean }[]>>({});
+type TopicRow = { topic: string; notes: string; covered: string; duration: string; followUp: string; followUpAction: string };
+const COVERED_STATES = ["Covered", "Partially", "Not Covered"] as const;
 
-  const list = active ? topics[active] || [] : [];
-  const update = (id: string, patch: Partial<{ topic: string; notes: string; covered: boolean }>) =>
-    setTopics({ ...topics, [active!]: list.map((x) => x.id === id ? { ...x, ...patch } : x) });
+export function ContentLogSection() {
+  const [state, setState] = useState<Record<string, TopicRow[]>>(() =>
+    Object.fromEntries(SESSIONS.map((s) => {
+      const seeded = CONTENT_TOPICS[s.id] || [];
+      const len = Math.max(seeded.length, 3);
+      return [s.id, Array.from({ length: len }, (_, i) => ({
+        topic: seeded[i] || "",
+        notes: "", covered: "Covered", duration: "", followUp: "NO", followUpAction: "",
+      }))];
+    }))
+  );
+  const upd = (id: string, i: number, patch: Partial<TopicRow>) =>
+    setState((p) => ({ ...p, [id]: p[id].map((r, idx) => idx === i ? { ...r, ...patch } : r) }));
+  const addRow = (id: string) =>
+    setState((p) => ({ ...p, [id]: [...p[id], { topic: "", notes: "", covered: "Covered", duration: "", followUp: "NO", followUpAction: "" }] }));
 
   return (
     <div className="space-y-5">
-      <SectionHeader title="📚 Session Content Log" subtitle="Every topic per session. Feeds the intranet handover pack." />
-      <div className="grid md:grid-cols-[260px_1fr] gap-4">
-        <div className="rounded-xl border bg-card p-2 max-h-[600px] overflow-y-auto">
-          {sessions.length === 0 && <div className="p-4 text-xs text-muted-foreground text-center">Add sessions first.</div>}
-          {sessions.map((s) => (
-            <button key={s.id} onClick={() => setActive(s.id)} className={cn("w-full text-left px-3 py-2 rounded-md text-sm", active === s.id ? "bg-primary-soft text-primary" : "hover:bg-muted")}>
-              <div className="font-semibold truncate">{s.topic}</div>
-              <div className="text-[10px] text-muted-foreground uppercase tracking-wider">{s.type} · {s.date}</div>
-            </button>
-          ))}
-        </div>
-        <div className="rounded-xl border bg-card p-4">
-          {!active && <div className="text-sm text-muted-foreground text-center py-8">Pick a session to log topics covered.</div>}
-          {active && (
-            <div className="space-y-2">
-              {list.map((t) => (
-                <div key={t.id} className="grid grid-cols-[24px_1fr_2fr] gap-2 items-center">
-                  <input type="checkbox" checked={t.covered} onChange={() => update(t.id, { covered: !t.covered })} className="h-4 w-4 accent-[oklch(0.55_0.22_258)]" />
-                  <Input className="h-8 text-sm" value={t.topic} onChange={(e) => update(t.id, { topic: e.target.value })} placeholder="Topic / agenda item" />
-                  <Input className="h-8 text-xs" value={t.notes} onChange={(e) => update(t.id, { notes: e.target.value })} placeholder="Notes & follow-ups" />
-                </div>
-              ))}
-              <Button size="sm" variant="outline" className="w-full" onClick={() => setTopics({ ...topics, [active]: [...list, { id: Math.random().toString(36).slice(2), topic: "", notes: "", covered: false }] })}><Plus className="h-4 w-4" /> Add topic</Button>
+      <SectionHeader title="📚 Session Content Log" subtitle="What was covered in every session. Every topic per session logged here. Feeds directly into the Client Intranet Handover Pack." />
+
+      {SESSIONS.map((s) => (
+        <div key={s.id} className="rounded-xl border bg-card overflow-hidden">
+          <div className="px-4 py-2 bg-primary/10 border-b border-primary/30">
+            <div className="text-sm font-bold">
+              <span className="font-mono text-primary mr-2">{s.id}</span>
+              <span className="text-[10px] uppercase tracking-wider mr-2 text-muted-foreground">{s.type}:</span>
+              {s.name}
             </div>
-          )}
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-xs min-w-[1100px]">
+              <thead className="bg-muted/30 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                <tr>
+                  <th className="px-2 py-2 text-left w-10">#</th>
+                  <th className="px-2 py-2 text-left">Topic / Agenda Item</th>
+                  <th className="px-2 py-2 text-left">Notes</th>
+                  <th className="px-2 py-2 text-left w-32">Covered?</th>
+                  <th className="px-2 py-2 text-left w-28">Duration (min)</th>
+                  <th className="px-2 py-2 text-left w-24">Follow-Up?</th>
+                  <th className="px-2 py-2 text-left">Follow-Up Action</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y">
+                {state[s.id].map((r, i) => (
+                  <tr key={i} className="hover:bg-muted/20">
+                    <td className="px-2 py-1 font-mono tabular-nums text-muted-foreground">{i + 1}</td>
+                    <td className="px-2 py-1"><Input className="h-7 text-xs" value={r.topic} onChange={(e) => upd(s.id, i, { topic: e.target.value })} /></td>
+                    <td className="px-2 py-1"><Input className="h-7 text-xs" value={r.notes} onChange={(e) => upd(s.id, i, { notes: e.target.value })} /></td>
+                    <td className="px-2 py-1">
+                      <Select value={r.covered} onValueChange={(v) => upd(s.id, i, { covered: v })}>
+                        <SelectTrigger className={cn("h-7 text-[11px] font-semibold",
+                          r.covered === "Covered" && "text-success",
+                          r.covered === "Partially" && "text-yellow-600 dark:text-yellow-400",
+                          r.covered === "Not Covered" && "text-destructive")}><SelectValue /></SelectTrigger>
+                        <SelectContent>{COVERED_STATES.map((x) => <SelectItem key={x} value={x}>{x}</SelectItem>)}</SelectContent>
+                      </Select>
+                    </td>
+                    <td className="px-2 py-1"><Input type="number" className="h-7 text-xs" value={r.duration} onChange={(e) => upd(s.id, i, { duration: e.target.value })} /></td>
+                    <td className="px-2 py-1">
+                      <Select value={r.followUp} onValueChange={(v) => upd(s.id, i, { followUp: v })}>
+                        <SelectTrigger className={cn("h-7 text-[11px] font-semibold", r.followUp === "YES" && "text-warning-foreground")}><SelectValue /></SelectTrigger>
+                        <SelectContent><SelectItem value="NO">NO</SelectItem><SelectItem value="YES">YES</SelectItem></SelectContent>
+                      </Select>
+                    </td>
+                    <td className="px-2 py-1"><Input className="h-7 text-xs" value={r.followUpAction} onChange={(e) => upd(s.id, i, { followUpAction: e.target.value })} /></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <div className="border-t px-3 py-2 bg-muted/10">
+            <Button size="sm" variant="outline" onClick={() => addRow(s.id)}><Plus className="h-4 w-4" /> Add topic</Button>
+          </div>
         </div>
-      </div>
+      ))}
     </div>
   );
 }
