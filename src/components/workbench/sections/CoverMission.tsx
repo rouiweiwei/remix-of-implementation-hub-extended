@@ -232,7 +232,7 @@ export function MissionControlSection() {
               {goLivePast ? "Go-Live reached" : "Countdown to Go-Live"}
             </div>
             <div className="mt-1 text-sm text-muted-foreground">
-              Target · <span className="font-semibold text-foreground">{new Date(goLiveTarget).toLocaleDateString(undefined, { weekday: "long", day: "numeric", month: "long", year: "numeric" })}</span>
+              Target · <span className="font-semibold text-foreground">{new Date(goLiveTarget).toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}</span>
             </div>
           </div>
           {goLivePast ? (

@@ -33,8 +33,13 @@ const NAV = [
   { id: "issues", label: "Issues Register", icon: "⚠️", group: "Registers" },
   { id: "stakeholders", label: "Stakeholder Map", icon: "👥", group: "People" },
   { id: "champions", label: "Champion Register", icon: "🏆", group: "People" },
+  { id: "users", label: "User Accounts", icon: "👤", group: "Data" },
+  { id: "project", label: "Project Details", icon: "🏗️", group: "Data" },
+  { id: "contractors", label: "Contractor Database", icon: "🔧", group: "Data" },
+  { id: "costcodes", label: "Cost Codes", icon: "💷", group: "Data" },
   { id: "dod", label: "Definition of Done", icon: "📋", group: "Close-out" },
   { id: "intranet", label: "Client Intranet Pack", icon: "🌐", group: "Close-out" },
+  { id: "handover", label: "Post-Impl Email", icon: "📨", group: "Close-out" },
 ] as const;
 
 type TabId = (typeof NAV)[number]["id"];
@@ -108,6 +113,11 @@ function Workbench() {
             {tab === "champions" && <ChampionsSection />}
             {tab === "dod" && <DefinitionOfDoneSection />}
             {tab === "intranet" && <IntranetSection />}
+            {tab === "users" && <UserAccountsSection />}
+            {tab === "project" && <ProjectDetailsSection />}
+            {tab === "contractors" && <ContractorsSection />}
+            {tab === "costcodes" && <CostCodesSection />}
+            {tab === "handover" && <PostImplementationEmailSection />}
           </main>
         </div>
       </div>
