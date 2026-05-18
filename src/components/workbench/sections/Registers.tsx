@@ -859,7 +859,7 @@ export function CostCodesSection() {
   return (
     <div className="space-y-5">
       <SectionHeader title="💰 Company Cost Codes" subtitle="Company-wide cost code structure — synced into Plexa budgets.">
-        <ImportExport filename="cost-codes.csv" csv={csv} onImport={(t) => {
+        <ImportExport filename="cost-codes.csv" csv={csv} columns={COLS} sample={{ code: "01-100", name: "Site Preliminaries", category: "Preliminaries", unit: "LS", rate: "25000", notes: "Site setup, hoarding, temp services" }} onImport={(t) => {
           replace(fromCSV(t).map((r) => ({
             id: Math.random().toString(36).slice(2),
             code: r.code || "", name: r.name || "", category: r.category || "",
