@@ -118,6 +118,7 @@ function Workbench() {
             {tab === "project" && <ProjectDetailsSection />}
             {tab === "contractors" && <ContractorsSection />}
             {tab === "costcodes" && <CostCodesSection />}
+            {tab === "templates" && <TemplatesLibrarySection />}
             {tab === "handover" && <PostImplementationEmailSection />}
           </main>
         </div>
