@@ -3,7 +3,7 @@ import { useState } from "react";
 import { PhaseBanner } from "@/components/workbench/PhaseBanner";
 import { CoverSection, MissionControlSection } from "@/components/workbench/sections/CoverMission";
 import { TimelineSection, ImplementationPlanSection, Phase3Section, Phase4Section, TrainingScheduleSection } from "@/components/workbench/sections/Phases";
-import { SessionRegisterSection, AttendanceSection, SignOffSection, EmailLogSection, IssuesSection, StakeholdersSection, ChampionsSection, DefinitionOfDoneSection, IntranetSection, ContentLogSection, UserAccountsSection, ProjectDetailsSection, ContractorsSection, CostCodesSection, PostImplementationEmailSection } from "@/components/workbench/sections/Registers";
+import { SessionRegisterSection, AttendanceSection, SignOffSection, EmailLogSection, IssuesSection, StakeholdersSection, ChampionsSection, DefinitionOfDoneSection, IntranetSection, ContentLogSection, UserAccountsSection, ProjectDetailsSection, ContractorsSection, CostCodesSection, PostImplementationEmailSection, TemplatesLibrarySection } from "@/components/workbench/sections/Registers";
 import { cn } from "@/lib/utils";
 import type { PhaseId } from "@/lib/playbook-data";
 
@@ -37,6 +37,7 @@ const NAV = [
   { id: "project", label: "Project Details", icon: "🏗️", group: "Data" },
   { id: "contractors", label: "Contractor Database", icon: "🔧", group: "Data" },
   { id: "costcodes", label: "Cost Codes", icon: "💷", group: "Data" },
+  { id: "templates", label: "Templates Library", icon: "📁", group: "Data" },
   { id: "dod", label: "Definition of Done", icon: "📋", group: "Close-out" },
   { id: "intranet", label: "Client Intranet Pack", icon: "🌐", group: "Close-out" },
   { id: "handover", label: "Post-Impl Email", icon: "📨", group: "Close-out" },
@@ -117,6 +118,7 @@ function Workbench() {
             {tab === "project" && <ProjectDetailsSection />}
             {tab === "contractors" && <ContractorsSection />}
             {tab === "costcodes" && <CostCodesSection />}
+            {tab === "templates" && <TemplatesLibrarySection />}
             {tab === "handover" && <PostImplementationEmailSection />}
           </main>
         </div>
