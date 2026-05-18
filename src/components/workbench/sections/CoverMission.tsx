@@ -416,6 +416,15 @@ function HeroStat({ icon, label, value, hint, tone }: { icon: React.ReactNode; l
   );
 }
 
+function CountdownUnit({ value, label }: { value: number; label: string }) {
+  return (
+    <div className="text-center min-w-[56px]">
+      <div className="text-3xl md:text-4xl font-bold tabular-nums leading-none">{String(value).padStart(2, "0")}</div>
+      <div className="text-[10px] uppercase tracking-wider text-muted-foreground mt-1">{label}</div>
+    </div>
+  );
+}
+
 function Mini({ label, value }: { label: string; value: number }) {
   return (
     <div>
