@@ -155,5 +155,22 @@
   body {
     background-color: var(--color-background);
     color: var(--color-foreground);
+    font-feature-settings: "cv11", "ss01";
+  }
+}
+
+@layer utilities {
+  .bg-grid {
+    background-image: var(--grid-dot);
+    background-size: 18px 18px;
+  }
+  .bg-brand-gradient {
+    background-image: var(--gradient-brand);
+  }
+  .text-brand-gradient {
+    background-image: var(--gradient-brand);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
   }
 }
