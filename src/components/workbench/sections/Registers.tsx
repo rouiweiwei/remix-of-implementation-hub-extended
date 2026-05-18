@@ -1,71 +1,109 @@
-import { useState } from "react";
-import { usePlaybook } from "@/lib/playbook-store";
+import { useState, useRef } from "react";
+import { usePlaybook, type SessionStatus } from "@/lib/playbook-store";
 import { SectionHeader, StatusBadge } from "../shared";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { Plus, Trash2, Check } from "lucide-react";
+import { Plus, Trash2, Check, Download, Upload, Send, Sparkles } from "lucide-react";
 import { TRAINING_MODULES } from "@/lib/playbook-data";
 import { cn } from "@/lib/utils";
 
+// =============== SESSION REGISTER ===============
+const SESSION_STATUS_CLS: Record<SessionStatus, string> = {
+  "Scheduled": "bg-primary/15 text-primary border-primary/30",
+  "In Progress": "bg-warning/20 text-warning-foreground border-warning/40",
+  "Completed": "bg-success/15 text-success border-success/30",
+  "Blocked": "bg-destructive/15 text-destructive border-destructive/30",
+};
+
 export function SessionRegisterSection() {
   const sessions = usePlaybook((s) => s.sessions);
+  const stakeholders = usePlaybook((s) => s.stakeholders);
   const add = usePlaybook((s) => s.addSession);
   const update = usePlaybook((s) => s.updateSession);
   const del = usePlaybook((s) => s.deleteSession);
 
+  const facilitators = Array.from(new Set([
+    ...stakeholders.map((s) => s.name).filter(Boolean),
+    "Travis", "Tony", "Ayman", "Christian Lowe",
+  ]));
+
   return (
     <div className="space-y-5">
-      <SectionHeader title="📅 Session Register" subtitle="Every workshop and training session logged.">
-        <Button onClick={() => add({ type: "Workshop", topic: "New session", date: new Date().toISOString().slice(0, 10), duration: "60 min", attendees: 0, status: "Scheduled" })}>
+      <SectionHeader title="📅 Session Register" subtitle="Every workshop and training session — facilitator, date, status, location.">
+        <Button onClick={() => add({ type: "Workshop", topic: "New session", module: "", date: new Date().toISOString().slice(0, 10), duration: "60 min", facilitator: facilitators[0] || "", location: "", status: "Scheduled" })}>
           <Plus className="h-4 w-4" /> Add session
         </Button>
       </SectionHeader>
 
-      <div className="rounded-xl border bg-card overflow-hidden">
-        <div className="grid grid-cols-[120px_1fr_140px_110px_90px_140px_40px] gap-3 px-4 py-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground bg-muted/30 border-b">
-          <div>Type</div><div>Topic</div><div>Date</div><div>Duration</div><div>Attendees</div><div>Status</div><div></div>
-        </div>
-        {sessions.length === 0 && <div className="px-4 py-8 text-center text-sm text-muted-foreground">No sessions yet — add your first.</div>}
-        {sessions.map((s) => (
-          <div key={s.id} className="grid grid-cols-[120px_1fr_140px_110px_90px_140px_40px] gap-3 px-4 py-2 items-center border-b last:border-0">
-            <Select value={s.type} onValueChange={(v) => update(s.id, { type: v as "Workshop" | "Training" })}>
-              <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
-              <SelectContent><SelectItem value="Workshop">Workshop</SelectItem><SelectItem value="Training">Training</SelectItem></SelectContent>
-            </Select>
-            <Input className="h-8 text-sm" value={s.topic} onChange={(e) => update(s.id, { topic: e.target.value })} />
-            <Input className="h-8 text-xs" type="date" value={s.date} onChange={(e) => update(s.id, { date: e.target.value })} />
-            <Input className="h-8 text-xs" value={s.duration} onChange={(e) => update(s.id, { duration: e.target.value })} />
-            <Input className="h-8 text-xs" type="number" value={s.attendees} onChange={(e) => update(s.id, { attendees: +e.target.value })} />
-            <Select value={s.status} onValueChange={(v) => update(s.id, { status: v as "Scheduled" | "Held" | "Cancelled" })}>
-              <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
-              <SelectContent><SelectItem value="Scheduled">Scheduled</SelectItem><SelectItem value="Held">Held</SelectItem><SelectItem value="Cancelled">Cancelled</SelectItem></SelectContent>
-            </Select>
-            <Button size="icon" variant="ghost" onClick={() => del(s.id)}><Trash2 className="h-4 w-4 text-muted-foreground" /></Button>
+      <div className="rounded-xl border bg-card overflow-x-auto">
+        <div className="min-w-[1200px]">
+          <div className="grid grid-cols-[110px_1.5fr_120px_130px_90px_160px_1fr_140px_40px] gap-2 px-3 py-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground bg-muted/30 border-b">
+            <div>Type</div><div>Topic / Session</div><div>Module</div><div>Date</div><div>Duration</div><div>Facilitator</div><div>Location / Link</div><div>Status</div><div></div>
           </div>
-        ))}
+          {sessions.length === 0 && <div className="px-4 py-8 text-center text-sm text-muted-foreground">No sessions yet — add your first.</div>}
+          {sessions.map((s) => (
+            <div key={s.id} className="grid grid-cols-[110px_1.5fr_120px_130px_90px_160px_1fr_140px_40px] gap-2 px-3 py-2 items-center border-b last:border-0">
+              <Select value={s.type} onValueChange={(v) => update(s.id, { type: v as "Workshop" | "Training" })}>
+                <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                <SelectContent><SelectItem value="Workshop">Workshop</SelectItem><SelectItem value="Training">Training</SelectItem></SelectContent>
+              </Select>
+              <Input className="h-8 text-sm" value={s.topic} onChange={(e) => update(s.id, { topic: e.target.value })} />
+              <Select value={s.module || "none"} onValueChange={(v) => update(s.id, { module: v === "none" ? "" : v })}>
+                <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="—" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">—</SelectItem>
+                  {TRAINING_MODULES.map((m) => <SelectItem key={m.id} value={m.id}>{m.id}</SelectItem>)}
+                </SelectContent>
+              </Select>
+              <Input className="h-8 text-xs" type="date" value={s.date} onChange={(e) => update(s.id, { date: e.target.value })} />
+              <Input className="h-8 text-xs" value={s.duration} onChange={(e) => update(s.id, { duration: e.target.value })} />
+              <Select value={s.facilitator || "unassigned"} onValueChange={(v) => update(s.id, { facilitator: v === "unassigned" ? "" : v })}>
+                <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Pick" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="unassigned">— Unassigned —</SelectItem>
+                  {facilitators.map((f) => <SelectItem key={f} value={f}>{f}</SelectItem>)}
+                </SelectContent>
+              </Select>
+              <Input className="h-8 text-xs" value={s.location} onChange={(e) => update(s.id, { location: e.target.value })} placeholder="Teams link / address…" />
+              <Select value={s.status} onValueChange={(v) => update(s.id, { status: v as SessionStatus })}>
+                <SelectTrigger className={cn("h-8 text-xs font-semibold border", SESSION_STATUS_CLS[s.status])}><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Scheduled">🔵 Scheduled</SelectItem>
+                  <SelectItem value="In Progress">🟠 In Progress</SelectItem>
+                  <SelectItem value="Completed">🟢 Completed</SelectItem>
+                  <SelectItem value="Blocked">🔴 Blocked</SelectItem>
+                </SelectContent>
+              </Select>
+              <Button size="icon" variant="ghost" onClick={() => del(s.id)}><Trash2 className="h-4 w-4 text-muted-foreground" /></Button>
+            </div>
+          ))}
+        </div>
       </div>
     </div>
   );
 }
 
+// =============== ATTENDANCE ===============
 export function AttendanceSection() {
   const sessions = usePlaybook((s) => s.sessions);
   const attendees = usePlaybook((s) => s.attendees);
   const add = usePlaybook((s) => s.addAttendee);
+  const update = usePlaybook((s) => s.updateAttendee);
   const del = usePlaybook((s) => s.deleteAttendee);
   const [sessionId, setSessionId] = useState<string>("");
-  const [name, setName] = useState("");
 
   const rows = sessionId ? attendees.filter((a) => a.sessionId === sessionId) : attendees;
 
   return (
     <div className="space-y-5">
-      <SectionHeader title="✅ Attendance Register" subtitle="Who attended every session — present, absent, rescheduled." />
+      <SectionHeader title="✅ Attendance Register" subtitle="Who attended every session — name, job title, company, signature.">
+        <Button disabled={!sessionId} onClick={() => add({ sessionId, name: "", jobTitle: "", company: "", signature: "", status: "Present" })}><Plus className="h-4 w-4" /> Add attendee</Button>
+      </SectionHeader>
 
       <div className="rounded-xl border bg-card p-4 flex flex-wrap items-end gap-3">
-        <div className="flex-1 min-w-48">
+        <div className="flex-1 min-w-64">
           <label className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Session</label>
           <Select value={sessionId} onValueChange={setSessionId}>
             <SelectTrigger className="mt-1"><SelectValue placeholder="Pick session" /></SelectTrigger>
@@ -75,36 +113,39 @@ export function AttendanceSection() {
             </SelectContent>
           </Select>
         </div>
-        <div className="flex-1 min-w-48">
-          <label className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Attendee name</label>
-          <Input className="mt-1" value={name} onChange={(e) => setName(e.target.value)} placeholder="Name…" />
-        </div>
-        <Button disabled={!sessionId || !name} onClick={() => { add({ sessionId, name, status: "Present" }); setName(""); }}><Plus className="h-4 w-4" /> Log</Button>
       </div>
 
-      <div className="rounded-xl border bg-card overflow-hidden">
-        <div className="grid grid-cols-[1fr_1fr_140px_40px] gap-3 px-4 py-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground bg-muted/30 border-b">
-          <div>Session</div><div>Name</div><div>Status</div><div></div>
+      <div className="rounded-xl border bg-card overflow-x-auto">
+        <div className="min-w-[1100px]">
+          <div className="grid grid-cols-[1fr_1fr_160px_180px_160px_140px_40px] gap-2 px-3 py-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground bg-muted/30 border-b">
+            <div>Session</div><div>Name</div><div>Job Title</div><div>Company</div><div>Signature</div><div>Status</div><div></div>
+          </div>
+          {rows.length === 0 && <div className="px-4 py-8 text-center text-sm text-muted-foreground">No attendance yet. Pick a session and add attendees.</div>}
+          {rows.map((a) => {
+            const sess = sessions.find((s) => s.id === a.sessionId);
+            return (
+              <div key={a.id} className="grid grid-cols-[1fr_1fr_160px_180px_160px_140px_40px] gap-2 px-3 py-2 items-center border-b last:border-0 text-sm">
+                <div className="truncate text-xs text-muted-foreground">{sess?.topic || "—"}</div>
+                <Input className="h-8 text-sm" value={a.name} onChange={(e) => update(a.id, { name: e.target.value })} />
+                <Input className="h-8 text-xs" value={a.jobTitle} onChange={(e) => update(a.id, { jobTitle: e.target.value })} />
+                <Input className="h-8 text-xs" value={a.company} onChange={(e) => update(a.id, { company: e.target.value })} />
+                <Input className="h-8 text-xs italic" value={a.signature} onChange={(e) => update(a.id, { signature: e.target.value })} placeholder="Type to sign" />
+                <Select value={a.status} onValueChange={(v) => update(a.id, { status: v as "Present" | "Absent" | "Rescheduled" })}>
+                  <SelectTrigger className={cn("h-8 text-xs", a.status === "Present" && "text-success", a.status === "Absent" && "text-destructive")}><SelectValue /></SelectTrigger>
+                  <SelectContent><SelectItem value="Present">Present</SelectItem><SelectItem value="Absent">Absent</SelectItem><SelectItem value="Rescheduled">Rescheduled</SelectItem></SelectContent>
+                </Select>
+                <Button size="icon" variant="ghost" onClick={() => del(a.id)}><Trash2 className="h-4 w-4 text-muted-foreground" /></Button>
+              </div>
+            );
+          })}
         </div>
-        {rows.length === 0 && <div className="px-4 py-8 text-center text-sm text-muted-foreground">No attendance yet.</div>}
-        {rows.map((a) => {
-          const sess = sessions.find((s) => s.id === a.sessionId);
-          return (
-            <div key={a.id} className="grid grid-cols-[1fr_1fr_140px_40px] gap-3 px-4 py-2 items-center border-b last:border-0 text-sm">
-              <div className="truncate">{sess?.topic || "—"}</div>
-              <div>{a.name}</div>
-              <Select value={a.status} onValueChange={(v) => { /* simple delete+add to update */ usePlaybook.getState().addAttendee({ sessionId: a.sessionId, name: a.name, status: v as "Present" | "Absent" | "Rescheduled" }); del(a.id); }}>
-                <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
-                <SelectContent><SelectItem value="Present">Present</SelectItem><SelectItem value="Absent">Absent</SelectItem><SelectItem value="Rescheduled">Rescheduled</SelectItem></SelectContent>
-              </Select>
-              <Button size="icon" variant="ghost" onClick={() => del(a.id)}><Trash2 className="h-4 w-4 text-muted-foreground" /></Button>
-            </div>
-          );
-        })}
       </div>
     </div>
   );
 }
+
+// =============== COMPETENCY (was Sign-Off) ===============
+const COMPETENCY = ["Novice", "Capable", "Proficient", "Expert"] as const;
 
 export function SignOffSection() {
   const signOffs = usePlaybook((s) => s.signOffs);
@@ -114,35 +155,49 @@ export function SignOffSection() {
 
   return (
     <div className="space-y-5">
-      <SectionHeader title="🖊️ Training Sign-Off" subtitle="Individual competency record — per person, per module.">
-        <Button onClick={() => add({ person: "", module: TRAINING_MODULES[0].id, status: "NOT STARTED", date: "" })}><Plus className="h-4 w-4" /> Add</Button>
+      <SectionHeader title="🖊️ Training Competency" subtitle="Per-person competency record — who's trained, what level, signed off by whom.">
+        <Button onClick={() => add({ person: "", jobTitle: "", module: TRAINING_MODULES[0].id, competency: "Novice", status: "NOT STARTED", signedBy: "", date: "" })}><Plus className="h-4 w-4" /> Add</Button>
       </SectionHeader>
 
-      <div className="rounded-xl border bg-card overflow-hidden">
-        <div className="grid grid-cols-[1fr_220px_160px_140px_40px] gap-3 px-4 py-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground bg-muted/30 border-b">
-          <div>Person</div><div>Module</div><div>Status</div><div>Date</div><div></div>
-        </div>
-        {signOffs.length === 0 && <div className="px-4 py-8 text-center text-sm text-muted-foreground">No sign-offs yet.</div>}
-        {signOffs.map((s) => (
-          <div key={s.id} className="grid grid-cols-[1fr_220px_160px_140px_40px] gap-3 px-4 py-2 items-center border-b last:border-0">
-            <Input className="h-8 text-sm" value={s.person} onChange={(e) => update(s.id, { person: e.target.value })} placeholder="Name…" />
-            <Select value={s.module} onValueChange={(v) => update(s.id, { module: v })}>
-              <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
-              <SelectContent>{TRAINING_MODULES.map((m) => <SelectItem key={m.id} value={m.id}>{m.id} — {m.name}</SelectItem>)}</SelectContent>
-            </Select>
-            <Select value={s.status} onValueChange={(v) => update(s.id, { status: v as "NOT STARTED" | "IN PROGRESS" | "COMPLETE" | "BLOCKED" })}>
-              <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
-              <SelectContent>{(["NOT STARTED", "IN PROGRESS", "COMPLETE", "BLOCKED"] as const).map((x) => <SelectItem key={x} value={x}>{x}</SelectItem>)}</SelectContent>
-            </Select>
-            <Input className="h-8 text-xs" type="date" value={s.date} onChange={(e) => update(s.id, { date: e.target.value })} />
-            <Button size="icon" variant="ghost" onClick={() => del(s.id)}><Trash2 className="h-4 w-4 text-muted-foreground" /></Button>
+      <div className="rounded-xl border bg-card overflow-x-auto">
+        <div className="min-w-[1150px]">
+          <div className="grid grid-cols-[1fr_180px_220px_140px_160px_180px_130px_40px] gap-2 px-3 py-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground bg-muted/30 border-b">
+            <div>Person</div><div>Job Title</div><div>Module</div><div>Competency</div><div>Status</div><div>Signed Off By</div><div>Date</div><div></div>
           </div>
-        ))}
+          {signOffs.length === 0 && <div className="px-4 py-8 text-center text-sm text-muted-foreground">No competency records yet.</div>}
+          {signOffs.map((s) => (
+            <div key={s.id} className="grid grid-cols-[1fr_180px_220px_140px_160px_180px_130px_40px] gap-2 px-3 py-2 items-center border-b last:border-0">
+              <Input className="h-8 text-sm" value={s.person} onChange={(e) => update(s.id, { person: e.target.value })} placeholder="Name…" />
+              <Input className="h-8 text-xs" value={s.jobTitle} onChange={(e) => update(s.id, { jobTitle: e.target.value })} placeholder="Title" />
+              <Select value={s.module} onValueChange={(v) => update(s.id, { module: v })}>
+                <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                <SelectContent>{TRAINING_MODULES.map((m) => <SelectItem key={m.id} value={m.id}>{m.id} — {m.name}</SelectItem>)}</SelectContent>
+              </Select>
+              <Select value={s.competency} onValueChange={(v) => update(s.id, { competency: v as typeof COMPETENCY[number] })}>
+                <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                <SelectContent>{COMPETENCY.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
+              </Select>
+              <Select value={s.status} onValueChange={(v) => update(s.id, { status: v as "NOT STARTED" | "IN PROGRESS" | "COMPLETE" | "BLOCKED" })}>
+                <SelectTrigger className={cn("h-8 text-xs font-semibold border",
+                  s.status === "NOT STARTED" && "bg-warning/15 text-warning-foreground border-warning/30",
+                  s.status === "IN PROGRESS" && "bg-yellow-400/20 text-yellow-700 dark:text-yellow-300 border-yellow-400/40",
+                  s.status === "COMPLETE" && "bg-success/15 text-success border-success/30",
+                  s.status === "BLOCKED" && "bg-destructive/15 text-destructive border-destructive/30",
+                )}><SelectValue /></SelectTrigger>
+                <SelectContent>{(["NOT STARTED", "IN PROGRESS", "COMPLETE", "BLOCKED"] as const).map((x) => <SelectItem key={x} value={x}>{x}</SelectItem>)}</SelectContent>
+              </Select>
+              <Input className="h-8 text-xs" value={s.signedBy} onChange={(e) => update(s.id, { signedBy: e.target.value })} placeholder="Trainer / signer" />
+              <Input className="h-8 text-xs" type="date" value={s.date} onChange={(e) => update(s.id, { date: e.target.value })} />
+              <Button size="icon" variant="ghost" onClick={() => del(s.id)}><Trash2 className="h-4 w-4 text-muted-foreground" /></Button>
+            </div>
+          ))}
+        </div>
       </div>
     </div>
   );
 }
 
+// =============== EMAIL LOG ===============
 export function EmailLogSection() {
   const emails = usePlaybook((s) => s.emails);
   const update = usePlaybook((s) => s.updateEmail);
@@ -150,26 +205,35 @@ export function EmailLogSection() {
 
   return (
     <div className="space-y-5">
-      <SectionHeader title="📧 Weekly Email Log" subtitle="Every Friday client communication logged.">
-        <Button onClick={() => add({ week: emails.length + 1, date: "", recipients: "CEO, CFO, IT Lead, Site Teams, Ops", status: "Green", summary: "", sent: false })}><Plus className="h-4 w-4" /> Add week</Button>
+      <SectionHeader title="📧 Weekly Email Log" subtitle="Every Friday client communication — subject, RAG, highlights, blockers.">
+        <Button onClick={() => add({ week: emails.length + 1, date: "", subject: `Week ${emails.length + 1} — Plexa Implementation Update`, recipients: "CEO, CFO, IT Lead, Site Teams, Ops", status: "Green", summary: "", highlights: "", blockers: "", sent: false })}><Plus className="h-4 w-4" /> Add week</Button>
       </SectionHeader>
 
       <div className="space-y-3">
         {emails.map((e) => (
           <div key={e.id} className="rounded-xl border bg-card p-4">
-            <div className="grid md:grid-cols-[80px_140px_1fr_140px_120px] gap-3 items-center">
+            <div className="grid md:grid-cols-[70px_130px_1fr_120px_120px] gap-2 items-center">
               <div className="text-xs font-semibold uppercase tracking-wider text-primary">Week {e.week}</div>
               <Input type="date" className="h-9 text-xs" value={e.date} onChange={(ev) => update(e.id, { date: ev.target.value })} />
-              <Input className="h-9 text-xs" value={e.recipients} onChange={(ev) => update(e.id, { recipients: ev.target.value })} placeholder="Recipients" />
+              <Input className="h-9 text-sm font-medium" value={e.subject} onChange={(ev) => update(e.id, { subject: ev.target.value })} placeholder="Subject line" />
               <Select value={e.status} onValueChange={(v) => update(e.id, { status: v as "Green" | "Amber" | "Red" })}>
-                <SelectTrigger className="h-9 text-xs"><SelectValue /></SelectTrigger>
+                <SelectTrigger className={cn("h-9 text-xs font-semibold",
+                  e.status === "Green" && "text-success",
+                  e.status === "Amber" && "text-warning-foreground",
+                  e.status === "Red" && "text-destructive",
+                )}><SelectValue /></SelectTrigger>
                 <SelectContent><SelectItem value="Green">🟢 Green</SelectItem><SelectItem value="Amber">🟠 Amber</SelectItem><SelectItem value="Red">🔴 Red</SelectItem></SelectContent>
               </Select>
               <Button variant={e.sent ? "default" : "outline"} size="sm" onClick={() => update(e.id, { sent: !e.sent })}>
-                {e.sent ? <><Check className="h-4 w-4" /> Sent</> : "Mark sent"}
+                {e.sent ? <><Check className="h-4 w-4" /> Sent</> : <><Send className="h-4 w-4" /> Mark sent</>}
               </Button>
             </div>
-            <Textarea className="mt-3 text-sm" rows={2} value={e.summary} onChange={(ev) => update(e.id, { summary: ev.target.value })} placeholder="✅ Completed | 📅 Next week | ⚠️ Issues | 📸 Photos…" />
+            <Input className="mt-2 h-8 text-xs" value={e.recipients} onChange={(ev) => update(e.id, { recipients: ev.target.value })} placeholder="Recipients" />
+            <div className="grid md:grid-cols-3 gap-2 mt-2">
+              <Textarea rows={2} className="text-xs" value={e.summary} onChange={(ev) => update(e.id, { summary: ev.target.value })} placeholder="Summary / what we did this week…" />
+              <Textarea rows={2} className="text-xs" value={e.highlights} onChange={(ev) => update(e.id, { highlights: ev.target.value })} placeholder="Highlights & wins…" />
+              <Textarea rows={2} className="text-xs" value={e.blockers} onChange={(ev) => update(e.id, { blockers: ev.target.value })} placeholder="Blockers & risks…" />
+            </div>
           </div>
         ))}
       </div>
@@ -177,6 +241,7 @@ export function EmailLogSection() {
   );
 }
 
+// =============== ISSUES ===============
 const ISSUE_TYPES = ["🐛 Bug", "👤 User Error", "✨ Feature", "⚙️ Config", "🔗 Integration", "📋 Process Gap", "🎓 Training Gap", "❓ Question", "📦 Data"] as const;
 const PRIORITIES = ["LOW", "MEDIUM", "HIGH", "CRITICAL"] as const;
 
@@ -188,15 +253,16 @@ export function IssuesSection() {
 
   return (
     <div className="space-y-5">
-      <SectionHeader title="⚠️ Issues Register" subtitle="Every issue logged, typed, owned. Nothing sits open silently.">
-        <Button onClick={() => add({ phase: "Phase 1A", type: "🐛 Bug", description: "", owner: "PLEXA", priority: "MEDIUM", raisedAt: new Date().toISOString().slice(0, 10), status: "Open", resolution: "" })}><Plus className="h-4 w-4" /> Log issue</Button>
+      <SectionHeader title="⚠️ Issues Register" subtitle="Every issue logged, typed, owned, dated. Nothing sits open silently.">
+        <Button onClick={() => add({ ref: `ISS-${String(issues.length + 1).padStart(3, "0")}`, phase: "Phase 1A", type: "🐛 Bug", description: "", owner: "PLEXA", assignedTo: "", priority: "MEDIUM", raisedAt: new Date().toISOString().slice(0, 10), dueDate: "", status: "Open", resolution: "", closedDate: "" })}><Plus className="h-4 w-4" /> Log issue</Button>
       </SectionHeader>
 
       <div className="space-y-3">
         {issues.length === 0 && <div className="rounded-xl border bg-card p-8 text-center text-sm text-muted-foreground">No issues logged.</div>}
         {issues.map((i) => (
-          <div key={i.id} className="rounded-xl border bg-card p-4">
-            <div className="grid md:grid-cols-[110px_160px_1fr_120px_120px_120px_40px] gap-2 items-center">
+          <div key={i.id} className="rounded-xl border bg-card p-3">
+            <div className="grid md:grid-cols-[90px_110px_150px_1fr_120px_140px_110px_120px_120px_40px] gap-2 items-center">
+              <Input className="h-8 text-xs font-mono" value={i.ref} onChange={(e) => update(i.id, { ref: e.target.value })} placeholder="REF" />
               <Input className="h-8 text-xs" value={i.phase} onChange={(e) => update(i.id, { phase: e.target.value })} />
               <Select value={i.type} onValueChange={(v) => update(i.id, { type: v as typeof ISSUE_TYPES[number] })}>
                 <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
@@ -207,17 +273,26 @@ export function IssuesSection() {
                 <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
                 <SelectContent><SelectItem value="PLEXA">PLEXA</SelectItem><SelectItem value="CLIENT">CLIENT</SelectItem></SelectContent>
               </Select>
+              <Input className="h-8 text-xs" value={i.assignedTo} onChange={(e) => update(i.id, { assignedTo: e.target.value })} placeholder="Assigned to" />
               <Select value={i.priority} onValueChange={(v) => update(i.id, { priority: v as typeof PRIORITIES[number] })}>
-                <SelectTrigger className={cn("h-8 text-xs", i.priority === "CRITICAL" && "text-destructive", i.priority === "HIGH" && "text-warning-foreground")}><SelectValue /></SelectTrigger>
+                <SelectTrigger className={cn("h-8 text-xs font-semibold",
+                  i.priority === "CRITICAL" && "text-destructive",
+                  i.priority === "HIGH" && "text-warning-foreground",
+                )}><SelectValue /></SelectTrigger>
                 <SelectContent>{PRIORITIES.map((p) => <SelectItem key={p} value={p}>{p}</SelectItem>)}</SelectContent>
               </Select>
-              <Select value={i.status} onValueChange={(v) => update(i.id, { status: v as "Open" | "In Progress" | "Closed" })}>
-                <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+              <Input className="h-8 text-xs" type="date" value={i.dueDate} onChange={(e) => update(i.id, { dueDate: e.target.value })} />
+              <Select value={i.status} onValueChange={(v) => update(i.id, { status: v as "Open" | "In Progress" | "Closed", closedDate: v === "Closed" ? new Date().toISOString().slice(0, 10) : i.closedDate })}>
+                <SelectTrigger className={cn("h-8 text-xs font-semibold",
+                  i.status === "Open" && "text-warning-foreground",
+                  i.status === "Closed" && "text-success",
+                )}><SelectValue /></SelectTrigger>
                 <SelectContent><SelectItem value="Open">Open</SelectItem><SelectItem value="In Progress">In Progress</SelectItem><SelectItem value="Closed">Closed</SelectItem></SelectContent>
               </Select>
               <Button size="icon" variant="ghost" onClick={() => del(i.id)}><Trash2 className="h-4 w-4 text-muted-foreground" /></Button>
             </div>
             <Textarea className="mt-2 text-sm" rows={1} value={i.resolution} onChange={(e) => update(i.id, { resolution: e.target.value })} placeholder="Resolution / notes…" />
+            <div className="text-[10px] text-muted-foreground mt-1">Raised {i.raisedAt}{i.closedDate && ` · Closed ${i.closedDate}`}</div>
           </div>
         ))}
       </div>
@@ -225,39 +300,108 @@ export function IssuesSection() {
   );
 }
 
+// =============== STAKEHOLDER MAP — with flow chart ===============
 export function StakeholdersSection() {
   const list = usePlaybook((s) => s.stakeholders);
+  const client = usePlaybook((s) => s.client);
   const add = usePlaybook((s) => s.addStakeholder);
   const update = usePlaybook((s) => s.updateStakeholder);
   const del = usePlaybook((s) => s.deleteStakeholder);
+
+  const byInfluence = {
+    High: list.filter((s) => s.influence === "High"),
+    Medium: list.filter((s) => s.influence === "Medium"),
+    Low: list.filter((s) => s.influence === "Low"),
+  };
+
+  const sentimentColor = (s: string) =>
+    s === "Positive" ? "ring-success/40 bg-success/5"
+    : s === "Negative" ? "ring-destructive/40 bg-destructive/5"
+    : s === "Neutral" ? "ring-warning/40 bg-warning/5"
+    : "ring-border bg-muted/30";
+
   return (
     <div className="space-y-5">
-      <SectionHeader title="👥 Stakeholder Map" subtitle="CEO, CFO, IT, Site, Ops — sentiment and engagement tracker.">
+      <SectionHeader title="👥 Stakeholder Map" subtitle="Influence × sentiment — who's who and how engaged.">
         <Button onClick={() => add({ name: "", role: "", dept: "", influence: "Medium", email: "", phone: "", sentiment: "Unknown", lastTouch: "" })}><Plus className="h-4 w-4" /> Add</Button>
       </SectionHeader>
-      <div className="rounded-xl border bg-card overflow-hidden">
-        <div className="grid grid-cols-[1fr_1fr_140px_110px_140px_140px_40px] gap-2 px-3 py-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground bg-muted/30 border-b">
-          <div>Name</div><div>Role · Department</div><div>Influence</div><div>Sentiment</div><div>Email</div><div>Phone</div><div></div>
-        </div>
-        {list.map((s) => (
-          <div key={s.id} className="grid grid-cols-[1fr_1fr_140px_110px_140px_140px_40px] gap-2 px-3 py-2 items-center border-b last:border-0">
-            <Input className="h-8 text-sm" value={s.name} onChange={(e) => update(s.id, { name: e.target.value })} placeholder="Name" />
-            <div className="flex gap-1"><Input className="h-8 text-xs" value={s.role} onChange={(e) => update(s.id, { role: e.target.value })} placeholder="Role" /><Input className="h-8 text-xs" value={s.dept} onChange={(e) => update(s.id, { dept: e.target.value })} placeholder="Dept" /></div>
-            <Select value={s.influence} onValueChange={(v) => update(s.id, { influence: v as "Low" | "Medium" | "High" })}><SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="Low">Low</SelectItem><SelectItem value="Medium">Medium</SelectItem><SelectItem value="High">High</SelectItem></SelectContent></Select>
-            <Select value={s.sentiment} onValueChange={(v) => update(s.id, { sentiment: v as "Negative" | "Neutral" | "Positive" | "Unknown" })}>
-              <SelectTrigger className={cn("h-8 text-xs", s.sentiment === "Positive" && "text-success", s.sentiment === "Negative" && "text-destructive")}><SelectValue /></SelectTrigger>
-              <SelectContent><SelectItem value="Positive">😊 Positive</SelectItem><SelectItem value="Neutral">😐 Neutral</SelectItem><SelectItem value="Negative">😟 Negative</SelectItem><SelectItem value="Unknown">❓ Unknown</SelectItem></SelectContent>
-            </Select>
-            <Input className="h-8 text-xs" value={s.email} onChange={(e) => update(s.id, { email: e.target.value })} placeholder="Email" />
-            <Input className="h-8 text-xs" value={s.phone} onChange={(e) => update(s.id, { phone: e.target.value })} placeholder="Phone" />
-            <Button size="icon" variant="ghost" onClick={() => del(s.id)}><Trash2 className="h-4 w-4 text-muted-foreground" /></Button>
+
+      {/* Flow chart */}
+      <div className="rounded-2xl border bg-gradient-to-br from-card to-primary-soft/30 p-6 overflow-x-auto">
+        <div className="min-w-[700px]">
+          {/* Client node */}
+          <div className="flex justify-center">
+            <div className="rounded-xl bg-brand-gradient text-primary-foreground px-5 py-3 text-center shadow-lg">
+              <div className="text-[10px] uppercase tracking-wider opacity-80">Client</div>
+              <div className="font-bold text-lg">{client.clientName || "—"}</div>
+            </div>
           </div>
-        ))}
+          <div className="flex justify-center"><div className="h-6 w-0.5 bg-primary/40" /></div>
+
+          {/* Influence tiers */}
+          {(["High", "Medium", "Low"] as const).map((tier) => (
+            <div key={tier} className="mb-4">
+              <div className="flex items-center gap-2 mb-2">
+                <div className={cn(
+                  "text-[10px] font-bold uppercase tracking-[0.15em] px-2 py-0.5 rounded-full",
+                  tier === "High" && "bg-primary text-primary-foreground",
+                  tier === "Medium" && "bg-primary/20 text-primary",
+                  tier === "Low" && "bg-muted text-muted-foreground",
+                )}>{tier} influence</div>
+                <div className="flex-1 h-px bg-border" />
+                <div className="text-[10px] text-muted-foreground">{byInfluence[tier].length}</div>
+              </div>
+              {byInfluence[tier].length === 0 ? (
+                <div className="text-xs text-muted-foreground italic px-2">None yet</div>
+              ) : (
+                <div className="flex flex-wrap gap-2">
+                  {byInfluence[tier].map((s) => (
+                    <div key={s.id} className={cn("rounded-lg ring-1 px-3 py-2 min-w-[160px]", sentimentColor(s.sentiment))}>
+                      <div className="font-semibold text-sm truncate">{s.name || "(unnamed)"}</div>
+                      <div className="text-[10px] text-muted-foreground truncate">{s.role}{s.dept && ` · ${s.dept}`}</div>
+                      <div className="text-[10px] mt-1">
+                        {s.sentiment === "Positive" && "😊 Positive"}
+                        {s.sentiment === "Neutral" && "😐 Neutral"}
+                        {s.sentiment === "Negative" && "😟 Negative"}
+                        {s.sentiment === "Unknown" && "❓ Unknown"}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Table */}
+      <div className="rounded-xl border bg-card overflow-x-auto">
+        <div className="min-w-[1100px]">
+          <div className="grid grid-cols-[1fr_1fr_140px_140px_180px_160px_140px_40px] gap-2 px-3 py-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground bg-muted/30 border-b">
+            <div>Name</div><div>Role · Department</div><div>Influence</div><div>Sentiment</div><div>Email</div><div>Phone</div><div>Last Touch</div><div></div>
+          </div>
+          {list.map((s) => (
+            <div key={s.id} className="grid grid-cols-[1fr_1fr_140px_140px_180px_160px_140px_40px] gap-2 px-3 py-2 items-center border-b last:border-0">
+              <Input className="h-8 text-sm" value={s.name} onChange={(e) => update(s.id, { name: e.target.value })} placeholder="Name" />
+              <div className="flex gap-1"><Input className="h-8 text-xs" value={s.role} onChange={(e) => update(s.id, { role: e.target.value })} placeholder="Role" /><Input className="h-8 text-xs" value={s.dept} onChange={(e) => update(s.id, { dept: e.target.value })} placeholder="Dept" /></div>
+              <Select value={s.influence} onValueChange={(v) => update(s.id, { influence: v as "Low" | "Medium" | "High" })}><SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="Low">Low</SelectItem><SelectItem value="Medium">Medium</SelectItem><SelectItem value="High">High</SelectItem></SelectContent></Select>
+              <Select value={s.sentiment} onValueChange={(v) => update(s.id, { sentiment: v as "Negative" | "Neutral" | "Positive" | "Unknown" })}>
+                <SelectTrigger className={cn("h-8 text-xs", s.sentiment === "Positive" && "text-success", s.sentiment === "Negative" && "text-destructive")}><SelectValue /></SelectTrigger>
+                <SelectContent><SelectItem value="Positive">😊 Positive</SelectItem><SelectItem value="Neutral">😐 Neutral</SelectItem><SelectItem value="Negative">😟 Negative</SelectItem><SelectItem value="Unknown">❓ Unknown</SelectItem></SelectContent>
+              </Select>
+              <Input className="h-8 text-xs" value={s.email} onChange={(e) => update(s.id, { email: e.target.value })} placeholder="Email" />
+              <Input className="h-8 text-xs" value={s.phone} onChange={(e) => update(s.id, { phone: e.target.value })} placeholder="Phone" />
+              <Input className="h-8 text-xs" type="date" value={s.lastTouch} onChange={(e) => update(s.id, { lastTouch: e.target.value })} />
+              <Button size="icon" variant="ghost" onClick={() => del(s.id)}><Trash2 className="h-4 w-4 text-muted-foreground" /></Button>
+            </div>
+          ))}
+        </div>
       </div>
     </div>
   );
 }
 
+// =============== CHAMPIONS ===============
 export function ChampionsSection() {
   const champions = usePlaybook((s) => s.champions);
   const resistant = usePlaybook((s) => s.resistantUsers);
@@ -329,6 +473,7 @@ export function ChampionsSection() {
   );
 }
 
+// =============== DEFINITION OF DONE ===============
 export function DefinitionOfDoneSection() {
   const dod = usePlaybook((s) => s.dod);
   const toggle = usePlaybook((s) => s.toggleDod);
@@ -369,11 +514,25 @@ export function DefinitionOfDoneSection() {
   );
 }
 
+// =============== INTRANET ===============
 export function IntranetSection() {
   const sessions = usePlaybook((s) => s.sessions);
   const issues = usePlaybook((s) => s.issues);
   const champions = usePlaybook((s) => s.champions);
   const client = usePlaybook((s) => s.client);
+  const signOffs = usePlaybook((s) => s.signOffs);
+
+  const items = [
+    { title: "Session Recordings", desc: `${sessions.length} sessions logged`, owner: "Plexa", status: "In Progress", icon: "🎥" },
+    { title: "Attendance Registers", desc: "Complete signed register per session", owner: "Plexa", status: "In Progress", icon: "✅" },
+    { title: "Training Competency Records", desc: `${signOffs.filter((s) => s.status === "COMPLETE").length} of ${signOffs.length} signed off`, owner: "Plexa", status: "In Progress", icon: "🖊️" },
+    { title: "Issue Summary", desc: `${issues.length} raised · ${issues.filter((i) => i.status === "Closed").length} resolved`, owner: "Plexa", status: "Pending", icon: "⚠️" },
+    { title: "Champion Roster", desc: `${champions.length} certified internal experts`, owner: "Plexa", status: "Pending", icon: "🏆" },
+    { title: "Quick-Start Guides (QSGs)", desc: "Module-by-module how-tos", owner: "Plexa", status: "Pending", icon: "📚" },
+    { title: "Configuration Manual", desc: "Folder structure, workflows, cost codes", owner: "Plexa", status: "Pending", icon: "⚙️" },
+    { title: "Post-Implementation Email", desc: "Automated handover email + analytics", owner: "Plexa", status: "Pending", icon: "📧" },
+  ];
+
   return (
     <div className="space-y-5">
       <SectionHeader title="🌐 Client Intranet Pack" subtitle="The complete Plexa training library, delivered at implementation close." />
@@ -387,21 +546,17 @@ export function IntranetSection() {
         </div>
       </div>
 
-      <div className="grid md:grid-cols-2 gap-4">
-        {[
-          { title: "Session recordings", desc: `${sessions.length} sessions logged`, icon: "🎥" },
-          { title: "Attendance registers", desc: "Complete signed register per session", icon: "✅" },
-          { title: "Training sign-offs", desc: "Per-person competency record", icon: "🖊️" },
-          { title: "Issue summary", desc: `${issues.length} issues raised · ${issues.filter((i) => i.status === "Closed").length} resolved`, icon: "⚠️" },
-          { title: "Champion roster", desc: `${champions.length} certified internal experts`, icon: "🏆" },
-          { title: "Quick-start guides (QSGs)", desc: "Module-by-module how-tos", icon: "📚" },
-        ].map((x) => (
-          <div key={x.title} className="rounded-xl border bg-card p-4 flex items-start gap-3">
-            <div className="text-2xl">{x.icon}</div>
-            <div>
-              <div className="font-semibold text-sm">{x.title}</div>
-              <div className="text-xs text-muted-foreground mt-0.5">{x.desc}</div>
-            </div>
+      <div className="rounded-xl border bg-card overflow-hidden">
+        <div className="grid grid-cols-[40px_1fr_1fr_120px_140px] gap-2 px-3 py-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground bg-muted/30 border-b">
+          <div></div><div>Item</div><div>Description</div><div>Owner</div><div>Status</div>
+        </div>
+        {items.map((x) => (
+          <div key={x.title} className="grid grid-cols-[40px_1fr_1fr_120px_140px] gap-2 px-3 py-3 items-center border-b last:border-0">
+            <div className="text-xl text-center">{x.icon}</div>
+            <div className="text-sm font-semibold">{x.title}</div>
+            <div className="text-xs text-muted-foreground">{x.desc}</div>
+            <div className="text-xs">{x.owner}</div>
+            <StatusBadge status={x.status === "Pending" ? "NOT STARTED" : "IN PROGRESS"} />
           </div>
         ))}
       </div>
@@ -409,6 +564,7 @@ export function IntranetSection() {
   );
 }
 
+// =============== SESSION CONTENT LOG ===============
 export function ContentLogSection() {
   const sessions = usePlaybook((s) => s.sessions);
   const [active, setActive] = useState<string | null>(null);
@@ -447,6 +603,371 @@ export function ContentLogSection() {
           )}
         </div>
       </div>
+    </div>
+  );
+}
+
+// =============== CSV HELPERS (used by Excel-style sections) ===============
+function toCSV(rows: Record<string, unknown>[], cols: string[]): string {
+  const esc = (v: unknown) => {
+    const s = String(v ?? "");
+    return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+  };
+  return [cols.join(","), ...rows.map((r) => cols.map((c) => esc(r[c])).join(","))].join("\n");
+}
+function fromCSV(text: string): Record<string, string>[] {
+  const lines = text.split(/\r?\n/).filter((l) => l.trim().length);
+  if (lines.length < 2) return [];
+  const parseLine = (l: string): string[] => {
+    const out: string[] = []; let cur = ""; let q = false;
+    for (let i = 0; i < l.length; i++) {
+      const c = l[i];
+      if (q) {
+        if (c === '"' && l[i + 1] === '"') { cur += '"'; i++; }
+        else if (c === '"') q = false;
+        else cur += c;
+      } else {
+        if (c === '"') q = true;
+        else if (c === ",") { out.push(cur); cur = ""; }
+        else cur += c;
+      }
+    }
+    out.push(cur);
+    return out;
+  };
+  const cols = parseLine(lines[0]);
+  return lines.slice(1).map((l) => {
+    const vals = parseLine(l);
+    return Object.fromEntries(cols.map((c, i) => [c, vals[i] ?? ""]));
+  });
+}
+function downloadCSV(filename: string, csv: string) {
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url; a.download = filename; a.click(); URL.revokeObjectURL(url);
+}
+
+function ImportExport({ filename, csv, onImport }: { filename: string; csv: string; onImport: (text: string) => void }) {
+  const ref = useRef<HTMLInputElement>(null);
+  return (
+    <div className="flex gap-2">
+      <Button variant="outline" size="sm" onClick={() => downloadCSV(filename, csv)}><Download className="h-4 w-4" /> Export</Button>
+      <Button variant="outline" size="sm" onClick={() => ref.current?.click()}><Upload className="h-4 w-4" /> Import</Button>
+      <input ref={ref} type="file" accept=".csv,text/csv" className="hidden" onChange={async (e) => {
+        const f = e.target.files?.[0]; if (!f) return;
+        const text = await f.text(); onImport(text); e.target.value = "";
+      }} />
+    </div>
+  );
+}
+
+// =============== USER ACCOUNTS ===============
+export function UserAccountsSection() {
+  const users = usePlaybook((s) => s.userAccounts);
+  const add = usePlaybook((s) => s.addUser);
+  const update = usePlaybook((s) => s.updateUser);
+  const del = usePlaybook((s) => s.deleteUser);
+  const replace = usePlaybook((s) => s.replaceUsers);
+  const COLS = ["name", "email", "phone", "position", "role", "status"];
+  const csv = toCSV(users as unknown as Record<string, unknown>[], COLS);
+
+  return (
+    <div className="space-y-5">
+      <SectionHeader title="👤 User Accounts" subtitle="Name, email, phone, position, role — the complete login roster.">
+        <ImportExport filename="user-accounts.csv" csv={csv} onImport={(t) => {
+          const parsed = fromCSV(t).map((r) => ({
+            id: Math.random().toString(36).slice(2),
+            name: r.name || "", email: r.email || "", phone: r.phone || "",
+            position: r.position || "", role: r.role || "",
+            status: ((["Pending", "Invited", "Active", "Disabled"].includes(r.status) ? r.status : "Pending") as "Pending" | "Invited" | "Active" | "Disabled"),
+          }));
+          replace(parsed);
+        }} />
+        <Button onClick={() => add({ name: "", email: "", phone: "", position: "", role: "Standard", status: "Pending" })}><Plus className="h-4 w-4" /> Add</Button>
+      </SectionHeader>
+
+      <div className="rounded-xl border bg-card overflow-x-auto">
+        <div className="min-w-[1100px]">
+          <div className="grid grid-cols-[1fr_1.2fr_140px_180px_160px_140px_40px] gap-2 px-3 py-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground bg-muted/30 border-b">
+            <div>Name</div><div>Email</div><div>Phone</div><div>Position</div><div>Role</div><div>Status</div><div></div>
+          </div>
+          {users.length === 0 && <div className="px-4 py-8 text-center text-sm text-muted-foreground">No users yet — add one or import a CSV.</div>}
+          {users.map((u) => (
+            <div key={u.id} className="grid grid-cols-[1fr_1.2fr_140px_180px_160px_140px_40px] gap-2 px-3 py-2 items-center border-b last:border-0">
+              <Input className="h-8 text-sm" value={u.name} onChange={(e) => update(u.id, { name: e.target.value })} />
+              <Input className="h-8 text-xs" value={u.email} onChange={(e) => update(u.id, { email: e.target.value })} />
+              <Input className="h-8 text-xs" value={u.phone} onChange={(e) => update(u.id, { phone: e.target.value })} />
+              <Input className="h-8 text-xs" value={u.position} onChange={(e) => update(u.id, { position: e.target.value })} />
+              <Input className="h-8 text-xs" value={u.role} onChange={(e) => update(u.id, { role: e.target.value })} />
+              <Select value={u.status} onValueChange={(v) => update(u.id, { status: v as "Pending" | "Invited" | "Active" | "Disabled" })}>
+                <SelectTrigger className={cn("h-8 text-xs", u.status === "Active" && "text-success", u.status === "Disabled" && "text-destructive")}><SelectValue /></SelectTrigger>
+                <SelectContent>{["Pending", "Invited", "Active", "Disabled"].map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
+              </Select>
+              <Button size="icon" variant="ghost" onClick={() => del(u.id)}><Trash2 className="h-4 w-4 text-muted-foreground" /></Button>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// =============== PROJECT DETAILS ===============
+export function ProjectDetailsSection() {
+  const rows = usePlaybook((s) => s.projectDetails);
+  const add = usePlaybook((s) => s.addProject);
+  const update = usePlaybook((s) => s.updateProject);
+  const del = usePlaybook((s) => s.deleteProject);
+  const replace = usePlaybook((s) => s.replaceProjects);
+  const COLS = ["code", "name", "type", "client", "pm", "startDate", "endDate", "value", "status"];
+  const csv = toCSV(rows as unknown as Record<string, unknown>[], COLS);
+  return (
+    <div className="space-y-5">
+      <SectionHeader title="🏗️ Project Details" subtitle="Every project in scope — code, type, PM, dates, value, status.">
+        <ImportExport filename="project-details.csv" csv={csv} onImport={(t) => {
+          replace(fromCSV(t).map((r) => ({
+            id: Math.random().toString(36).slice(2),
+            code: r.code || "", name: r.name || "", type: r.type || "", client: r.client || "", pm: r.pm || "",
+            startDate: r.startDate || "", endDate: r.endDate || "", value: r.value || "",
+            status: ((["Tender", "Awarded", "Live", "Complete", "Archived"].includes(r.status) ? r.status : "Live") as ProjectsStatus),
+          })));
+        }} />
+        <Button onClick={() => add({ code: "", name: "", type: "Construction", client: "", pm: "", startDate: "", endDate: "", value: "", status: "Live" })}><Plus className="h-4 w-4" /> Add</Button>
+      </SectionHeader>
+
+      <div className="rounded-xl border bg-card overflow-x-auto">
+        <div className="min-w-[1300px]">
+          <div className="grid grid-cols-[100px_1.2fr_140px_1fr_140px_120px_120px_120px_120px_40px] gap-2 px-3 py-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground bg-muted/30 border-b">
+            <div>Code</div><div>Name</div><div>Type</div><div>Client</div><div>PM</div><div>Start</div><div>End</div><div>Value</div><div>Status</div><div></div>
+          </div>
+          {rows.length === 0 && <div className="px-4 py-8 text-center text-sm text-muted-foreground">No projects yet.</div>}
+          {rows.map((p) => (
+            <div key={p.id} className="grid grid-cols-[100px_1.2fr_140px_1fr_140px_120px_120px_120px_120px_40px] gap-2 px-3 py-2 items-center border-b last:border-0">
+              <Input className="h-8 text-xs font-mono" value={p.code} onChange={(e) => update(p.id, { code: e.target.value })} />
+              <Input className="h-8 text-sm" value={p.name} onChange={(e) => update(p.id, { name: e.target.value })} />
+              <Input className="h-8 text-xs" value={p.type} onChange={(e) => update(p.id, { type: e.target.value })} />
+              <Input className="h-8 text-xs" value={p.client} onChange={(e) => update(p.id, { client: e.target.value })} />
+              <Input className="h-8 text-xs" value={p.pm} onChange={(e) => update(p.id, { pm: e.target.value })} />
+              <Input className="h-8 text-xs" type="date" value={p.startDate} onChange={(e) => update(p.id, { startDate: e.target.value })} />
+              <Input className="h-8 text-xs" type="date" value={p.endDate} onChange={(e) => update(p.id, { endDate: e.target.value })} />
+              <Input className="h-8 text-xs" value={p.value} onChange={(e) => update(p.id, { value: e.target.value })} placeholder="$" />
+              <Select value={p.status} onValueChange={(v) => update(p.id, { status: v as ProjectsStatus })}>
+                <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                <SelectContent>{["Tender", "Awarded", "Live", "Complete", "Archived"].map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
+              </Select>
+              <Button size="icon" variant="ghost" onClick={() => del(p.id)}><Trash2 className="h-4 w-4 text-muted-foreground" /></Button>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+type ProjectsStatus = "Tender" | "Awarded" | "Live" | "Complete" | "Archived";
+
+// =============== CONTRACTOR DATABASE ===============
+export function ContractorsSection() {
+  const rows = usePlaybook((s) => s.contractors);
+  const add = usePlaybook((s) => s.addContractor);
+  const update = usePlaybook((s) => s.updateContractor);
+  const del = usePlaybook((s) => s.deleteContractor);
+  const replace = usePlaybook((s) => s.replaceContractors);
+  const COLS = ["company", "trade", "contact", "email", "phone", "insurance", "abn", "status"];
+  const csv = toCSV(rows as unknown as Record<string, unknown>[], COLS);
+  return (
+    <div className="space-y-5">
+      <SectionHeader title="🔧 Contractor Database" subtitle="Every subcontractor — trade, contact, compliance.">
+        <ImportExport filename="contractor-database.csv" csv={csv} onImport={(t) => {
+          replace(fromCSV(t).map((r) => ({
+            id: Math.random().toString(36).slice(2),
+            company: r.company || "", trade: r.trade || "", contact: r.contact || "",
+            email: r.email || "", phone: r.phone || "", insurance: r.insurance || "", abn: r.abn || "",
+            status: ((["Pending", "Approved", "Rejected"].includes(r.status) ? r.status : "Pending") as "Pending" | "Approved" | "Rejected"),
+          })));
+        }} />
+        <Button onClick={() => add({ company: "", trade: "", contact: "", email: "", phone: "", insurance: "", abn: "", status: "Pending" })}><Plus className="h-4 w-4" /> Add</Button>
+      </SectionHeader>
+
+      <div className="rounded-xl border bg-card overflow-x-auto">
+        <div className="min-w-[1200px]">
+          <div className="grid grid-cols-[1.2fr_160px_1fr_1fr_140px_180px_140px_140px_40px] gap-2 px-3 py-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground bg-muted/30 border-b">
+            <div>Company</div><div>Trade</div><div>Contact</div><div>Email</div><div>Phone</div><div>Insurance Exp.</div><div>ABN</div><div>Status</div><div></div>
+          </div>
+          {rows.length === 0 && <div className="px-4 py-8 text-center text-sm text-muted-foreground">No contractors yet.</div>}
+          {rows.map((c) => (
+            <div key={c.id} className="grid grid-cols-[1.2fr_160px_1fr_1fr_140px_180px_140px_140px_40px] gap-2 px-3 py-2 items-center border-b last:border-0">
+              <Input className="h-8 text-sm" value={c.company} onChange={(e) => update(c.id, { company: e.target.value })} />
+              <Input className="h-8 text-xs" value={c.trade} onChange={(e) => update(c.id, { trade: e.target.value })} />
+              <Input className="h-8 text-xs" value={c.contact} onChange={(e) => update(c.id, { contact: e.target.value })} />
+              <Input className="h-8 text-xs" value={c.email} onChange={(e) => update(c.id, { email: e.target.value })} />
+              <Input className="h-8 text-xs" value={c.phone} onChange={(e) => update(c.id, { phone: e.target.value })} />
+              <Input className="h-8 text-xs" type="date" value={c.insurance} onChange={(e) => update(c.id, { insurance: e.target.value })} />
+              <Input className="h-8 text-xs" value={c.abn} onChange={(e) => update(c.id, { abn: e.target.value })} />
+              <Select value={c.status} onValueChange={(v) => update(c.id, { status: v as "Pending" | "Approved" | "Rejected" })}>
+                <SelectTrigger className={cn("h-8 text-xs", c.status === "Approved" && "text-success", c.status === "Rejected" && "text-destructive")}><SelectValue /></SelectTrigger>
+                <SelectContent>{["Pending", "Approved", "Rejected"].map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
+              </Select>
+              <Button size="icon" variant="ghost" onClick={() => del(c.id)}><Trash2 className="h-4 w-4 text-muted-foreground" /></Button>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// =============== COST CODES ===============
+export function CostCodesSection() {
+  const rows = usePlaybook((s) => s.costCodes);
+  const add = usePlaybook((s) => s.addCostCode);
+  const update = usePlaybook((s) => s.updateCostCode);
+  const del = usePlaybook((s) => s.deleteCostCode);
+  const replace = usePlaybook((s) => s.replaceCostCodes);
+  const COLS = ["code", "name", "category", "unit", "rate", "notes"];
+  const csv = toCSV(rows as unknown as Record<string, unknown>[], COLS);
+  return (
+    <div className="space-y-5">
+      <SectionHeader title="💰 Company Cost Codes" subtitle="Company-wide cost code structure — synced into Plexa budgets.">
+        <ImportExport filename="cost-codes.csv" csv={csv} onImport={(t) => {
+          replace(fromCSV(t).map((r) => ({
+            id: Math.random().toString(36).slice(2),
+            code: r.code || "", name: r.name || "", category: r.category || "",
+            unit: r.unit || "", rate: r.rate || "", notes: r.notes || "",
+          })));
+        }} />
+        <Button onClick={() => add({ code: "", name: "", category: "", unit: "", rate: "", notes: "" })}><Plus className="h-4 w-4" /> Add</Button>
+      </SectionHeader>
+
+      <div className="rounded-xl border bg-card overflow-x-auto">
+        <div className="min-w-[1100px]">
+          <div className="grid grid-cols-[120px_1.5fr_180px_100px_120px_1fr_40px] gap-2 px-3 py-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground bg-muted/30 border-b">
+            <div>Code</div><div>Name</div><div>Category</div><div>Unit</div><div>Rate</div><div>Notes</div><div></div>
+          </div>
+          {rows.length === 0 && <div className="px-4 py-8 text-center text-sm text-muted-foreground">No cost codes yet.</div>}
+          {rows.map((c) => (
+            <div key={c.id} className="grid grid-cols-[120px_1.5fr_180px_100px_120px_1fr_40px] gap-2 px-3 py-2 items-center border-b last:border-0">
+              <Input className="h-8 text-xs font-mono" value={c.code} onChange={(e) => update(c.id, { code: e.target.value })} />
+              <Input className="h-8 text-sm" value={c.name} onChange={(e) => update(c.id, { name: e.target.value })} />
+              <Input className="h-8 text-xs" value={c.category} onChange={(e) => update(c.id, { category: e.target.value })} />
+              <Input className="h-8 text-xs" value={c.unit} onChange={(e) => update(c.id, { unit: e.target.value })} />
+              <Input className="h-8 text-xs" value={c.rate} onChange={(e) => update(c.id, { rate: e.target.value })} />
+              <Input className="h-8 text-xs" value={c.notes} onChange={(e) => update(c.id, { notes: e.target.value })} />
+              <Button size="icon" variant="ghost" onClick={() => del(c.id)}><Trash2 className="h-4 w-4 text-muted-foreground" /></Button>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// =============== POST-IMPLEMENTATION EMAIL ===============
+export function PostImplementationEmailSection() {
+  const client = usePlaybook((s) => s.client);
+  const tasks = usePlaybook((s) => s.tasks);
+  const sessions = usePlaybook((s) => s.sessions);
+  const issues = usePlaybook((s) => s.issues);
+  const champions = usePlaybook((s) => s.champions);
+  const dod = usePlaybook((s) => s.dod);
+  const signOffs = usePlaybook((s) => s.signOffs);
+
+  const tasksDone = tasks.filter((t) => t.status === "COMPLETE").length;
+  const sessionsDone = sessions.filter((s) => s.status === "Completed").length;
+  const issuesClosed = issues.filter((i) => i.status === "Closed").length;
+  const dodDone = dod.filter((d) => d.confirmed).length;
+  const competencyComplete = signOffs.filter((s) => s.status === "COMPLETE").length;
+
+  const [recipients, setRecipients] = useState("CEO, CFO, IT Lead, Site Teams, Ops");
+  const [scheduled, setScheduled] = useState(false);
+  const [scheduleDate, setScheduleDate] = useState("");
+
+  const subject = `🎉 ${client.clientName} — Plexa Implementation Complete`;
+  const body = `Hi team,
+
+We're thrilled to wrap up the Plexa implementation for ${client.clientName}. A huge thank you to ${client.clientLead} and the entire team for an outstanding partnership.
+
+THE NUMBERS
+• ${tasksDone}/${tasks.length} tasks completed (${Math.round((tasksDone / tasks.length) * 100)}%)
+• ${sessionsDone}/${sessions.length} sessions delivered
+• ${competencyComplete}/${signOffs.length} users signed off across training modules
+• ${issuesClosed}/${issues.length} issues resolved
+• ${dodDone}/${dod.length} Definition of Done criteria confirmed
+• ${champions.length} certified Plexa Champions inside ${client.clientName}
+
+WHAT HAPPENS NEXT
+• Hypercare for the next 2 weeks — embedded support from your CS team
+• Weekly check-ins continue through the first month of go-live
+• Your dedicated Account Manager, ${client.accountManager}, remains your single point of contact
+
+Login to your dashboards at platform.plexapro.com — full analytics, adoption metrics, and module usage are live.
+
+Welcome to the Plexa family. Here's to building something great together.
+
+— The Plexa Customer Success Team`;
+
+  return (
+    <div className="space-y-5">
+      <SectionHeader title="📧 Post-Implementation Email" subtitle="Automated handover email with live dashboards and analytics.">
+        <Button variant="outline" onClick={() => navigator.clipboard?.writeText(`Subject: ${subject}\n\n${body}`)}><Sparkles className="h-4 w-4" /> Copy email</Button>
+        <Button onClick={() => setScheduled(true)}><Send className="h-4 w-4" /> {scheduled ? "Scheduled" : "Schedule send"}</Button>
+      </SectionHeader>
+
+      <div className="grid lg:grid-cols-[1.4fr_1fr] gap-5">
+        <div className="rounded-xl border bg-card overflow-hidden">
+          <div className="border-b px-4 py-3 bg-muted/30 space-y-2">
+            <div className="grid grid-cols-[80px_1fr] gap-2 items-center">
+              <div className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">To</div>
+              <Input className="h-8 text-sm" value={recipients} onChange={(e) => setRecipients(e.target.value)} />
+            </div>
+            <div className="grid grid-cols-[80px_1fr] gap-2 items-center">
+              <div className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Subject</div>
+              <Input className="h-8 text-sm font-semibold" value={subject} readOnly />
+            </div>
+            <div className="grid grid-cols-[80px_1fr] gap-2 items-center">
+              <div className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Send</div>
+              <div className="flex gap-2 items-center">
+                <Input className="h-8 text-xs w-44" type="datetime-local" value={scheduleDate} onChange={(e) => setScheduleDate(e.target.value)} />
+                <span className="text-xs text-muted-foreground">{scheduled ? `✅ Scheduled for ${scheduleDate || "now"}` : "Pick a time"}</span>
+              </div>
+            </div>
+          </div>
+          <Textarea className="border-0 rounded-none font-mono text-xs leading-relaxed" rows={26} value={body} readOnly />
+        </div>
+
+        <div className="space-y-3">
+          <div className="rounded-xl border bg-card p-5">
+            <div className="text-[10px] font-bold uppercase tracking-[0.15em] text-primary mb-3">Live dashboard snapshot (embedded)</div>
+            <div className="grid grid-cols-2 gap-2">
+              <Snap label="Tasks complete" value={`${Math.round((tasksDone / tasks.length) * 100)}%`} sub={`${tasksDone}/${tasks.length}`} tone="brand" />
+              <Snap label="Sessions delivered" value={`${sessionsDone}`} sub={`of ${sessions.length}`} tone="success" />
+              <Snap label="Users signed off" value={`${competencyComplete}`} sub={`of ${signOffs.length}`} tone="success" />
+              <Snap label="Issues resolved" value={`${issuesClosed}`} sub={`of ${issues.length}`} />
+              <Snap label="DoD confirmed" value={`${dodDone}/${dod.length}`} tone="brand" />
+              <Snap label="Champions" value={`${champions.length}`} tone="success" />
+            </div>
+          </div>
+          <div className="rounded-xl border bg-gradient-to-br from-success/10 to-primary/10 p-5">
+            <div className="text-sm font-bold mb-2">📊 Embedded analytics</div>
+            <p className="text-xs text-muted-foreground">The email auto-attaches platform usage analytics (logins, modules used, adoption trend) from platform.plexapro.com via SSO link.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function Snap({ label, value, sub, tone }: { label: string; value: string; sub?: string; tone?: "brand" | "success" | "warning" | "danger" }) {
+  return (
+    <div className="rounded-lg border bg-background p-3">
+      <div className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">{label}</div>
+      <div className={cn("text-xl font-bold tabular-nums mt-0.5",
+        tone === "brand" && "text-primary",
+        tone === "success" && "text-success",
+        tone === "warning" && "text-warning-foreground",
+        tone === "danger" && "text-destructive",
+      )}>{value}</div>
+      {sub && <div className="text-[10px] text-muted-foreground">{sub}</div>}
     </div>
   );
 }

@@ -4,7 +4,41 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { SectionHeader, StatusBadge } from "../shared";
 import { cn } from "@/lib/utils";
-import { AlertTriangle, CheckCircle2, Clock, Flag, ShieldCheck, Target, TrendingUp, Users } from "lucide-react";
+import { AlertTriangle, CheckCircle2, Clock, Flag, ShieldCheck, Target, TrendingUp, Users, X } from "lucide-react";
+import { useState } from "react";
+
+function MultiUserField({ label, value, onChange }: { label: string; value: string; onChange: (v: string) => void }) {
+  const [draft, setDraft] = useState("");
+  const tokens = value.split(",").map((s) => s.trim()).filter(Boolean);
+  const add = () => {
+    const v = draft.trim();
+    if (!v) return;
+    onChange([...tokens, v].join(", "));
+    setDraft("");
+  };
+  const remove = (i: number) => onChange(tokens.filter((_, j) => j !== i).join(", "));
+  return (
+    <div>
+      <Label className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">{label}</Label>
+      <div className="mt-1 flex flex-wrap items-center gap-1.5 rounded-md border bg-background px-2 py-1.5 min-h-9">
+        {tokens.map((t, i) => (
+          <span key={i} className="inline-flex items-center gap-1 rounded-full bg-primary-soft text-primary text-xs font-medium px-2 py-0.5">
+            {t}
+            <button type="button" onClick={() => remove(i)} className="hover:text-destructive"><X className="h-3 w-3" /></button>
+          </span>
+        ))}
+        <input
+          className="flex-1 min-w-32 bg-transparent outline-none text-sm"
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
+          onKeyDown={(e) => { if (e.key === "Enter" || e.key === ",") { e.preventDefault(); add(); } }}
+          onBlur={add}
+          placeholder={tokens.length ? "Add another…" : "Type name + Enter"}
+        />
+      </div>
+    </div>
+  );
+}
 
 export function CoverSection() {
   const client = usePlaybook((s) => s.client);
@@ -18,32 +52,23 @@ export function CoverSection() {
           <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-primary">Client Information</div>
           <div className="mt-4 space-y-3">
             <Field label="Client Name" value={client.clientName} onChange={(v) => setClient({ clientName: v })} />
-            <Field label="Implementation Lead (Plexa)" value={client.plexaLead} onChange={(v) => setClient({ plexaLead: v })} />
-            <Field label="Implementation Lead (Client)" value={client.clientLead} onChange={(v) => setClient({ clientLead: v })} />
+            <MultiUserField label="Implementation Lead (Plexa)" value={client.plexaLead} onChange={(v) => setClient({ plexaLead: v })} />
+            <MultiUserField label="Implementation Lead (Client)" value={client.clientLead} onChange={(v) => setClient({ clientLead: v })} />
             <Field label="Go-Live Target Date" type="date" value={client.goLiveDate} onChange={(v) => setClient({ goLiveDate: v })} />
-            <Field label="Account Manager (Plexa)" value={client.accountManager} onChange={(v) => setClient({ accountManager: v })} />
+            <MultiUserField label="Account Manager (Plexa)" value={client.accountManager} onChange={(v) => setClient({ accountManager: v })} />
           </div>
         </div>
 
-        <div className="rounded-xl border bg-brand-gradient text-primary-foreground p-5 relative overflow-hidden">
+        <div className="rounded-xl border bg-brand-gradient text-primary-foreground p-6 relative overflow-hidden">
           <div className="absolute inset-0 bg-grid opacity-15" />
           <div className="relative">
-            <div className="text-[11px] font-semibold uppercase tracking-[0.18em] opacity-80">Playbook</div>
-            <h3 className="text-3xl font-bold mt-1">Implementation Playbook</h3>
-            <p className="text-sm opacity-90 mt-2 max-w-md">The definitive workbench for delivering a world-class Plexa implementation. Every phase. Every owner. Every deadline.</p>
-            <div className="mt-6 grid grid-cols-3 gap-3 text-center">
-              <div className="rounded-lg bg-white/10 backdrop-blur p-3">
-                <div className="text-2xl font-bold">8</div>
-                <div className="text-[10px] uppercase tracking-wider opacity-80">Phases</div>
-              </div>
-              <div className="rounded-lg bg-white/10 backdrop-blur p-3">
-                <div className="text-2xl font-bold">76</div>
-                <div className="text-[10px] uppercase tracking-wider opacity-80">Tasks</div>
-              </div>
-              <div className="rounded-lg bg-white/10 backdrop-blur p-3">
-                <div className="text-2xl font-bold">29</div>
-                <div className="text-[10px] uppercase tracking-wider opacity-80">DoD Items</div>
-              </div>
+            <div className="text-[11px] font-semibold uppercase tracking-[0.18em] opacity-80">Welcome to</div>
+            <h3 className="text-4xl font-bold mt-1 tracking-tight">Plexa</h3>
+            <div className="mt-4 space-y-3 text-sm leading-relaxed opacity-95 max-w-prose">
+              <p>We're thrilled to have your organisation join the <span className="font-semibold">Plexa</span> family and are proud to power your business through the Plexa Platform. This is more than just an implementation — it's the beginning of a partnership built on your success.</p>
+              <p>At Plexa, we believe that when you win, we win. That's why we're committed to being with you every step of the way, from onboarding through to long-term growth. Our team is dedicated to ensuring you get the most out of the platform, and we won't consider our job done until you're thriving.</p>
+              <p>You're not just a customer — you're a partner, and your success is our success.</p>
+              <p className="font-semibold">Let's build something great together.</p>
             </div>
           </div>
         </div>
@@ -93,14 +118,12 @@ export function MissionControlSection() {
   const blockedTasks = tasks.filter((t) => t.status === "BLOCKED");
   const dodDone = dod.filter((d) => d.confirmed).length;
 
-  // Where we are
   const currentPhase = PHASES.find((p) => {
     const pr = phaseProgress(tasks, p.id);
     return pr.status === "IN PROGRESS" || pr.status === "BLOCKED";
   }) ?? PHASES.find((p) => phaseProgress(tasks, p.id).status === "NOT STARTED") ?? PHASES[PHASES.length - 1];
   const currentProg = phaseProgress(tasks, currentPhase.id);
 
-  // Next-up tasks (not started/in progress in current or next phase, top 6)
   const phaseOrder = PHASES.map((p) => p.id);
   const currentIdx = phaseOrder.indexOf(currentPhase.id);
   const focusPhases = phaseOrder.slice(currentIdx, currentIdx + 2);
@@ -108,7 +131,6 @@ export function MissionControlSection() {
     .filter((t) => focusPhases.includes(t.phase) && t.status !== "COMPLETE" && t.status !== "BLOCKED")
     .slice(0, 6);
 
-  // Timeline math
   const goLiveTarget = client.goLiveDate || calcEndDate(startDate, timelineMode);
   const today = new Date();
   const target = new Date(goLiveTarget);
@@ -128,7 +150,6 @@ export function MissionControlSection() {
   const onTrack = workPct >= timeElapsedPct - 5;
   const drift = timeElapsedPct - workPct;
 
-  // Risk score / banner
   const risks: { level: "danger" | "warning"; text: string }[] = [];
   if (blockedTasks.length > 0) risks.push({ level: "danger", text: `${blockedTasks.length} blocked task${blockedTasks.length > 1 ? "s" : ""} holding up delivery` });
   if (criticalIssues.length > 0) risks.push({ level: "danger", text: `${criticalIssues.length} high/critical issue${criticalIssues.length > 1 ? "s" : ""} open` });
@@ -139,6 +160,13 @@ export function MissionControlSection() {
 
   const healthLabel = risks.some((r) => r.level === "danger") ? "AT RISK" : risks.length > 0 ? "WATCH" : "ON TRACK";
   const healthTone = healthLabel === "AT RISK" ? "danger" : healthLabel === "WATCH" ? "warning" : "success";
+
+  // Granular analytics
+  const ragColor = healthLabel === "ON TRACK" ? "bg-success" : healthLabel === "WATCH" ? "bg-warning" : "bg-destructive";
+  const emailsSent = emails.filter((e) => e.sent).length;
+  const sessionsHeld = sessions.filter((s) => s.status === "Completed").length;
+  const issuesByType: Record<string, number> = {};
+  openIssues.forEach((i) => { issuesByType[i.type] = (issuesByType[i.type] || 0) + 1; });
 
   return (
     <div className="space-y-6">
@@ -175,7 +203,6 @@ export function MissionControlSection() {
           </div>
         </div>
 
-        {/* Pace bar */}
         <div className="mt-5">
           <div className="flex items-center justify-between text-[11px] font-semibold uppercase tracking-wider text-muted-foreground mb-1.5">
             <span>Work complete</span><span>Time elapsed</span>
@@ -190,28 +217,7 @@ export function MissionControlSection() {
         </div>
       </div>
 
-      {/* Timeline risks banner */}
-      {risks.length > 0 && (
-        <div className="rounded-xl border border-destructive/30 bg-destructive/5 p-4">
-          <div className="flex items-center gap-2 mb-2">
-            <AlertTriangle className="h-4 w-4 text-destructive" />
-            <div className="text-[11px] font-bold uppercase tracking-[0.15em] text-destructive">Threats to the timeline</div>
-          </div>
-          <ul className="space-y-1.5">
-            {risks.map((r, i) => (
-              <li key={i} className="flex items-start gap-2 text-sm">
-                <span className={cn(
-                  "mt-1 h-1.5 w-1.5 rounded-full flex-none",
-                  r.level === "danger" ? "bg-destructive" : "bg-warning"
-                )} />
-                <span>{r.text}</span>
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
-
-      {/* Go-Live countdown */}
+      {/* Go-Live countdown — moved ABOVE threats */}
       <div className={cn(
         "rounded-xl border p-5 relative overflow-hidden",
         goLivePast ? "bg-success/5 border-success/30" :
@@ -245,14 +251,71 @@ export function MissionControlSection() {
         </div>
       </div>
 
-      {/* Phase progress + next up */}
-      <div className="grid lg:grid-cols-3 gap-5">
-        <div className="rounded-xl border bg-card p-5 lg:col-span-2">
-          <div className="flex items-center justify-between mb-4">
-            <div className="text-[11px] font-bold uppercase tracking-[0.15em] text-primary">Phase progress</div>
-            <div className="text-[11px] text-muted-foreground">{overall.complete}/{overall.total} tasks · {overall.pct}%</div>
+      {/* Timeline risks banner */}
+      {risks.length > 0 && (
+        <div className="rounded-xl border border-destructive/30 bg-destructive/5 p-4">
+          <div className="flex items-center gap-2 mb-2">
+            <AlertTriangle className="h-4 w-4 text-destructive" />
+            <div className="text-[11px] font-bold uppercase tracking-[0.15em] text-destructive">Threats to the timeline</div>
           </div>
-          <div className="space-y-2.5">
+          <ul className="space-y-1.5">
+            {risks.map((r, i) => (
+              <li key={i} className="flex items-start gap-2 text-sm">
+                <span className={cn(
+                  "mt-1 h-1.5 w-1.5 rounded-full flex-none",
+                  r.level === "danger" ? "bg-destructive" : "bg-warning"
+                )} />
+                <span>{r.text}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {/* Granular analytics & progress */}
+      <div className="rounded-xl border bg-card p-5">
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <div className="text-[11px] font-bold uppercase tracking-[0.15em] text-primary">Live analytics & progress</div>
+            <div className="text-xs text-muted-foreground mt-0.5">Granular view — every register, every count, RAG status.</div>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className={cn("h-2.5 w-2.5 rounded-full", ragColor)} />
+            <span className="text-xs font-semibold uppercase tracking-wider">{healthLabel}</span>
+          </div>
+        </div>
+        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3">
+          <Stat label="Total tasks" value={overall.total} />
+          <Stat label="Complete" value={overall.complete} tone="success" />
+          <Stat label="In progress" value={overall.inProgress} tone="brand" />
+          <Stat label="Blocked" value={overall.blocked} tone={overall.blocked ? "danger" : undefined} />
+          <Stat label="Sessions held" value={`${sessionsHeld}/${sessions.length}`} />
+          <Stat label="Champions" value={champions.length} />
+          <Stat label="Issues open" value={openIssues.length} tone={openIssues.length ? "warning" : undefined} />
+          <Stat label="Critical" value={criticalIssues.length} tone={criticalIssues.length ? "danger" : undefined} />
+          <Stat label="Emails sent" value={`${emailsSent}/${emails.length}`} tone={emailsSent === emails.length ? "success" : pendingEmails >= 2 ? "warning" : undefined} />
+          <Stat label="DoD confirmed" value={`${dodDone}/${dod.length}`} />
+          <Stat label="Days to go-live" value={daysToGoLive >= 0 ? daysToGoLive : "—"} tone={daysToGoLive < 14 ? "danger" : daysToGoLive < 30 ? "warning" : undefined} />
+          <Stat label="Pace vs time" value={onTrack ? "On track" : `${drift}% behind`} tone={onTrack ? "success" : "danger"} />
+        </div>
+
+        {/* Weekly email compliance strip */}
+        <div className="mt-5">
+          <div className="text-[11px] font-bold uppercase tracking-[0.15em] text-primary mb-2">Weekly email compliance</div>
+          <div className="flex gap-1">
+            {emails.map((e) => (
+              <div key={e.id} className={cn(
+                "flex-1 rounded-md py-2 text-center text-[10px] font-bold",
+                e.sent ? "bg-success/20 text-success" : "bg-muted text-muted-foreground border border-dashed"
+              )}>W{e.week}<div className="text-[9px] opacity-70 mt-0.5">{e.sent ? "SENT" : "PENDING"}</div></div>
+            ))}
+          </div>
+        </div>
+
+        {/* Per-phase progress */}
+        <div className="mt-5">
+          <div className="text-[11px] font-bold uppercase tracking-[0.15em] text-primary mb-2">Phase-by-phase breakdown</div>
+          <div className="space-y-2">
             {PHASES.map((p) => {
               const prog = phaseProgress(tasks, p.id);
               const isCurrent = p.id === currentPhase.id;
@@ -276,6 +339,24 @@ export function MissionControlSection() {
           </div>
         </div>
 
+        {/* Issues by type */}
+        {Object.keys(issuesByType).length > 0 && (
+          <div className="mt-5">
+            <div className="text-[11px] font-bold uppercase tracking-[0.15em] text-primary mb-2">Open issues by type</div>
+            <div className="flex flex-wrap gap-2">
+              {Object.entries(issuesByType).map(([type, count]) => (
+                <div key={type} className="rounded-md border bg-background px-2.5 py-1 text-xs flex items-center gap-2">
+                  <span>{type}</span>
+                  <span className="font-bold tabular-nums">{count}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Next up + blockers + issues */}
+      <div className="grid lg:grid-cols-3 gap-5">
         <div className="rounded-xl border bg-card p-5">
           <div className="flex items-center justify-between mb-4">
             <div className="text-[11px] font-bold uppercase tracking-[0.15em] text-primary">What's next</div>
@@ -300,10 +381,7 @@ export function MissionControlSection() {
             </ul>
           )}
         </div>
-      </div>
 
-      {/* Blockers + Issues */}
-      <div className="grid lg:grid-cols-2 gap-5">
         <div className="rounded-xl border bg-card p-5">
           <div className="flex items-center justify-between mb-3">
             <div className="text-[11px] font-bold uppercase tracking-[0.15em] text-destructive">Blocked tasks</div>
@@ -312,7 +390,7 @@ export function MissionControlSection() {
           {blockedTasks.length === 0 ? (
             <div className="text-sm text-muted-foreground text-center py-6 flex items-center justify-center gap-2">
               <CheckCircle2 className="h-4 w-4 text-success" />
-              Nothing blocked. Keep it flowing.
+              Nothing blocked.
             </div>
           ) : (
             <ul className="space-y-2">
@@ -336,7 +414,7 @@ export function MissionControlSection() {
           {openIssues.length === 0 ? (
             <div className="text-sm text-muted-foreground text-center py-6 flex items-center justify-center gap-2">
               <ShieldCheck className="h-4 w-4 text-success" />
-              No open issues raised.
+              No open issues.
             </div>
           ) : (
             <ul className="space-y-2">
@@ -349,13 +427,6 @@ export function MissionControlSection() {
                     <div className="truncate">{i.description || "(no description)"}</div>
                     <div className="text-[11px] text-muted-foreground">{i.type} · {i.owner} · Phase {i.phase}</div>
                   </div>
-                  <span className={cn(
-                    "text-[10px] font-bold uppercase tracking-wider rounded px-1.5 py-0.5",
-                    i.priority === "CRITICAL" && "bg-destructive text-destructive-foreground",
-                    i.priority === "HIGH" && "bg-warning text-warning-foreground",
-                    i.priority === "MEDIUM" && "bg-muted text-muted-foreground",
-                    i.priority === "LOW" && "bg-muted text-muted-foreground",
-                  )}>{i.priority}</span>
                 </li>
               ))}
             </ul>
@@ -363,27 +434,15 @@ export function MissionControlSection() {
         </div>
       </div>
 
-      {/* Footer strip: people + comms + DoD */}
-      <div className="grid md:grid-cols-3 gap-5">
+      {/* Footer strip */}
+      <div className="grid md:grid-cols-2 gap-5">
         <div className="rounded-xl border bg-card p-5">
           <div className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.15em] text-primary mb-3"><Users className="h-3.5 w-3.5" />People & training</div>
           <div className="grid grid-cols-3 gap-2 text-center">
             <Mini label="Sessions" value={sessions.length} />
-            <Mini label="Held" value={sessions.filter((s) => s.status === "Held").length} />
+            <Mini label="Held" value={sessionsHeld} />
             <Mini label="Champions" value={champions.length} />
           </div>
-        </div>
-        <div className="rounded-xl border bg-card p-5">
-          <div className="text-[11px] font-bold uppercase tracking-[0.15em] text-primary mb-3">Weekly comms</div>
-          <div className="flex gap-1">
-            {emails.map((e) => (
-              <div key={e.id} className={cn(
-                "flex-1 rounded-md py-1.5 text-center text-[10px] font-bold",
-                e.sent ? "bg-success/15 text-success" : "bg-muted text-muted-foreground"
-              )}>W{e.week}</div>
-            ))}
-          </div>
-          <div className="text-[11px] text-muted-foreground mt-2">{emails.filter((e) => e.sent).length} of {emails.length} weekly updates sent</div>
         </div>
         <div className="rounded-xl border bg-card p-5">
           <div className="text-[11px] font-bold uppercase tracking-[0.15em] text-primary mb-3">Definition of done</div>
@@ -412,6 +471,21 @@ function HeroStat({ icon, label, value, hint, tone }: { icon: React.ReactNode; l
         tone === "danger" && "text-destructive",
       )}>{value}</div>
       {hint && <div className="text-[10px] text-muted-foreground mt-0.5">{hint}</div>}
+    </div>
+  );
+}
+
+function Stat({ label, value, tone }: { label: string; value: string | number; tone?: "brand" | "success" | "warning" | "danger" }) {
+  return (
+    <div className="rounded-lg border bg-background p-3">
+      <div className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">{label}</div>
+      <div className={cn(
+        "text-xl font-bold tabular-nums mt-0.5",
+        tone === "brand" && "text-primary",
+        tone === "success" && "text-success",
+        tone === "warning" && "text-warning-foreground",
+        tone === "danger" && "text-destructive",
+      )}>{value}</div>
     </div>
   );
 }
