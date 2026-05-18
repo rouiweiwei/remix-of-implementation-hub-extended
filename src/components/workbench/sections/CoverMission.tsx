@@ -211,6 +211,40 @@ export function MissionControlSection() {
         </div>
       )}
 
+      {/* Go-Live countdown */}
+      <div className={cn(
+        "rounded-xl border p-5 relative overflow-hidden",
+        goLivePast ? "bg-success/5 border-success/30" :
+        daysToGoLive < 14 ? "bg-destructive/5 border-destructive/30" :
+        daysToGoLive < 30 ? "bg-warning/10 border-warning/40" :
+        "bg-primary-soft border-primary/30"
+      )}>
+        <div className="flex flex-wrap items-center justify-between gap-5">
+          <div className="min-w-0">
+            <div className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.15em] text-primary">
+              <Clock className="h-3.5 w-3.5" />
+              {goLivePast ? "Go-Live reached" : "Countdown to Go-Live"}
+            </div>
+            <div className="mt-1 text-sm text-muted-foreground">
+              Target · <span className="font-semibold text-foreground">{new Date(goLiveTarget).toLocaleDateString(undefined, { weekday: "long", day: "numeric", month: "long", year: "numeric" })}</span>
+            </div>
+          </div>
+          {goLivePast ? (
+            <div className="text-2xl font-bold text-success">Live for {Math.abs(daysToGoLive)} day{Math.abs(daysToGoLive) === 1 ? "" : "s"}</div>
+          ) : (
+            <div className="flex items-end gap-3">
+              <CountdownUnit value={cdWeeks} label={cdWeeks === 1 ? "Week" : "Weeks"} />
+              <span className="text-2xl font-bold text-muted-foreground pb-2">:</span>
+              <CountdownUnit value={cdDays} label="Days" />
+              <span className="text-2xl font-bold text-muted-foreground pb-2">:</span>
+              <CountdownUnit value={cdHours} label="Hrs" />
+              <span className="text-2xl font-bold text-muted-foreground pb-2">:</span>
+              <CountdownUnit value={cdMinutes} label="Min" />
+            </div>
+          )}
+        </div>
+      </div>
+
       {/* Phase progress + next up */}
       <div className="grid lg:grid-cols-3 gap-5">
         <div className="rounded-xl border bg-card p-5 lg:col-span-2">
