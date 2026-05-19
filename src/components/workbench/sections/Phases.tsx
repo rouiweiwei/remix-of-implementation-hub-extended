@@ -10,7 +10,15 @@ import { Textarea } from "@/components/ui/textarea";
 import { Calendar, History } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-const MODES: TimelineMode[] = ["Quick (4 Weeks)", "Medium (6 Weeks)", "Enterprise (8 Weeks)", "Complex (12 Weeks)"];
+const MODES: TimelineMode[] = [
+  "Quick (4 Weeks)",
+  "Medium (6 Weeks)",
+  "Enterprise (8 Weeks)",
+  "Extended (10 Weeks)",
+  "Complex (12 Weeks)",
+  "Strategic (14 Weeks)",
+  "Transformational (16 Weeks)",
+];
 
 export function TimelineSection() {
   const startDate = usePlaybook((s) => s.startDate);
