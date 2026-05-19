@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { usePlaybook, calcEndDate, type TimelineMode } from "@/lib/playbook-store";
+import { usePlaybook, calcEndDate, addBusinessDays, weeksForMode, type TimelineMode } from "@/lib/playbook-store";
 import { PHASES, type PhaseId, WORKSHOP_STEPS, RESISTANCE_PROFILES, TRAINING_MODULES } from "@/lib/playbook-data";
 import type { TaskStatus } from "@/lib/playbook-data";
 import { SectionHeader, StatusBadge } from "../shared";
