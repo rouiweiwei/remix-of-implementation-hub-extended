@@ -536,6 +536,7 @@ export function IssuesSection() {
               <th className="px-2 py-2 text-left w-32">Date Raised</th>
               <th className="px-2 py-2 text-left w-32">Status</th>
               <th className="px-2 py-2 text-left">Resolution / Notes</th>
+              <th className="px-2 py-2 text-left w-10"></th>
             </tr>
           </thead>
           <tbody className="divide-y">
