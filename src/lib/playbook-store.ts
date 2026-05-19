@@ -11,7 +11,14 @@ import {
   PHASES,
 } from "./playbook-data";
 
-export type TimelineMode = "Quick (4 Weeks)" | "Medium (6 Weeks)" | "Enterprise (8 Weeks)" | "Complex (12 Weeks)";
+export type TimelineMode =
+  | "Quick (4 Weeks)"
+  | "Medium (6 Weeks)"
+  | "Enterprise (8 Weeks)"
+  | "Extended (10 Weeks)"
+  | "Complex (12 Weeks)"
+  | "Strategic (14 Weeks)"
+  | "Transformational (16 Weeks)";
 
 export interface ClientInfo {
   clientName: string;
