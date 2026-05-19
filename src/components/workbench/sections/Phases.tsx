@@ -32,7 +32,7 @@ export function TimelineSection() {
     <div className="space-y-6">
       <SectionHeader title="📆 Timeline Planner" subtitle="Pick mode and start date. All phase dates auto-calculate." />
 
-      <div className="grid md:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 md:grid-cols-4 xl:grid-cols-7 gap-3">
         {MODES.map((m) => {
           const active = m === timelineMode;
           const weeks = m.match(/\d+/)?.[0];
