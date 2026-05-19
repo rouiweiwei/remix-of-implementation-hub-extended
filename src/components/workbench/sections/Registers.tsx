@@ -486,6 +486,8 @@ export function IssuesSection() {
     Array.from({ length: ISSUE_ROWS }, () => ({ phase: "Phase 4", type: "👤 User Error", description: "", reportedBy: "", owner: "PLEXA", priority: "MEDIUM", dateRaised: "", status: "Open", resolution: "" }))
   );
   const upd = (i: number, patch: Partial<IssueRow>) => setRows((p) => p.map((r, idx) => idx === i ? { ...r, ...patch } : r));
+  const addRow = () => setRows((p) => [...p, { phase: "Phase 4", type: "👤 User Error", description: "", reportedBy: "", owner: "PLEXA", priority: "MEDIUM", dateRaised: "", status: "Open", resolution: "" }]);
+  const delRow = (i: number) => setRows((p) => p.filter((_, idx) => idx !== i));
 
   const counts = {
     bug: rows.filter((r) => r.type.includes("Bug")).length,
@@ -534,6 +536,7 @@ export function IssuesSection() {
               <th className="px-2 py-2 text-left w-32">Date Raised</th>
               <th className="px-2 py-2 text-left w-32">Status</th>
               <th className="px-2 py-2 text-left">Resolution / Notes</th>
+              <th className="px-2 py-2 text-left w-10"></th>
             </tr>
           </thead>
           <tbody className="divide-y">
@@ -575,10 +578,14 @@ export function IssuesSection() {
                   </Select>
                 </td>
                 <td className="px-2 py-1"><Input className="h-7 text-xs" value={r.resolution} onChange={(e) => upd(i, { resolution: e.target.value })} /></td>
+                <td className="px-2 py-1 text-center"><button onClick={() => delRow(i)} className="text-muted-foreground hover:text-destructive text-sm" title="Delete row">×</button></td>
               </tr>
             ))}
           </tbody>
         </table>
+      </div>
+      <div className="flex justify-end">
+        <Button size="sm" variant="outline" onClick={addRow}>+ Add Issue</Button>
       </div>
     </div>
   );
