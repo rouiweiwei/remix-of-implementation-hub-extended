@@ -11,7 +11,14 @@ import {
   PHASES,
 } from "./playbook-data";
 
-export type TimelineMode = "Quick (4 Weeks)" | "Medium (6 Weeks)" | "Enterprise (8 Weeks)" | "Complex (12 Weeks)";
+export type TimelineMode =
+  | "Quick (4 Weeks)"
+  | "Medium (6 Weeks)"
+  | "Enterprise (8 Weeks)"
+  | "Extended (10 Weeks)"
+  | "Complex (12 Weeks)"
+  | "Strategic (14 Weeks)"
+  | "Transformational (16 Weeks)";
 
 export interface ClientInfo {
   clientName: string;
@@ -441,11 +448,28 @@ export function overallProgress(tasks: Task[]) {
   return { total, complete, inProgress, blocked, pct: total === 0 ? 0 : Math.round((complete / total) * 100) };
 }
 
-export function calcEndDate(startDate: string, mode: TimelineMode): string {
-  const weeks = mode.startsWith("Quick") ? 4 : mode.startsWith("Medium") ? 6 : mode.startsWith("Enterprise") ? 8 : 12;
+export function weeksForMode(mode: TimelineMode): number {
+  const m = mode.match(/\d+/);
+  return m ? parseInt(m[0], 10) : 6;
+}
+
+// Add N business days (skip Sat/Sun) to a date string (YYYY-MM-DD)
+export function addBusinessDays(startDate: string, days: number): Date {
   const d = new Date(startDate);
-  d.setDate(d.getDate() + weeks * 7);
-  return d.toISOString().slice(0, 10);
+  let added = 0;
+  while (added < days) {
+    d.setDate(d.getDate() + 1);
+    const day = d.getDay();
+    if (day !== 0 && day !== 6) added++;
+  }
+  return d;
+}
+
+export function calcEndDate(startDate: string, mode: TimelineMode): string {
+  const weeks = weeksForMode(mode);
+  // 5 business days per week
+  const end = addBusinessDays(startDate, weeks * 5);
+  return end.toISOString().slice(0, 10);
 }
 
 export { PHASES };

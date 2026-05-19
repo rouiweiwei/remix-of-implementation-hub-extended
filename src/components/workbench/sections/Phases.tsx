@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { usePlaybook, calcEndDate, type TimelineMode } from "@/lib/playbook-store";
+import { usePlaybook, calcEndDate, addBusinessDays, weeksForMode, type TimelineMode } from "@/lib/playbook-store";
 import { PHASES, type PhaseId, WORKSHOP_STEPS, RESISTANCE_PROFILES, TRAINING_MODULES } from "@/lib/playbook-data";
 import type { TaskStatus } from "@/lib/playbook-data";
 import { SectionHeader, StatusBadge } from "../shared";
@@ -10,7 +10,15 @@ import { Textarea } from "@/components/ui/textarea";
 import { Calendar, History } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-const MODES: TimelineMode[] = ["Quick (4 Weeks)", "Medium (6 Weeks)", "Enterprise (8 Weeks)", "Complex (12 Weeks)"];
+const MODES: TimelineMode[] = [
+  "Quick (4 Weeks)",
+  "Medium (6 Weeks)",
+  "Enterprise (8 Weeks)",
+  "Extended (10 Weeks)",
+  "Complex (12 Weeks)",
+  "Strategic (14 Weeks)",
+  "Transformational (16 Weeks)",
+];
 
 export function TimelineSection() {
   const startDate = usePlaybook((s) => s.startDate);
@@ -24,7 +32,7 @@ export function TimelineSection() {
     <div className="space-y-6">
       <SectionHeader title="📆 Timeline Planner" subtitle="Pick mode and start date. All phase dates auto-calculate." />
 
-      <div className="grid md:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 md:grid-cols-4 xl:grid-cols-7 gap-3">
         {MODES.map((m) => {
           const active = m === timelineMode;
           const weeks = m.match(/\d+/)?.[0];
@@ -70,20 +78,31 @@ export function TimelineSection() {
       <div className="rounded-xl border bg-card p-5">
         <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-primary mb-3">Phase Timeline</div>
         <div className="space-y-2">
-          {PHASES.map((p, i) => {
-            const d = new Date(startDate);
-            d.setDate(d.getDate() + i * Math.floor((parseInt(timelineMode.match(/\d+/)?.[0] || "6") * 7) / PHASES.length));
-            return (
-              <div key={p.id} className="flex items-center gap-3">
-                <div className="w-24 text-sm font-semibold">{p.name}</div>
-                <div className="text-xs text-muted-foreground flex-1">{p.description}</div>
-                <div className="text-xs font-medium text-foreground">{d.toISOString().slice(0, 10)}</div>
-              </div>
-            );
-          })}
+          {(() => {
+            const totalBizDays = weeksForMode(timelineMode) * 5;
+            const perPhase = Math.max(1, Math.floor(totalBizDays / PHASES.length));
+            let cursor = 0;
+            return PHASES.map((p, i) => {
+              const phaseStart = i === 0 ? new Date(startDate) : addBusinessDays(startDate, cursor);
+              const isLast = i === PHASES.length - 1;
+              const endOffset = isLast ? totalBizDays : cursor + perPhase;
+              const phaseEnd = addBusinessDays(startDate, Math.max(endOffset - 1, cursor));
+              cursor = endOffset;
+              return (
+                <div key={p.id} className="flex items-center gap-3">
+                  <div className="w-24 text-sm font-semibold">{p.name}</div>
+                  <div className="text-xs text-muted-foreground flex-1">{p.description}</div>
+                  <div className="text-xs font-medium text-foreground whitespace-nowrap">
+                    {phaseStart.toISOString().slice(0, 10)} → {phaseEnd.toISOString().slice(0, 10)}
+                  </div>
+                </div>
+              );
+            });
+          })()}
         </div>
-        <p className="text-xs text-muted-foreground mt-4">Dates are calendar days (weekends included). Adjust manually for public holidays. Phase 2B/2C only applies if the client has existing data to migrate.</p>
+        <p className="text-xs text-muted-foreground mt-4">Dates are business days only (weekends excluded). Adjust manually for public holidays. Phase 2B/2C only applies if the client has existing data to migrate.</p>
       </div>
+
     </div>
   );
 }
