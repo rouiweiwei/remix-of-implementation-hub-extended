@@ -479,24 +479,30 @@ export function EmailLogSection() {
 const ISSUE_TYPES = ["🐛 Bug/Defect", "👤 User Error", "✨ Feature Request", "⚙️ Configuration", "🔗 Integration", "📋 Process Gap", "🎓 Training Gap", "❓ Question", "📦 Data"] as const;
 const PRIORITIES = ["LOW", "MEDIUM", "HIGH", "CRITICAL"] as const;
 const ISSUE_STATUSES = ["Open", "In Progress", "Closed"] as const;
-type IssueRow = { phase: string; type: string; description: string; reportedBy: string; owner: string; priority: string; dateRaised: string; status: string; resolution: string };
+type IssueRow = { phase: string; type: string; description: string; reportedBy: string; owner: string; priority: string; dateRaised: string; status: string; resolution: string; archived?: boolean };
 
 export function IssuesSection() {
   const [rows, setRows] = useState<IssueRow[]>(() =>
-    Array.from({ length: ISSUE_ROWS }, () => ({ phase: "Phase 4", type: "👤 User Error", description: "", reportedBy: "", owner: "PLEXA", priority: "MEDIUM", dateRaised: "", status: "Open", resolution: "" }))
+    Array.from({ length: ISSUE_ROWS }, () => ({ phase: "Phase 4", type: "👤 User Error", description: "", reportedBy: "", owner: "PLEXA", priority: "MEDIUM", dateRaised: "", status: "Open", resolution: "", archived: false }))
   );
+  const [showArchived, setShowArchived] = useState(false);
   const upd = (i: number, patch: Partial<IssueRow>) => setRows((p) => p.map((r, idx) => idx === i ? { ...r, ...patch } : r));
-  const addRow = () => setRows((p) => [...p, { phase: "Phase 4", type: "👤 User Error", description: "", reportedBy: "", owner: "PLEXA", priority: "MEDIUM", dateRaised: "", status: "Open", resolution: "" }]);
+  const addRow = () => setRows((p) => [...p, { phase: "Phase 4", type: "👤 User Error", description: "", reportedBy: "", owner: "PLEXA", priority: "MEDIUM", dateRaised: "", status: "Open", resolution: "", archived: false }]);
   const delRow = (i: number) => setRows((p) => p.filter((_, idx) => idx !== i));
+  const toggleArchive = (i: number) => setRows((p) => p.map((r, idx) => idx === i ? { ...r, archived: !r.archived } : r));
 
+  const active = rows.filter((r) => !r.archived);
+  const archivedCount = rows.length - active.length;
   const counts = {
-    bug: rows.filter((r) => r.type.includes("Bug")).length,
-    user: rows.filter((r) => r.type.includes("User Error")).length,
-    feature: rows.filter((r) => r.type.includes("Feature")).length,
-    training: rows.filter((r) => r.type.includes("Training")).length,
-    open: rows.filter((r) => r.status === "Open" || r.status === "In Progress").length,
-    closed: rows.filter((r) => r.status === "Closed").length,
+    bug: active.filter((r) => r.type.includes("Bug")).length,
+    user: active.filter((r) => r.type.includes("User Error")).length,
+    feature: active.filter((r) => r.type.includes("Feature")).length,
+    training: active.filter((r) => r.type.includes("Training")).length,
+    open: active.filter((r) => r.status === "Open" || r.status === "In Progress").length,
+    closed: active.filter((r) => r.status === "Closed").length,
   };
+  const visibleRows = rows.map((r, i) => ({ r, i })).filter(({ r }) => showArchived ? r.archived : !r.archived);
+
 
   return (
     <div className="space-y-5">
