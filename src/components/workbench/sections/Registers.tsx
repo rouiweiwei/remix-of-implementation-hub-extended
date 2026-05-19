@@ -546,8 +546,8 @@ export function IssuesSection() {
             </tr>
           </thead>
           <tbody className="divide-y">
-            {rows.map((r, i) => (
-              <tr key={i} className="hover:bg-muted/20">
+            {visibleRows.map(({ r, i }) => (
+              <tr key={i} className={cn("hover:bg-muted/20", r.archived && "opacity-60")}>
                 <td className="px-2 py-1 font-mono tabular-nums text-muted-foreground">{i + 1}</td>
                 <td className="px-2 py-1"><Input className="h-7 text-xs" value={r.phase} onChange={(e) => upd(i, { phase: e.target.value })} /></td>
                 <td className="px-2 py-1">
@@ -584,15 +584,27 @@ export function IssuesSection() {
                   </Select>
                 </td>
                 <td className="px-2 py-1"><Input className="h-7 text-xs" value={r.resolution} onChange={(e) => upd(i, { resolution: e.target.value })} /></td>
-                <td className="px-2 py-1 text-center"><button onClick={() => delRow(i)} className="text-muted-foreground hover:text-destructive text-sm" title="Delete row">×</button></td>
+                <td className="px-2 py-1 text-center whitespace-nowrap">
+                  <button onClick={() => toggleArchive(i)} className="text-muted-foreground hover:text-foreground text-xs mr-1" title={r.archived ? "Restore" : "Archive"}>
+                    {r.archived ? "↺" : "📦"}
+                  </button>
+                  <button onClick={() => delRow(i)} className="text-muted-foreground hover:text-destructive text-sm" title="Delete row">×</button>
+                </td>
               </tr>
             ))}
+            {visibleRows.length === 0 && (
+              <tr><td colSpan={11} className="px-2 py-6 text-center text-muted-foreground text-xs">{showArchived ? "No archived issues." : "No issues."}</td></tr>
+            )}
           </tbody>
         </table>
       </div>
-      <div className="flex justify-end">
+      <div className="flex justify-between items-center">
+        <button onClick={() => setShowArchived((v) => !v)} className="text-xs text-muted-foreground hover:text-foreground underline">
+          {showArchived ? `← Back to active` : `View archived (${archivedCount})`}
+        </button>
         <Button size="sm" variant="outline" onClick={addRow}>+ Add Issue</Button>
       </div>
+
     </div>
   );
 }
