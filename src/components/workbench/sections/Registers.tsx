@@ -486,6 +486,8 @@ export function IssuesSection() {
     Array.from({ length: ISSUE_ROWS }, () => ({ phase: "Phase 4", type: "👤 User Error", description: "", reportedBy: "", owner: "PLEXA", priority: "MEDIUM", dateRaised: "", status: "Open", resolution: "" }))
   );
   const upd = (i: number, patch: Partial<IssueRow>) => setRows((p) => p.map((r, idx) => idx === i ? { ...r, ...patch } : r));
+  const addRow = () => setRows((p) => [...p, { phase: "Phase 4", type: "👤 User Error", description: "", reportedBy: "", owner: "PLEXA", priority: "MEDIUM", dateRaised: "", status: "Open", resolution: "" }]);
+  const delRow = (i: number) => setRows((p) => p.filter((_, idx) => idx !== i));
 
   const counts = {
     bug: rows.filter((r) => r.type.includes("Bug")).length,
