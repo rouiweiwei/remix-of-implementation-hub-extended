@@ -578,10 +578,14 @@ export function IssuesSection() {
                   </Select>
                 </td>
                 <td className="px-2 py-1"><Input className="h-7 text-xs" value={r.resolution} onChange={(e) => upd(i, { resolution: e.target.value })} /></td>
+                <td className="px-2 py-1 text-center"><button onClick={() => delRow(i)} className="text-muted-foreground hover:text-destructive text-sm" title="Delete row">×</button></td>
               </tr>
             ))}
           </tbody>
         </table>
+      </div>
+      <div className="flex justify-end">
+        <Button size="sm" variant="outline" onClick={addRow}>+ Add Issue</Button>
       </div>
     </div>
   );
