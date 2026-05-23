@@ -5,7 +5,7 @@ import { Label } from "@/components/ui/label";
 import { SectionHeader, StatusBadge } from "../shared";
 import { cn } from "@/lib/utils";
 import { AlertTriangle, Bell, CheckCircle2, Clock, Flag, ShieldCheck, Target, TrendingUp, Users, X } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 function MultiUserField({ label, value, onChange }: { label: string; value: string; onChange: (v: string) => void }) {
   const [draft, setDraft] = useState("");
@@ -133,16 +133,22 @@ export function MissionControlSection() {
     .slice(0, 6);
 
   const goLiveTarget = client.goLiveDate || calcEndDate(startDate, timelineMode);
-  const today = new Date();
+  const [now, setNow] = useState<Date | null>(null);
+  useEffect(() => {
+    setNow(new Date());
+    const id = setInterval(() => setNow(new Date()), 60_000);
+    return () => clearInterval(id);
+  }, []);
+  const today = now ?? new Date(0);
   const target = new Date(goLiveTarget);
-  const msToGoLive = target.getTime() - today.getTime();
+  const msToGoLive = now ? target.getTime() - today.getTime() : 0;
   const daysToGoLive = Math.ceil(msToGoLive / 86400000);
   const absMs = Math.max(0, msToGoLive);
   const cdWeeks = Math.floor(absMs / (7 * 86400000));
   const cdDays = Math.floor((absMs % (7 * 86400000)) / 86400000);
   const cdHours = Math.floor((absMs % 86400000) / 3600000);
   const cdMinutes = Math.floor((absMs % 3600000) / 60000);
-  const goLivePast = msToGoLive < 0;
+  const goLivePast = now ? msToGoLive < 0 : false;
   const start = new Date(startDate);
   const totalDays = Math.max(1, Math.ceil((target.getTime() - start.getTime()) / 86400000));
   const elapsed = Math.max(0, Math.ceil((today.getTime() - start.getTime()) / 86400000));
