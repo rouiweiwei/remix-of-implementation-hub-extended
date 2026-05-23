@@ -231,6 +231,10 @@ export interface IntranetResource {
   recordedOn: string;    // YYYY-MM-DD
   description: string;
   status: IntranetStatus;
+  fileName?: string;     // attached file name
+  fileType?: string;     // MIME type
+  fileSize?: number;     // bytes
+  fileData?: string;     // base64 data URL of attachment
 }
 
 interface PlaybookState {
