@@ -297,6 +297,7 @@ const initial = {
   } as ClientInfo,
   tasks: SEED_TASKS,
   noteHistory: {} as Record<string, NoteHistoryEntry[]>,
+  taskOverrides: {} as Record<string, TaskScheduleOverride>,
   timelineMode: "Medium (6 Weeks)" as TimelineMode,
   startDate: new Date().toISOString().slice(0, 10),
   trainingModules: TRAINING_MODULES.map((m) => ({
