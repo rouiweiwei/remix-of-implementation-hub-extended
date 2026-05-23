@@ -367,6 +367,7 @@ const initial = {
   projectDetails: [] as ProjectDetail[],
   contractors: [] as Contractor[],
   costCodes: [] as CostCode[],
+  reminderTasks: [] as ReminderTask[],
 };
 
 export const usePlaybook = create<PlaybookState>()(
