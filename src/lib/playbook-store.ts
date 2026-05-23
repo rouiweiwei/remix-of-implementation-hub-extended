@@ -369,6 +369,16 @@ export const usePlaybook = create<PlaybookState>()(
           };
         }),
       setTimeline: (timelineMode, startDate) => set({ timelineMode, startDate }),
+      setTaskSchedule: (id, patch) =>
+        set((s) => {
+          const next = { ...s.taskOverrides };
+          if (patch === null) {
+            delete next[id];
+          } else {
+            next[id] = { ...next[id], ...patch };
+          }
+          return { taskOverrides: next };
+        }),
       updateModule: (id, patch) =>
         set((s) => ({ trainingModules: s.trainingModules.map((m) => (m.id === id ? { ...m, ...patch } : m)) })),
 
