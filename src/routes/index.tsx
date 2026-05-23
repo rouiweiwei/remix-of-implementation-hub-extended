@@ -77,7 +77,7 @@ function Workbench() {
         </div>
       </header>
 
-      <div className="mx-auto max-w-[1600px] px-6 py-6">
+      <div className="w-full px-6 py-6">
         <PhaseBanner
           activePhase={phaseFilter}
           onPickPhase={(p) => { setPhaseFilter(p); setTab("plan"); }}
