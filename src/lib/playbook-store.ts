@@ -194,10 +194,16 @@ export interface CostCode {
   notes: string;
 }
 
+export interface TaskScheduleOverride {
+  start?: string; // YYYY-MM-DD
+  end?: string;   // YYYY-MM-DD (inclusive)
+}
+
 interface PlaybookState {
   client: ClientInfo;
   tasks: Task[];
   noteHistory: Record<string, NoteHistoryEntry[]>;
+  taskOverrides: Record<string, TaskScheduleOverride>;
   timelineMode: TimelineMode;
   startDate: string;
   trainingModules: TrainingModuleState[];
@@ -219,6 +225,7 @@ interface PlaybookState {
   setClient: (c: Partial<ClientInfo>) => void;
   updateTaskStatus: (id: string, status: TaskStatus) => void;
   updateTaskNotes: (id: string, notes: string, by?: string) => void;
+  setTaskSchedule: (id: string, patch: TaskScheduleOverride | null) => void;
   setTimeline: (mode: TimelineMode, startDate: string) => void;
   updateModule: (id: string, patch: Partial<TrainingModuleState>) => void;
 
@@ -290,6 +297,7 @@ const initial = {
   } as ClientInfo,
   tasks: SEED_TASKS,
   noteHistory: {} as Record<string, NoteHistoryEntry[]>,
+  taskOverrides: {} as Record<string, TaskScheduleOverride>,
   timelineMode: "Medium (6 Weeks)" as TimelineMode,
   startDate: new Date().toISOString().slice(0, 10),
   trainingModules: TRAINING_MODULES.map((m) => ({
@@ -361,6 +369,16 @@ export const usePlaybook = create<PlaybookState>()(
           };
         }),
       setTimeline: (timelineMode, startDate) => set({ timelineMode, startDate }),
+      setTaskSchedule: (id, patch) =>
+        set((s) => {
+          const next = { ...s.taskOverrides };
+          if (patch === null) {
+            delete next[id];
+          } else {
+            next[id] = { ...next[id], ...patch };
+          }
+          return { taskOverrides: next };
+        }),
       updateModule: (id, patch) =>
         set((s) => ({ trainingModules: s.trainingModules.map((m) => (m.id === id ? { ...m, ...patch } : m)) })),
 
@@ -473,3 +491,61 @@ export function calcEndDate(startDate: string, mode: TimelineMode): string {
 }
 
 export { PHASES };
+
+// ─── Schedule computation ─────────────────────────────────────────────
+// Auto-derive a start & end date for every task by spreading them evenly
+// across their phase's date range. Overrides win.
+export interface ScheduledTask {
+  task: Task;
+  start: string; // YYYY-MM-DD
+  end: string;   // YYYY-MM-DD (inclusive)
+  isOverride: boolean;
+}
+
+function isoDay(d: Date) {
+  return d.toISOString().slice(0, 10);
+}
+
+export function computeSchedule(
+  tasks: Task[],
+  startDate: string,
+  mode: TimelineMode,
+  overrides: Record<string, TaskScheduleOverride>
+): ScheduledTask[] {
+  const totalBizDays = weeksForMode(mode) * 5;
+  const perPhase = Math.max(1, Math.floor(totalBizDays / PHASES.length));
+  const phaseRanges: Record<string, { startOffset: number; endOffset: number }> = {};
+  let cursor = 0;
+  PHASES.forEach((p, i) => {
+    const isLast = i === PHASES.length - 1;
+    const endOffset = isLast ? totalBizDays : cursor + perPhase;
+    phaseRanges[p.id] = { startOffset: cursor, endOffset };
+    cursor = endOffset;
+  });
+
+  const result: ScheduledTask[] = [];
+  PHASES.forEach((p) => {
+    const phaseTasks = tasks.filter((t) => t.phase === p.id);
+    const { startOffset, endOffset } = phaseRanges[p.id];
+    const span = Math.max(1, endOffset - startOffset);
+    const slot = Math.max(1, Math.floor(span / Math.max(1, phaseTasks.length)));
+    phaseTasks.forEach((t, idx) => {
+      const o = overrides[t.id];
+      let start: string;
+      let end: string;
+      const taskStartOffset = startOffset + idx * slot;
+      const taskEndOffset = idx === phaseTasks.length - 1
+        ? endOffset
+        : Math.min(endOffset, taskStartOffset + slot);
+      const autoStart = taskStartOffset === 0
+        ? new Date(startDate)
+        : addBusinessDays(startDate, taskStartOffset);
+      const autoEnd = addBusinessDays(startDate, Math.max(taskEndOffset - 1, taskStartOffset));
+      start = o?.start || isoDay(autoStart);
+      end = o?.end || isoDay(autoEnd);
+      if (new Date(end) < new Date(start)) end = start;
+      result.push({ task: t, start, end, isOverride: !!(o?.start || o?.end) });
+    });
+  });
+  return result;
+}

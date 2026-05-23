@@ -5,6 +5,7 @@ import { PhaseBanner } from "@/components/workbench/PhaseBanner";
 import { CoverSection, MissionControlSection } from "@/components/workbench/sections/CoverMission";
 import { TimelineSection, ImplementationPlanSection, Phase3Section, Phase4Section, TrainingScheduleSection } from "@/components/workbench/sections/Phases";
 import { SessionRegisterSection, AttendanceSection, SignOffSection, EmailLogSection, IssuesSection, StakeholdersSection, ChampionsSection, DefinitionOfDoneSection, IntranetSection, ContentLogSection, UserAccountsSection, ProjectDetailsSection, ContractorsSection, CostCodesSection, PostImplementationEmailSection, TemplatesLibrarySection } from "@/components/workbench/sections/Registers";
+import { GanttSection } from "@/components/workbench/sections/Gantt";
 import { cn } from "@/lib/utils";
 import type { PhaseId } from "@/lib/playbook-data";
 
@@ -22,6 +23,7 @@ const NAV = [
   { id: "cover", label: "Cover", icon: "📖", group: "Overview" },
   { id: "mission", label: "Mission Control", icon: "🎯", group: "Overview" },
   { id: "timeline", label: "Timeline Planner", icon: "📆", group: "Overview" },
+  { id: "gantt", label: "Day-by-Day Gantt", icon: "📊", group: "Overview" },
   { id: "plan", label: "Implementation Plan", icon: "🗺️", group: "Phases" },
   { id: "phase3", label: "Phase 3 — Workshops", icon: "🎯", group: "Phases" },
   { id: "phase4", label: "Phase 4 — Training", icon: "🏋️", group: "Phases" },
@@ -122,6 +124,7 @@ function Workbench() {
             {tab === "cover" && <CoverSection />}
             {tab === "mission" && <MissionControlSection />}
             {tab === "timeline" && <TimelineSection />}
+            {tab === "gantt" && <GanttSection />}
             {tab === "plan" && <ImplementationPlanSection filterPhase={phaseFilter} />}
             {tab === "phase3" && <Phase3Section />}
             {tab === "phase4" && <Phase4Section />}
