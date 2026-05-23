@@ -23,6 +23,7 @@ const NAV = [
   { id: "cover", label: "Cover", icon: "📖", group: "Overview" },
   { id: "mission", label: "Mission Control", icon: "🎯", group: "Overview" },
   { id: "timeline", label: "Timeline Planner", icon: "📆", group: "Overview" },
+  { id: "gantt", label: "Day-by-Day Gantt", icon: "📊", group: "Overview" },
   { id: "plan", label: "Implementation Plan", icon: "🗺️", group: "Phases" },
   { id: "phase3", label: "Phase 3 — Workshops", icon: "🎯", group: "Phases" },
   { id: "phase4", label: "Phase 4 — Training", icon: "🏋️", group: "Phases" },
