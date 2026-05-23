@@ -354,6 +354,25 @@ export function TrainingScheduleSection() {
   );
   const update = (n: number, patch: Partial<ItemState>) =>
     setState((p) => ({ ...p, [n]: { ...p[n], ...patch } }));
+  const bulkApply = (nums: number[], key: "teach" | "practice" | "observe", value: boolean) =>
+    setState((p) => {
+      const next = { ...p };
+      for (const n of nums) {
+        const cur = next[n];
+        const merged = { ...cur, [key]: value };
+        const allDone = merged.teach && merged.practice && merged.observe;
+        const anyDone = merged.teach || merged.practice || merged.observe;
+        merged.status = allDone
+          ? "COMPLETE"
+          : anyDone
+            ? "IN PROGRESS"
+            : cur.status === "COMPLETE"
+              ? "IN PROGRESS"
+              : cur.status;
+        next[n] = merged;
+      }
+      return next;
+    });
 
   const total = allItems.length;
   const complete = Object.values(state).filter((s) => s.status === "COMPLETE").length;
