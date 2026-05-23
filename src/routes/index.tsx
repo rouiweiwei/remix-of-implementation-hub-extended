@@ -124,6 +124,7 @@ function Workbench() {
             {tab === "cover" && <CoverSection />}
             {tab === "mission" && <MissionControlSection />}
             {tab === "timeline" && <TimelineSection />}
+            {tab === "gantt" && <GanttSection />}
             {tab === "plan" && <ImplementationPlanSection filterPhase={phaseFilter} />}
             {tab === "phase3" && <Phase3Section />}
             {tab === "phase4" && <Phase4Section />}
