@@ -491,3 +491,61 @@ export function calcEndDate(startDate: string, mode: TimelineMode): string {
 }
 
 export { PHASES };
+
+// ─── Schedule computation ─────────────────────────────────────────────
+// Auto-derive a start & end date for every task by spreading them evenly
+// across their phase's date range. Overrides win.
+export interface ScheduledTask {
+  task: Task;
+  start: string; // YYYY-MM-DD
+  end: string;   // YYYY-MM-DD (inclusive)
+  isOverride: boolean;
+}
+
+function isoDay(d: Date) {
+  return d.toISOString().slice(0, 10);
+}
+
+export function computeSchedule(
+  tasks: Task[],
+  startDate: string,
+  mode: TimelineMode,
+  overrides: Record<string, TaskScheduleOverride>
+): ScheduledTask[] {
+  const totalBizDays = weeksForMode(mode) * 5;
+  const perPhase = Math.max(1, Math.floor(totalBizDays / PHASES.length));
+  const phaseRanges: Record<string, { startOffset: number; endOffset: number }> = {};
+  let cursor = 0;
+  PHASES.forEach((p, i) => {
+    const isLast = i === PHASES.length - 1;
+    const endOffset = isLast ? totalBizDays : cursor + perPhase;
+    phaseRanges[p.id] = { startOffset: cursor, endOffset };
+    cursor = endOffset;
+  });
+
+  const result: ScheduledTask[] = [];
+  PHASES.forEach((p) => {
+    const phaseTasks = tasks.filter((t) => t.phase === p.id);
+    const { startOffset, endOffset } = phaseRanges[p.id];
+    const span = Math.max(1, endOffset - startOffset);
+    const slot = Math.max(1, Math.floor(span / Math.max(1, phaseTasks.length)));
+    phaseTasks.forEach((t, idx) => {
+      const o = overrides[t.id];
+      let start: string;
+      let end: string;
+      const taskStartOffset = startOffset + idx * slot;
+      const taskEndOffset = idx === phaseTasks.length - 1
+        ? endOffset
+        : Math.min(endOffset, taskStartOffset + slot);
+      const autoStart = taskStartOffset === 0
+        ? new Date(startDate)
+        : addBusinessDays(startDate, taskStartOffset);
+      const autoEnd = addBusinessDays(startDate, Math.max(taskEndOffset - 1, taskStartOffset));
+      start = o?.start || isoDay(autoStart);
+      end = o?.end || isoDay(autoEnd);
+      if (new Date(end) < new Date(start)) end = start;
+      result.push({ task: t, start, end, isOverride: !!(o?.start || o?.end) });
+    });
+  });
+  return result;
+}
