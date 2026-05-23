@@ -322,6 +322,10 @@ interface PlaybookState {
   updateReminderTask: (id: string, patch: Partial<ReminderTask>) => void;
   deleteReminderTask: (id: string) => void;
 
+  addIntranet: (r: Omit<IntranetResource, "id">) => void;
+  updateIntranet: (id: string, patch: Partial<IntranetResource>) => void;
+  deleteIntranet: (id: string) => void;
+
   resetAll: () => void;
 }
 
