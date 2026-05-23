@@ -39,7 +39,7 @@ const NAV = [
   { id: "signoff", label: "Training Sign-Off", icon: "🖊️", group: "Registers" },
   { id: "content", label: "Session Content Log", icon: "📚", group: "Registers" },
   { id: "email", label: "Weekly Email Log", icon: "📧", group: "Registers" },
-  { id: "issues", label: "Issues Register", icon: "⚠️", group: "Registers" },
+  { id: "issues", label: "Queries Register", icon: "⚠️", group: "Registers" },
   { id: "stakeholders", label: "Stakeholder Map", icon: "👥", group: "People" },
   { id: "champions", label: "Champion Register", icon: "🏆", group: "People" },
   { id: "dod", label: "Definition of Done", icon: "📋", group: "Close-out" },
