@@ -199,6 +199,22 @@ export interface TaskScheduleOverride {
   end?: string;   // YYYY-MM-DD (inclusive)
 }
 
+export type ReminderPriority = "LOW" | "MEDIUM" | "HIGH" | "URGENT";
+export type ReminderStatus = "OPEN" | "IN PROGRESS" | "DONE";
+
+export interface ReminderTask {
+  id: string;
+  title: string;
+  details: string;
+  assignee: string;        // free-text name (or pick from directory)
+  dueDate: string;         // YYYY-MM-DD
+  remindAt: string;        // YYYY-MM-DD — when to surface on dashboard
+  priority: ReminderPriority;
+  status: ReminderStatus;
+  createdAt: string;       // ISO
+  completedAt?: string;    // ISO
+}
+
 interface PlaybookState {
   client: ClientInfo;
   tasks: Task[];
