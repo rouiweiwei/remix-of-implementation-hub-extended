@@ -4,7 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { SectionHeader, StatusBadge } from "../shared";
 import { cn } from "@/lib/utils";
-import { AlertTriangle, CheckCircle2, Clock, Flag, ShieldCheck, Target, TrendingUp, Users, X } from "lucide-react";
+import { AlertTriangle, Bell, CheckCircle2, Clock, Flag, ShieldCheck, Target, TrendingUp, Users, X } from "lucide-react";
 import { useState } from "react";
 
 function MultiUserField({ label, value, onChange }: { label: string; value: string; onChange: (v: string) => void }) {
