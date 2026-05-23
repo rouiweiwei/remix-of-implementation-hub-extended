@@ -489,6 +489,9 @@ export function TrainingScheduleSection() {
                               </Select>
                             </td>
                             <td className="px-2 py-1.5">
+                              <Input type="date" className="h-7 text-xs" value={s.date} onChange={(e) => update(it.n, { date: e.target.value })} />
+                            </td>
+                            <td className="px-2 py-1.5">
                               <Input className="h-7 text-xs" value={s.facilitator} onChange={(e) => update(it.n, { facilitator: e.target.value })} placeholder="Name…" />
                             </td>
                             {(["teach","practice","observe"] as const).map((k) => (
