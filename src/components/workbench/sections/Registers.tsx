@@ -1078,6 +1078,12 @@ export function IntranetSection() {
                     </div>
                   )}
 
+                  <div>
+                    <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-0.5">Description / Notes</div>
+                    <Textarea className="text-xs min-h-[60px]" placeholder="What this covers, key timestamps, prerequisites…" value={r.description} onChange={(e) => updateIntranet(r.id, { description: e.target.value })} />
+                  </div>
+
+
                   {session && (
                     <div className="text-[10px] text-muted-foreground border-t pt-1.5">
                       Linked to <span className="font-mono text-primary">{session.id}</span> · {session.type} · Module {session.module}
