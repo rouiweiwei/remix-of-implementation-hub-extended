@@ -111,6 +111,7 @@ export function MissionControlSection() {
   const client = usePlaybook((s) => s.client);
   const startDate = usePlaybook((s) => s.startDate);
   const timelineMode = usePlaybook((s) => s.timelineMode);
+  const reminders = usePlaybook((s) => s.reminderTasks);
 
   const overall = overallProgress(tasks);
   const openIssues = issues.filter((i) => i.status !== "Closed");
