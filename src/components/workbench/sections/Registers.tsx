@@ -1512,3 +1512,268 @@ export function TemplatesLibrarySection() {
     </div>
   );
 }
+
+// =================== TASKS & REMINDERS REGISTER ===================
+const REMINDER_PRIORITIES = ["LOW", "MEDIUM", "HIGH", "URGENT"] as const;
+const REMINDER_STATUSES = ["OPEN", "IN PROGRESS", "DONE"] as const;
+const PRIORITY_CLS: Record<string, string> = {
+  LOW: "bg-muted text-muted-foreground border-border",
+  MEDIUM: "bg-primary/15 text-primary border-primary/30",
+  HIGH: "bg-yellow-400/20 text-yellow-700 dark:text-yellow-300 border-yellow-400/40",
+  URGENT: "bg-destructive/15 text-destructive border-destructive/40",
+};
+const STATUS_CLS: Record<string, string> = {
+  OPEN: "bg-muted text-foreground border-border",
+  "IN PROGRESS": "bg-primary/15 text-primary border-primary/30",
+  DONE: "bg-success/15 text-success border-success/40",
+};
+
+function todayIso() {
+  return new Date().toISOString().slice(0, 10);
+}
+
+function dueLabel(dueDate: string, status: string) {
+  if (!dueDate) return { text: "No due date", tone: "muted" as const };
+  if (status === "DONE") return { text: `Due ${dueDate}`, tone: "success" as const };
+  const today = new Date(todayIso());
+  const due = new Date(dueDate);
+  const days = Math.round((due.getTime() - today.getTime()) / 86400000);
+  if (days < 0) return { text: `${Math.abs(days)}d overdue`, tone: "danger" as const };
+  if (days === 0) return { text: "Due today", tone: "danger" as const };
+  if (days === 1) return { text: "Due tomorrow", tone: "warning" as const };
+  if (days <= 7) return { text: `Due in ${days}d`, tone: "warning" as const };
+  return { text: `Due in ${days}d`, tone: "muted" as const };
+}
+
+export function TasksRegisterSection() {
+  const reminders = usePlaybook((s) => s.reminderTasks);
+  const addReminderTask = usePlaybook((s) => s.addReminderTask);
+  const updateReminderTask = usePlaybook((s) => s.updateReminderTask);
+  const deleteReminderTask = usePlaybook((s) => s.deleteReminderTask);
+
+  const [filter, setFilter] = useState<"all" | "open" | "due" | "overdue" | "done">("all");
+  const [draft, setDraft] = useState({
+    title: "",
+    details: "",
+    assignee: "",
+    dueDate: "",
+    remindAt: "",
+    priority: "MEDIUM" as (typeof REMINDER_PRIORITIES)[number],
+  });
+
+  const today = todayIso();
+  const open = reminders.filter((r) => r.status !== "DONE");
+  const overdue = open.filter((r) => r.dueDate && r.dueDate < today);
+  const dueToday = open.filter((r) => r.dueDate === today);
+  const dueSoon = open.filter((r) => r.dueDate && r.dueDate > today && (new Date(r.dueDate).getTime() - new Date(today).getTime()) <= 7 * 86400000);
+  const done = reminders.filter((r) => r.status === "DONE");
+
+  const visible = reminders
+    .filter((r) => {
+      if (filter === "all") return true;
+      if (filter === "open") return r.status !== "DONE";
+      if (filter === "done") return r.status === "DONE";
+      if (filter === "due") return r.status !== "DONE" && (r.dueDate === today || (r.dueDate && r.dueDate > today && new Date(r.dueDate).getTime() - new Date(today).getTime() <= 7 * 86400000));
+      if (filter === "overdue") return r.status !== "DONE" && r.dueDate && r.dueDate < today;
+      return true;
+    })
+    .sort((a, b) => {
+      if (a.status === "DONE" && b.status !== "DONE") return 1;
+      if (b.status === "DONE" && a.status !== "DONE") return -1;
+      const da = a.dueDate || "9999-12-31";
+      const db = b.dueDate || "9999-12-31";
+      return da.localeCompare(db);
+    });
+
+  const submit = () => {
+    if (!draft.title.trim()) return;
+    addReminderTask({
+      title: draft.title.trim(),
+      details: draft.details.trim(),
+      assignee: draft.assignee.trim(),
+      dueDate: draft.dueDate,
+      remindAt: draft.remindAt || draft.dueDate,
+      priority: draft.priority,
+      status: "OPEN",
+    });
+    setDraft({ title: "", details: "", assignee: "", dueDate: "", remindAt: "", priority: "MEDIUM" });
+  };
+
+  return (
+    <div className="space-y-5">
+      <SectionHeader
+        title="🔔 Tasks & Reminders"
+        subtitle="Assign a task, set a due date and a reminder. Anything due today, due soon, or overdue is surfaced on Mission Control."
+      />
+
+      {/* KPI strip */}
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-2 text-center">
+        {[
+          { label: "TOTAL", value: reminders.length, tone: "text-foreground" },
+          { label: "OPEN", value: open.length, tone: "text-primary" },
+          { label: "DUE TODAY", value: dueToday.length, tone: dueToday.length ? "text-destructive" : "text-muted-foreground" },
+          { label: "OVERDUE", value: overdue.length, tone: overdue.length ? "text-destructive" : "text-muted-foreground" },
+          { label: "DONE", value: done.length, tone: "text-success" },
+        ].map((t) => (
+          <div key={t.label} className="rounded-lg border bg-card px-3 py-2">
+            <div className="text-[9px] font-semibold uppercase tracking-wider text-muted-foreground">{t.label}</div>
+            <div className={cn("text-lg font-bold tabular-nums", t.tone)}>{t.value}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* Add form */}
+      <div className="rounded-xl border bg-card p-4 space-y-3">
+        <div className="text-[11px] font-bold uppercase tracking-[0.15em] text-primary">Add a task / reminder</div>
+        <div className="grid md:grid-cols-12 gap-2">
+          <Input
+            className="md:col-span-4 h-9 text-sm"
+            placeholder="Task title (e.g. Send cost code template to Bec)"
+            value={draft.title}
+            onChange={(e) => setDraft({ ...draft, title: e.target.value })}
+          />
+          <Input
+            className="md:col-span-2 h-9 text-sm"
+            list="reminder-assignees"
+            placeholder="Assign to…"
+            value={draft.assignee}
+            onChange={(e) => setDraft({ ...draft, assignee: e.target.value })}
+          />
+          <datalist id="reminder-assignees">
+            {USER_DIRECTORY.map((u) => (
+              <option key={`${u.firstName}-${u.lastName}`} value={`${u.firstName} ${u.lastName}`}>
+                {u.role}
+              </option>
+            ))}
+          </datalist>
+          <div className="md:col-span-2">
+            <label className="text-[9px] font-semibold uppercase tracking-wider text-muted-foreground block mb-0.5">Due date</label>
+            <Input type="date" className="h-9 text-sm" value={draft.dueDate} onChange={(e) => setDraft({ ...draft, dueDate: e.target.value })} />
+          </div>
+          <div className="md:col-span-2">
+            <label className="text-[9px] font-semibold uppercase tracking-wider text-muted-foreground block mb-0.5">Remind on</label>
+            <Input type="date" className="h-9 text-sm" value={draft.remindAt} onChange={(e) => setDraft({ ...draft, remindAt: e.target.value })} />
+          </div>
+          <Select value={draft.priority} onValueChange={(v) => setDraft({ ...draft, priority: v as (typeof REMINDER_PRIORITIES)[number] })}>
+            <SelectTrigger className={cn("md:col-span-2 h-9 text-sm font-semibold border self-end", PRIORITY_CLS[draft.priority])}>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {REMINDER_PRIORITIES.map((p) => <SelectItem key={p} value={p}>{p}</SelectItem>)}
+            </SelectContent>
+          </Select>
+        </div>
+        <Textarea
+          className="text-sm min-h-[64px]"
+          placeholder="Details (optional) — what specifically needs doing"
+          value={draft.details}
+          onChange={(e) => setDraft({ ...draft, details: e.target.value })}
+        />
+        <div className="flex justify-end">
+          <Button size="sm" onClick={submit} disabled={!draft.title.trim()}>
+            <Plus className="h-4 w-4" /> Add reminder
+          </Button>
+        </div>
+      </div>
+
+      {/* Filter chips */}
+      <div className="flex flex-wrap gap-2">
+        {([
+          { id: "all", label: `All (${reminders.length})` },
+          { id: "open", label: `Open (${open.length})` },
+          { id: "due", label: `Due / soon (${dueToday.length + dueSoon.length})` },
+          { id: "overdue", label: `Overdue (${overdue.length})` },
+          { id: "done", label: `Done (${done.length})` },
+        ] as const).map((f) => (
+          <button
+            key={f.id}
+            type="button"
+            onClick={() => setFilter(f.id)}
+            className={cn(
+              "px-3 py-1 rounded-full text-xs font-semibold border transition-colors",
+              filter === f.id ? "bg-primary text-primary-foreground border-primary" : "bg-card text-foreground border-border hover:bg-muted"
+            )}
+          >
+            {f.label}
+          </button>
+        ))}
+      </div>
+
+      {/* List */}
+      <div className="rounded-xl border bg-card overflow-hidden">
+        {visible.length === 0 ? (
+          <div className="px-4 py-10 text-center text-sm text-muted-foreground">
+            No tasks match this filter. Add one above to get started.
+          </div>
+        ) : (
+          <div className="divide-y">
+            {visible.map((r) => {
+              const due = dueLabel(r.dueDate, r.status);
+              return (
+                <div key={r.id} className={cn("p-4 space-y-2", r.status === "DONE" && "bg-muted/30")}>
+                  <div className="flex flex-wrap items-start gap-2">
+                    <div className="min-w-0 flex-1">
+                      <div className={cn("font-semibold text-sm", r.status === "DONE" && "line-through text-muted-foreground")}>{r.title}</div>
+                      {r.details && <div className="text-xs text-muted-foreground mt-0.5 whitespace-pre-wrap">{r.details}</div>}
+                    </div>
+                    <span className={cn("rounded border px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider", PRIORITY_CLS[r.priority])}>{r.priority}</span>
+                    <span className={cn(
+                      "rounded border px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider",
+                      due.tone === "danger" && "bg-destructive/15 text-destructive border-destructive/40",
+                      due.tone === "warning" && "bg-yellow-400/20 text-yellow-700 dark:text-yellow-300 border-yellow-400/40",
+                      due.tone === "success" && "bg-success/15 text-success border-success/40",
+                      due.tone === "muted" && "bg-muted text-muted-foreground border-border"
+                    )}>{due.text}</span>
+                  </div>
+
+                  <div className="grid md:grid-cols-12 gap-2 items-end">
+                    <div className="md:col-span-3">
+                      <label className="text-[9px] font-semibold uppercase tracking-wider text-muted-foreground block mb-0.5">Assigned to</label>
+                      <Input className="h-8 text-xs" value={r.assignee} list="reminder-assignees" onChange={(e) => updateReminderTask(r.id, { assignee: e.target.value })} />
+                    </div>
+                    <div className="md:col-span-2">
+                      <label className="text-[9px] font-semibold uppercase tracking-wider text-muted-foreground block mb-0.5">Due</label>
+                      <Input type="date" className="h-8 text-xs" value={r.dueDate} onChange={(e) => updateReminderTask(r.id, { dueDate: e.target.value })} />
+                    </div>
+                    <div className="md:col-span-2">
+                      <label className="text-[9px] font-semibold uppercase tracking-wider text-muted-foreground block mb-0.5">Remind on</label>
+                      <Input type="date" className="h-8 text-xs" value={r.remindAt} onChange={(e) => updateReminderTask(r.id, { remindAt: e.target.value })} />
+                    </div>
+                    <div className="md:col-span-2">
+                      <label className="text-[9px] font-semibold uppercase tracking-wider text-muted-foreground block mb-0.5">Priority</label>
+                      <Select value={r.priority} onValueChange={(v) => updateReminderTask(r.id, { priority: v as (typeof REMINDER_PRIORITIES)[number] })}>
+                        <SelectTrigger className={cn("h-8 text-[11px] font-semibold border", PRIORITY_CLS[r.priority])}><SelectValue /></SelectTrigger>
+                        <SelectContent>{REMINDER_PRIORITIES.map((p) => <SelectItem key={p} value={p}>{p}</SelectItem>)}</SelectContent>
+                      </Select>
+                    </div>
+                    <div className="md:col-span-2">
+                      <label className="text-[9px] font-semibold uppercase tracking-wider text-muted-foreground block mb-0.5">Status</label>
+                      <Select value={r.status} onValueChange={(v) => updateReminderTask(r.id, { status: v as (typeof REMINDER_STATUSES)[number] })}>
+                        <SelectTrigger className={cn("h-8 text-[11px] font-semibold border", STATUS_CLS[r.status])}><SelectValue /></SelectTrigger>
+                        <SelectContent>{REMINDER_STATUSES.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
+                      </Select>
+                    </div>
+                    <div className="md:col-span-1 flex md:justify-end gap-1">
+                      {r.status !== "DONE" ? (
+                        <Button size="sm" variant="outline" className="h-8 px-2" title="Mark as done" onClick={() => updateReminderTask(r.id, { status: "DONE" })}>
+                          <Check className="h-4 w-4" />
+                        </Button>
+                      ) : (
+                        <Button size="sm" variant="outline" className="h-8 px-2" title="Re-open" onClick={() => updateReminderTask(r.id, { status: "OPEN" })}>
+                          ↺
+                        </Button>
+                      )}
+                      <Button size="sm" variant="ghost" className="h-8 px-2 text-destructive hover:text-destructive" title="Delete" onClick={() => deleteReminderTask(r.id)}>
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}

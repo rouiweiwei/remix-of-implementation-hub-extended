@@ -199,6 +199,22 @@ export interface TaskScheduleOverride {
   end?: string;   // YYYY-MM-DD (inclusive)
 }
 
+export type ReminderPriority = "LOW" | "MEDIUM" | "HIGH" | "URGENT";
+export type ReminderStatus = "OPEN" | "IN PROGRESS" | "DONE";
+
+export interface ReminderTask {
+  id: string;
+  title: string;
+  details: string;
+  assignee: string;        // free-text name (or pick from directory)
+  dueDate: string;         // YYYY-MM-DD
+  remindAt: string;        // YYYY-MM-DD — when to surface on dashboard
+  priority: ReminderPriority;
+  status: ReminderStatus;
+  createdAt: string;       // ISO
+  completedAt?: string;    // ISO
+}
+
 interface PlaybookState {
   client: ClientInfo;
   tasks: Task[];
@@ -220,6 +236,7 @@ interface PlaybookState {
   projectDetails: ProjectDetail[];
   contractors: Contractor[];
   costCodes: CostCode[];
+  reminderTasks: ReminderTask[];
 
   // actions
   setClient: (c: Partial<ClientInfo>) => void;
@@ -281,6 +298,10 @@ interface PlaybookState {
   updateCostCode: (id: string, patch: Partial<CostCode>) => void;
   deleteCostCode: (id: string) => void;
   replaceCostCodes: (rows: CostCode[]) => void;
+
+  addReminderTask: (r: Omit<ReminderTask, "id" | "createdAt">) => void;
+  updateReminderTask: (id: string, patch: Partial<ReminderTask>) => void;
+  deleteReminderTask: (id: string) => void;
 
   resetAll: () => void;
 }
@@ -346,6 +367,7 @@ const initial = {
   projectDetails: [] as ProjectDetail[],
   contractors: [] as Contractor[],
   costCodes: [] as CostCode[],
+  reminderTasks: [] as ReminderTask[],
 };
 
 export const usePlaybook = create<PlaybookState>()(
@@ -437,6 +459,26 @@ export const usePlaybook = create<PlaybookState>()(
       updateCostCode: (id, patch) => set((st) => ({ costCodes: st.costCodes.map((x) => (x.id === id ? { ...x, ...patch } : x)) })),
       deleteCostCode: (id) => set((st) => ({ costCodes: st.costCodes.filter((x) => x.id !== id) })),
       replaceCostCodes: (rows) => set({ costCodes: rows }),
+
+      addReminderTask: (r) =>
+        set((st) => ({
+          reminderTasks: [
+            ...st.reminderTasks,
+            { id: uid(), createdAt: new Date().toISOString(), ...r },
+          ],
+        })),
+      updateReminderTask: (id, patch) =>
+        set((st) => ({
+          reminderTasks: st.reminderTasks.map((x) => {
+            if (x.id !== id) return x;
+            const merged = { ...x, ...patch };
+            if (patch.status === "DONE" && !merged.completedAt) merged.completedAt = new Date().toISOString();
+            if (patch.status && patch.status !== "DONE") merged.completedAt = undefined;
+            return merged;
+          }),
+        })),
+      deleteReminderTask: (id) =>
+        set((st) => ({ reminderTasks: st.reminderTasks.filter((x) => x.id !== id) })),
 
       resetAll: () => set(initial),
     }),

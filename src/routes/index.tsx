@@ -4,7 +4,7 @@ import { ChevronDown } from "lucide-react";
 import { PhaseBanner } from "@/components/workbench/PhaseBanner";
 import { CoverSection, MissionControlSection } from "@/components/workbench/sections/CoverMission";
 import { TimelineSection, ImplementationPlanSection, Phase3Section, Phase4Section, TrainingScheduleSection } from "@/components/workbench/sections/Phases";
-import { SessionRegisterSection, AttendanceSection, SignOffSection, EmailLogSection, IssuesSection, StakeholdersSection, ChampionsSection, DefinitionOfDoneSection, IntranetSection, ContentLogSection, UserAccountsSection, ProjectDetailsSection, ContractorsSection, CostCodesSection, PostImplementationEmailSection, TemplatesLibrarySection } from "@/components/workbench/sections/Registers";
+import { SessionRegisterSection, AttendanceSection, SignOffSection, EmailLogSection, IssuesSection, StakeholdersSection, ChampionsSection, DefinitionOfDoneSection, IntranetSection, ContentLogSection, UserAccountsSection, ProjectDetailsSection, ContractorsSection, CostCodesSection, PostImplementationEmailSection, TemplatesLibrarySection, TasksRegisterSection } from "@/components/workbench/sections/Registers";
 import { GanttSection } from "@/components/workbench/sections/Gantt";
 import { cn } from "@/lib/utils";
 import type { PhaseId } from "@/lib/playbook-data";
@@ -33,6 +33,7 @@ const NAV = [
   { id: "contractors", label: "Contractor Database", icon: "🔧", group: "Data" },
   { id: "costcodes", label: "Cost Codes", icon: "💷", group: "Data" },
   { id: "templates", label: "Templates Library", icon: "📁", group: "Data" },
+  { id: "tasks", label: "Tasks & Reminders", icon: "🔔", group: "Registers" },
   { id: "sessions", label: "Session Register", icon: "📅", group: "Registers" },
   { id: "attendance", label: "Attendance", icon: "✅", group: "Registers" },
   { id: "signoff", label: "Training Sign-Off", icon: "🖊️", group: "Registers" },
@@ -129,6 +130,7 @@ function Workbench() {
             {tab === "phase3" && <Phase3Section />}
             {tab === "phase4" && <Phase4Section />}
             {tab === "schedule" && <TrainingScheduleSection />}
+            {tab === "tasks" && <TasksRegisterSection />}
             {tab === "sessions" && <SessionRegisterSection />}
             {tab === "attendance" && <AttendanceSection />}
             {tab === "signoff" && <SignOffSection />}
