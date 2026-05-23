@@ -273,8 +273,72 @@ export function MissionControlSection() {
         </div>
       )}
 
+
+      {/* Reminders & assigned tasks */}
+      {(() => {
+        const todayIso = new Date().toISOString().slice(0, 10);
+        const open = reminders.filter((r) => r.status !== "DONE");
+        const overdue = open.filter((r) => r.dueDate && r.dueDate < todayIso);
+        const dueToday = open.filter((r) => r.dueDate === todayIso);
+        const remindNow = open.filter((r) => r.remindAt && r.remindAt <= todayIso && r.dueDate !== todayIso && !(r.dueDate && r.dueDate < todayIso));
+        const upcoming = open.filter((r) => r.dueDate && r.dueDate > todayIso && (new Date(r.dueDate).getTime() - new Date(todayIso).getTime()) <= 7 * 86400000);
+        const sorted = [...overdue, ...dueToday, ...remindNow, ...upcoming].slice(0, 6);
+        const priTone = (p: string) => p === "URGENT" ? "bg-destructive/15 text-destructive border-destructive/40" : p === "HIGH" ? "bg-yellow-400/20 text-yellow-700 dark:text-yellow-300 border-yellow-400/40" : p === "MEDIUM" ? "bg-primary/15 text-primary border-primary/30" : "bg-muted text-muted-foreground border-border";
+        return (
+          <div className="rounded-xl border bg-card p-5">
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.15em] text-primary">
+                <Bell className="h-3.5 w-3.5" /> Reminders & assigned tasks
+              </div>
+              <div className="text-[11px] text-muted-foreground">
+                {open.length} open · {dueToday.length} due today · <span className={cn(overdue.length && "text-destructive font-semibold")}>{overdue.length} overdue</span>
+              </div>
+            </div>
+            {sorted.length === 0 ? (
+              <div className="text-sm text-muted-foreground text-center py-6 flex items-center justify-center gap-2">
+                <CheckCircle2 className="h-4 w-4 text-success" />
+                No reminders due. Add one from <span className="font-semibold">Registers → Tasks & Reminders</span>.
+              </div>
+            ) : (
+              <ul className="space-y-2">
+                {sorted.map((r) => {
+                  const isOverdue = r.dueDate && r.dueDate < todayIso;
+                  const isToday = r.dueDate === todayIso;
+                  const dueText = !r.dueDate
+                    ? "No due date"
+                    : isOverdue
+                      ? `Overdue · ${r.dueDate}`
+                      : isToday
+                        ? "Due today"
+                        : `Due ${r.dueDate}`;
+                  return (
+                    <li key={r.id} className={cn(
+                      "flex items-start gap-3 text-sm border-l-2 pl-3 py-1",
+                      isOverdue ? "border-destructive" : isToday ? "border-warning" : "border-primary/40"
+                    )}>
+                      <div className="min-w-0 flex-1">
+                        <div className="truncate font-medium">{r.title}</div>
+                        <div className="text-[11px] text-muted-foreground flex flex-wrap items-center gap-x-2 gap-y-0.5 mt-0.5">
+                          <span>{r.assignee || "Unassigned"}</span>
+                          <span>·</span>
+                          <span className={cn(isOverdue && "text-destructive font-semibold", isToday && "text-warning-foreground font-semibold")}>{dueText}</span>
+                        </div>
+                      </div>
+                      <span className={cn("rounded border px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider flex-none", priTone(r.priority))}>
+                        {r.priority}
+                      </span>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </div>
+        );
+      })()}
+
       {/* Granular analytics & progress */}
       <div className="rounded-xl border bg-card p-5">
+
         <div className="flex items-center justify-between mb-4">
           <div>
             <div className="text-[11px] font-bold uppercase tracking-[0.15em] text-primary">Live analytics & progress</div>
