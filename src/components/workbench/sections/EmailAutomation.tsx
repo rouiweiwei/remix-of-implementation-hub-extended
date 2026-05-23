@@ -23,19 +23,21 @@ export function EmailAutomationPanel({
 }: {
   onAutoFillWeek?: (weekIdx: number) => void;
 }) {
-  const ctx = usePlaybook((s) => ({
-    client: s.client,
-    tasks: s.tasks,
-    taskOverrides: s.taskOverrides,
-    timelineMode: s.timelineMode,
-    startDate: s.startDate,
-    issues: s.issues,
-    stakeholders: s.stakeholders,
-    champions: s.champions,
-    dod: s.dod,
-    intranet: s.intranet,
-    sessions: s.sessions,
-  }));
+  const client = usePlaybook((s) => s.client);
+  const tasks = usePlaybook((s) => s.tasks);
+  const taskOverrides = usePlaybook((s) => s.taskOverrides);
+  const timelineMode = usePlaybook((s) => s.timelineMode);
+  const startDate = usePlaybook((s) => s.startDate);
+  const issues = usePlaybook((s) => s.issues);
+  const stakeholders = usePlaybook((s) => s.stakeholders);
+  const champions = usePlaybook((s) => s.champions);
+  const dod = usePlaybook((s) => s.dod);
+  const intranet = usePlaybook((s) => s.intranet);
+  const sessions = usePlaybook((s) => s.sessions);
+  const ctx = useMemo(
+    () => ({ client, tasks, taskOverrides, timelineMode, startDate, issues, stakeholders, champions, dod, intranet, sessions }),
+    [client, tasks, taskOverrides, timelineMode, startDate, issues, stakeholders, champions, dod, intranet, sessions]
+  );
 
   const [preview, setPreview] = useState<DraftedEmail | null>(null);
   const [weekIdx, setWeekIdx] = useState(0);
