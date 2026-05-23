@@ -299,6 +299,10 @@ interface PlaybookState {
   deleteCostCode: (id: string) => void;
   replaceCostCodes: (rows: CostCode[]) => void;
 
+  addReminderTask: (r: Omit<ReminderTask, "id" | "createdAt">) => void;
+  updateReminderTask: (id: string, patch: Partial<ReminderTask>) => void;
+  deleteReminderTask: (id: string) => void;
+
   resetAll: () => void;
 }
 
