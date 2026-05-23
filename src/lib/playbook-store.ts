@@ -236,6 +236,7 @@ interface PlaybookState {
   projectDetails: ProjectDetail[];
   contractors: Contractor[];
   costCodes: CostCode[];
+  reminderTasks: ReminderTask[];
 
   // actions
   setClient: (c: Partial<ClientInfo>) => void;
