@@ -130,6 +130,7 @@ function Workbench() {
             {tab === "phase3" && <Phase3Section />}
             {tab === "phase4" && <Phase4Section />}
             {tab === "schedule" && <TrainingScheduleSection />}
+            {tab === "tasks" && <TasksRegisterSection />}
             {tab === "sessions" && <SessionRegisterSection />}
             {tab === "attendance" && <AttendanceSection />}
             {tab === "signoff" && <SignOffSection />}
