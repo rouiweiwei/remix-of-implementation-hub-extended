@@ -443,9 +443,31 @@ export function TrainingScheduleSection() {
                         <th className="px-2 py-2 text-left w-32">Status</th>
                         <th className="px-2 py-2 text-left w-32">Session Date</th>
                         <th className="px-2 py-2 text-left w-32">Facilitator</th>
-                        <th className="px-2 py-2 text-center w-20">Pt 1 Teach</th>
-                        <th className="px-2 py-2 text-center w-20">Pt 2 Practice</th>
-                        <th className="px-2 py-2 text-center w-20">Pt 3 Observe</th>
+                        {(["teach","practice","observe"] as const).map((k, idx) => {
+                          const nums = sub.items.map((i) => i.n);
+                          const allOn = nums.every((n) => state[n]?.[k]);
+                          const label = idx === 0 ? "Pt 1 Teach" : idx === 1 ? "Pt 2 Practice" : "Pt 3 Observe";
+                          return (
+                            <th key={k} className="px-2 py-2 text-center w-24">
+                              <div className="flex flex-col items-center gap-1">
+                                <span>{label}</span>
+                                <button
+                                  type="button"
+                                  onClick={() => bulkApply(nums, k, !allOn)}
+                                  className={cn(
+                                    "px-1.5 py-0.5 rounded border text-[9px] font-bold normal-case tracking-normal transition-colors",
+                                    allOn
+                                      ? "bg-destructive/15 text-destructive border-destructive/40 hover:bg-destructive/25"
+                                      : "bg-success/15 text-success border-success/40 hover:bg-success/25"
+                                  )}
+                                  title={allOn ? "Click to clear all in this sub-module" : "Click to mark all done in this sub-module"}
+                                >
+                                  {allOn ? "✗ Clear all" : "✓ Apply to all"}
+                                </button>
+                              </div>
+                            </th>
+                          );
+                        })}
                         <th className="px-2 py-2 text-center w-20">Sign-Off</th>
                       </tr>
                     </thead>
@@ -465,9 +487,6 @@ export function TrainingScheduleSection() {
                                 <SelectTrigger className={cn("h-7 text-[11px] font-semibold border", STATUS_SELECT_CLS[s.status])}><SelectValue /></SelectTrigger>
                                 <SelectContent>{(["NOT STARTED","IN PROGRESS","COMPLETE","BLOCKED"] as TaskStatus[]).map((x) => <SelectItem key={x} value={x}>{x}</SelectItem>)}</SelectContent>
                               </Select>
-                            </td>
-                            <td className="px-2 py-1.5">
-                              <Input type="date" className="h-7 text-xs" value={s.date} onChange={(e) => update(it.n, { date: e.target.value })} />
                             </td>
                             <td className="px-2 py-1.5">
                               <Input className="h-7 text-xs" value={s.facilitator} onChange={(e) => update(it.n, { facilitator: e.target.value })} placeholder="Name…" />
