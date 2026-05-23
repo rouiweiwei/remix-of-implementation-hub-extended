@@ -255,6 +255,7 @@ interface PlaybookState {
   contractors: Contractor[];
   costCodes: CostCode[];
   reminderTasks: ReminderTask[];
+  intranet: IntranetResource[];
 
   // actions
   setClient: (c: Partial<ClientInfo>) => void;
