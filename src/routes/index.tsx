@@ -65,7 +65,7 @@ function Workbench() {
   return (
     <div className="min-h-screen bg-background">
       <header className="sticky top-0 z-30 border-b bg-background/80 backdrop-blur">
-        <div className="mx-auto max-w-[1600px] flex items-center justify-between px-6 h-14">
+        <div className="w-full flex items-center justify-between px-6 h-14">
           <div className="flex items-center gap-3">
             <div className="h-8 w-8 rounded-lg bg-brand-gradient flex items-center justify-center text-primary-foreground font-bold text-sm">P</div>
             <div>
@@ -77,7 +77,7 @@ function Workbench() {
         </div>
       </header>
 
-      <div className="mx-auto max-w-[1600px] px-6 py-6">
+      <div className="w-full px-6 py-6">
         <PhaseBanner
           activePhase={phaseFilter}
           onPickPhase={(p) => { setPhaseFilter(p); setTab("plan"); }}
