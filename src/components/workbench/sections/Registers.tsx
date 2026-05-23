@@ -423,57 +423,106 @@ export function EmailLogSection() {
     Array.from({ length: EMAIL_WEEKS }, () => ({ dateSent: "", phase: "", completed: "", planned: "", openIssues: "", sentTo: "CEO, CFO, IT Lead, Site Teams, Ops Managers", status: "PENDING" }))
   );
   const upd = (i: number, patch: Partial<EmailRow>) => setRows((p) => p.map((r, idx) => idx === i ? { ...r, ...patch } : r));
+  const [tab, setTab] = useState<"log" | "auto">("auto");
+
+  const ctx = usePlaybook((s) => ({
+    client: s.client, tasks: s.tasks, taskOverrides: s.taskOverrides, timelineMode: s.timelineMode,
+    startDate: s.startDate, issues: s.issues, stakeholders: s.stakeholders, champions: s.champions,
+    dod: s.dod, intranet: s.intranet, sessions: s.sessions,
+  }));
+
+  const autoFill = (i: number) => {
+    const dateAnchor = rows[i].dateSent || new Date().toISOString().slice(0, 10);
+    const fill = buildWeeklyAutoFill(ctx, { weekEndingDate: dateAnchor, weekNumber: i + 1 });
+    upd(i, {
+      completed: fill.completed,
+      planned: fill.planned,
+      openIssues: fill.openIssues,
+      status: rows[i].status === "PENDING" ? "DRAFTED" : rows[i].status,
+    });
+  };
 
   return (
     <div className="space-y-5">
-      <SectionHeader title="📧 Weekly Client Email Log" subtitle="Every hold-point communication. Every Friday. No exceptions. Distribution: CEO, CFO, IT Lead, Site Teams, Ops Managers." />
+      <SectionHeader title="📧 Weekly Client Email Log" subtitle="Auto-drafted from your live registers. Preview, copy, and send from your own inbox — or fill the weekly log table by hand." />
 
-      <div className="rounded-xl border bg-primary-soft px-4 py-3 text-xs">
-        <div className="font-semibold mb-1">TEMPLATE — Subject: Weekly Implementation Update — [CLIENT] | Week of [DATE]</div>
-        <div className="text-muted-foreground">STATUS: [GREEN/AMBER/RED]  |  ✅ DONE THIS WEEK: [bullet list]  |  📅 NEXT WEEK: [bullet list]  |  ⚠️ OPEN ISSUES: [from Issues Register]  |  📸 PHOTOS / SIGNED SHEETS: [attached]</div>
+      <div className="inline-flex rounded-lg border bg-card p-0.5">
+        {([
+          { id: "auto", label: "✨ Auto-Drafts" },
+          { id: "log", label: "📋 Weekly Log" },
+        ] as const).map((t) => (
+          <button
+            key={t.id}
+            onClick={() => setTab(t.id)}
+            className={cn(
+              "px-3 py-1.5 text-xs font-semibold rounded-md transition-colors",
+              tab === t.id ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"
+            )}
+          >
+            {t.label}
+          </button>
+        ))}
       </div>
 
-      <div className="rounded-xl border bg-card overflow-x-auto">
-        <table className="w-full text-xs min-w-[1300px]">
-          <thead className="bg-muted/30 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-            <tr>
-              <th className="px-2 py-2 text-left w-12">Wk</th>
-              <th className="px-2 py-2 text-left w-32">Date Sent</th>
-              <th className="px-2 py-2 text-left w-32">Phase</th>
-              <th className="px-2 py-2 text-left">Completed This Week</th>
-              <th className="px-2 py-2 text-left">Planned Next Week</th>
-              <th className="px-2 py-2 text-left">Open Issues</th>
-              <th className="px-2 py-2 text-left w-44">Sent To</th>
-              <th className="px-2 py-2 text-left w-28">Status</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y">
-            {rows.map((r, i) => (
-              <tr key={i} className="hover:bg-muted/20 align-top">
-                <td className="px-2 py-1.5 font-mono font-semibold">W{i + 1}</td>
-                <td className="px-2 py-1.5"><Input type="date" className="h-7 text-xs" value={r.dateSent} onChange={(e) => upd(i, { dateSent: e.target.value })} /></td>
-                <td className="px-2 py-1.5"><Input className="h-7 text-xs" value={r.phase} onChange={(e) => upd(i, { phase: e.target.value })} placeholder="Phase 1A…" /></td>
-                <td className="px-2 py-1.5"><Textarea className="text-xs min-h-[28px]" rows={1} value={r.completed} onChange={(e) => upd(i, { completed: e.target.value })} /></td>
-                <td className="px-2 py-1.5"><Textarea className="text-xs min-h-[28px]" rows={1} value={r.planned} onChange={(e) => upd(i, { planned: e.target.value })} /></td>
-                <td className="px-2 py-1.5"><Textarea className="text-xs min-h-[28px]" rows={1} value={r.openIssues} onChange={(e) => upd(i, { openIssues: e.target.value })} /></td>
-                <td className="px-2 py-1.5"><Input className="h-7 text-xs" value={r.sentTo} onChange={(e) => upd(i, { sentTo: e.target.value })} /></td>
-                <td className="px-2 py-1.5">
-                  <Select value={r.status} onValueChange={(v) => upd(i, { status: v })}>
-                    <SelectTrigger className={cn("h-7 text-[11px] font-semibold",
-                      r.status === "SENT" && "text-success",
-                      r.status === "DRAFTED" && "text-yellow-600 dark:text-yellow-400",
-                      r.status === "PENDING" && "text-warning-foreground")}><SelectValue /></SelectTrigger>
-                    <SelectContent>{EMAIL_STATUSES.map((x) => <SelectItem key={x} value={x}>{x}</SelectItem>)}</SelectContent>
-                  </Select>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+      {tab === "auto" && <EmailAutomationPanel />}
+
+      {tab === "log" && (
+        <>
+          <div className="rounded-xl border bg-primary-soft px-4 py-3 text-xs">
+            <div className="font-semibold mb-1">TEMPLATE — Subject: Weekly Implementation Update — [CLIENT] | Week of [DATE]</div>
+            <div className="text-muted-foreground">STATUS: [GREEN/AMBER/RED]  |  ✅ DONE THIS WEEK: [bullet list]  |  📅 NEXT WEEK: [bullet list]  |  ⚠️ OPEN ISSUES: [from Issues Register]  |  📸 PHOTOS / SIGNED SHEETS: [attached]</div>
+          </div>
+
+          <div className="rounded-xl border bg-card overflow-x-auto">
+            <table className="w-full text-xs min-w-[1400px]">
+              <thead className="bg-muted/30 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                <tr>
+                  <th className="px-2 py-2 text-left w-12">Wk</th>
+                  <th className="px-2 py-2 text-left w-32">Date Sent</th>
+                  <th className="px-2 py-2 text-left w-28">Phase</th>
+                  <th className="px-2 py-2 text-left">Completed This Week</th>
+                  <th className="px-2 py-2 text-left">Planned Next Week</th>
+                  <th className="px-2 py-2 text-left">Open Issues</th>
+                  <th className="px-2 py-2 text-left w-40">Sent To</th>
+                  <th className="px-2 py-2 text-left w-28">Status</th>
+                  <th className="px-2 py-2 text-left w-24">Auto</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y">
+                {rows.map((r, i) => (
+                  <tr key={i} className="hover:bg-muted/20 align-top">
+                    <td className="px-2 py-1.5 font-mono font-semibold">W{i + 1}</td>
+                    <td className="px-2 py-1.5"><Input type="date" className="h-7 text-xs" value={r.dateSent} onChange={(e) => upd(i, { dateSent: e.target.value })} /></td>
+                    <td className="px-2 py-1.5"><Input className="h-7 text-xs" value={r.phase} onChange={(e) => upd(i, { phase: e.target.value })} placeholder="Phase 1A…" /></td>
+                    <td className="px-2 py-1.5"><Textarea className="text-xs min-h-[28px]" rows={1} value={r.completed} onChange={(e) => upd(i, { completed: e.target.value })} /></td>
+                    <td className="px-2 py-1.5"><Textarea className="text-xs min-h-[28px]" rows={1} value={r.planned} onChange={(e) => upd(i, { planned: e.target.value })} /></td>
+                    <td className="px-2 py-1.5"><Textarea className="text-xs min-h-[28px]" rows={1} value={r.openIssues} onChange={(e) => upd(i, { openIssues: e.target.value })} /></td>
+                    <td className="px-2 py-1.5"><Input className="h-7 text-xs" value={r.sentTo} onChange={(e) => upd(i, { sentTo: e.target.value })} /></td>
+                    <td className="px-2 py-1.5">
+                      <Select value={r.status} onValueChange={(v) => upd(i, { status: v })}>
+                        <SelectTrigger className={cn("h-7 text-[11px] font-semibold",
+                          r.status === "SENT" && "text-success",
+                          r.status === "DRAFTED" && "text-yellow-600 dark:text-yellow-400",
+                          r.status === "PENDING" && "text-warning-foreground")}><SelectValue /></SelectTrigger>
+                        <SelectContent>{EMAIL_STATUSES.map((x) => <SelectItem key={x} value={x}>{x}</SelectItem>)}</SelectContent>
+                      </Select>
+                    </td>
+                    <td className="px-2 py-1.5">
+                      <Button size="sm" variant="outline" className="h-7 text-[10px]" onClick={() => autoFill(i)} title="Auto-fill from live task data">
+                        <Sparkles className="h-3 w-3 mr-1" /> Fill
+                      </Button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </>
+      )}
     </div>
   );
 }
+
 
 // =============== ISSUES REGISTER ===============
 const ISSUE_TYPES = ["🐛 Bug/Defect", "👤 User Error", "✨ Feature Request", "⚙️ Configuration", "🔗 Integration", "📋 Process Gap", "🎓 Training Gap", "❓ Question", "📦 Data"] as const;
