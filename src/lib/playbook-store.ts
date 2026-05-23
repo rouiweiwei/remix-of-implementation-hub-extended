@@ -194,10 +194,16 @@ export interface CostCode {
   notes: string;
 }
 
+export interface TaskScheduleOverride {
+  start?: string; // YYYY-MM-DD
+  end?: string;   // YYYY-MM-DD (inclusive)
+}
+
 interface PlaybookState {
   client: ClientInfo;
   tasks: Task[];
   noteHistory: Record<string, NoteHistoryEntry[]>;
+  taskOverrides: Record<string, TaskScheduleOverride>;
   timelineMode: TimelineMode;
   startDate: string;
   trainingModules: TrainingModuleState[];
@@ -219,6 +225,7 @@ interface PlaybookState {
   setClient: (c: Partial<ClientInfo>) => void;
   updateTaskStatus: (id: string, status: TaskStatus) => void;
   updateTaskNotes: (id: string, notes: string, by?: string) => void;
+  setTaskSchedule: (id: string, patch: TaskScheduleOverride | null) => void;
   setTimeline: (mode: TimelineMode, startDate: string) => void;
   updateModule: (id: string, patch: Partial<TrainingModuleState>) => void;
 
