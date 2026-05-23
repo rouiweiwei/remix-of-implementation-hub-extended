@@ -159,7 +159,7 @@ export function MissionControlSection() {
 
   const risks: { level: "danger" | "warning"; text: string }[] = [];
   if (blockedTasks.length > 0) risks.push({ level: "danger", text: `${blockedTasks.length} blocked task${blockedTasks.length > 1 ? "s" : ""} holding up delivery` });
-  if (criticalIssues.length > 0) risks.push({ level: "danger", text: `${criticalIssues.length} high/critical issue${criticalIssues.length > 1 ? "s" : ""} open` });
+  if (criticalIssues.length > 0) risks.push({ level: "danger", text: `${criticalIssues.length} high/critical quer${criticalIssues.length > 1 ? "ies" : "y"} open` });
   if (drift > 10) risks.push({ level: "warning", text: `Delivery is ${drift}% behind schedule (work vs. time elapsed)` });
   if (daysToGoLive < 14 && workPct < 80) risks.push({ level: "danger", text: `Go-live in ${daysToGoLive} days but only ${workPct}% of work complete` });
   const pendingEmails = emails.filter((e) => !e.sent).length;
@@ -362,7 +362,7 @@ export function MissionControlSection() {
           <Stat label="Blocked" value={overall.blocked} tone={overall.blocked ? "danger" : undefined} />
           <Stat label="Sessions held" value={`${sessionsHeld}/${sessions.length}`} />
           <Stat label="Champions" value={champions.length} />
-          <Stat label="Issues open" value={openIssues.length} tone={openIssues.length ? "warning" : undefined} />
+          <Stat label="Queries open" value={openIssues.length} tone={openIssues.length ? "warning" : undefined} />
           <Stat label="Critical" value={criticalIssues.length} tone={criticalIssues.length ? "danger" : undefined} />
           <Stat label="Emails sent" value={`${emailsSent}/${emails.length}`} tone={emailsSent === emails.length ? "success" : pendingEmails >= 2 ? "warning" : undefined} />
           <Stat label="DoD confirmed" value={`${dodDone}/${dod.length}`} />

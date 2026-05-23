@@ -506,7 +506,7 @@ export function IssuesSection() {
 
   return (
     <div className="space-y-5">
-      <SectionHeader title="⚠️ Issues Register" subtitle="All types · implementation + training. Every issue logged, typed, owned. Feature Requests go to the product roadmap. User Errors feed back into training. Nothing slips." />
+      <SectionHeader title="⚠️ Queries Register" subtitle="All types · implementation + training. Every query logged, typed, owned. Feature Requests go to the product roadmap. User Errors feed back into training. Nothing slips." />
 
       <div className="rounded-xl border bg-muted/30 px-4 py-2 text-xs">
         <span className="font-semibold">TYPES:</span> 🐛 Bug/Defect · 👤 User Error · ✨ Feature Request · ⚙️ Configuration · 🔗 Integration · 📋 Process Gap · 🎓 Training Gap · ❓ Question · 📦 Data
@@ -593,7 +593,7 @@ export function IssuesSection() {
               </tr>
             ))}
             {visibleRows.length === 0 && (
-              <tr><td colSpan={11} className="px-2 py-6 text-center text-muted-foreground text-xs">{showArchived ? "No archived issues." : "No issues."}</td></tr>
+              <tr><td colSpan={11} className="px-2 py-6 text-center text-muted-foreground text-xs">{showArchived ? "No archived queries." : "No queries."}</td></tr>
             )}
           </tbody>
         </table>
@@ -835,7 +835,7 @@ export function IntranetSection() {
     { title: "Session Recordings", desc: `${sessions.length} sessions logged`, owner: "Plexa", status: "In Progress", icon: "🎥" },
     { title: "Attendance Registers", desc: "Complete signed register per session", owner: "Plexa", status: "In Progress", icon: "✅" },
     { title: "Training Competency Records", desc: `${signOffs.filter((s) => s.status === "COMPLETE").length} of ${signOffs.length} signed off`, owner: "Plexa", status: "In Progress", icon: "🖊️" },
-    { title: "Issue Summary", desc: `${issues.length} raised · ${issues.filter((i) => i.status === "Closed").length} resolved`, owner: "Plexa", status: "Pending", icon: "⚠️" },
+    { title: "Query Summary", desc: `${issues.length} raised · ${issues.filter((i) => i.status === "Closed").length} resolved`, owner: "Plexa", status: "Pending", icon: "⚠️" },
     { title: "Champion Roster", desc: `${champions.length} certified internal experts`, owner: "Plexa", status: "Pending", icon: "🏆" },
     { title: "Quick-Start Guides (QSGs)", desc: "Module-by-module how-tos", owner: "Plexa", status: "Pending", icon: "📚" },
     { title: "Configuration Manual", desc: "Folder structure, workflows, cost codes", owner: "Plexa", status: "Pending", icon: "⚙️" },
@@ -1269,7 +1269,7 @@ THE NUMBERS
 • ${tasksDone}/${tasks.length} tasks completed (${Math.round((tasksDone / tasks.length) * 100)}%)
 • ${sessionsDone}/${sessions.length} sessions delivered
 • ${competencyComplete}/${signOffs.length} users signed off across training modules
-• ${issuesClosed}/${issues.length} issues resolved
+• ${issuesClosed}/${issues.length} queries resolved
 • ${dodDone}/${dod.length} Definition of Done criteria confirmed
 • ${champions.length} certified Plexa Champions inside ${client.clientName}
 
@@ -1320,7 +1320,7 @@ Welcome to the Plexa family. Here's to building something great together.
               <Snap label="Tasks complete" value={`${Math.round((tasksDone / tasks.length) * 100)}%`} sub={`${tasksDone}/${tasks.length}`} tone="brand" />
               <Snap label="Sessions delivered" value={`${sessionsDone}`} sub={`of ${sessions.length}`} tone="success" />
               <Snap label="Users signed off" value={`${competencyComplete}`} sub={`of ${signOffs.length}`} tone="success" />
-              <Snap label="Issues resolved" value={`${issuesClosed}`} sub={`of ${issues.length}`} />
+              <Snap label="Queries resolved" value={`${issuesClosed}`} sub={`of ${issues.length}`} />
               <Snap label="DoD confirmed" value={`${dodDone}/${dod.length}`} tone="brand" />
               <Snap label="Champions" value={`${champions.length}`} tone="success" />
             </div>
