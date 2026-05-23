@@ -1015,10 +1015,68 @@ export function IntranetSection() {
                     <Input className="h-8 text-xs" placeholder="Name" value={r.presenter} onChange={(e) => updateIntranet(r.id, { presenter: e.target.value })} />
                   </div>
 
-                  <div>
-                    <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-0.5">Description / Notes</div>
-                    <Textarea className="text-xs min-h-[60px]" placeholder="What this covers, key timestamps, prerequisites…" value={r.description} onChange={(e) => updateIntranet(r.id, { description: e.target.value })} />
-                  </div>
+                  {r.kind !== "Recording" && (
+                    <div>
+                      <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-0.5">Attachment</div>
+                      {r.fileName ? (
+                        <div className="flex items-center gap-2 rounded-lg border bg-muted/30 px-2.5 py-1.5">
+                          <span className="text-lg leading-none">📎</span>
+                          <div className="min-w-0 flex-1">
+                            <div className="text-xs font-semibold truncate">{r.fileName}</div>
+                            <div className="text-[10px] text-muted-foreground">
+                              {r.fileType || "file"}{r.fileSize ? ` · ${(r.fileSize / 1024).toFixed(0)} KB` : ""}
+                            </div>
+                          </div>
+                          {r.fileData && (
+                            <Button size="sm" variant="outline" className="h-7 shrink-0" asChild>
+                              <a href={r.fileData} download={r.fileName} target="_blank" rel="noreferrer">Download</a>
+                            </Button>
+                          )}
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            className="h-7 w-7 text-destructive shrink-0"
+                            onClick={() => updateIntranet(r.id, { fileName: undefined, fileType: undefined, fileSize: undefined, fileData: undefined })}
+                            title="Remove attachment"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </Button>
+                        </div>
+                      ) : (
+                        <label className="flex flex-col items-center justify-center gap-1 rounded-lg border-2 border-dashed bg-muted/10 hover:bg-muted/30 cursor-pointer px-3 py-4 text-center transition-colors">
+                          <Upload className="h-4 w-4 text-muted-foreground" />
+                          <div className="text-xs font-semibold">Click to attach a file</div>
+                          <div className="text-[10px] text-muted-foreground">PDF, DOCX, PPTX, image — up to ~5MB</div>
+                          <input
+                            type="file"
+                            className="hidden"
+                            accept=".pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,image/*"
+                            onChange={(e) => {
+                              const f = e.target.files?.[0];
+                              if (!f) return;
+                              if (f.size > 5 * 1024 * 1024) {
+                                alert("Attachment must be 5MB or smaller. For larger files, paste a SharePoint/Drive link in the Link field.");
+                                e.target.value = "";
+                                return;
+                              }
+                              const reader = new FileReader();
+                              reader.onload = () => {
+                                updateIntranet(r.id, {
+                                  fileName: f.name,
+                                  fileType: f.type || "application/octet-stream",
+                                  fileSize: f.size,
+                                  fileData: String(reader.result),
+                                  format: r.format || (f.type.includes("pdf") ? "PDF" : f.type.split("/")[1]?.toUpperCase() || "File"),
+                                });
+                              };
+                              reader.readAsDataURL(f);
+                              e.target.value = "";
+                            }}
+                          />
+                        </label>
+                      )}
+                    </div>
+                  )}
 
                   {session && (
                     <div className="text-[10px] text-muted-foreground border-t pt-1.5">
