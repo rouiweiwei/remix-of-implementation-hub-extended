@@ -391,6 +391,7 @@ const initial = {
   contractors: [] as Contractor[],
   costCodes: [] as CostCode[],
   reminderTasks: [] as ReminderTask[],
+  intranet: [] as IntranetResource[],
 };
 
 export const usePlaybook = create<PlaybookState>()(
