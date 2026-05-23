@@ -504,6 +504,11 @@ export const usePlaybook = create<PlaybookState>()(
       deleteReminderTask: (id) =>
         set((st) => ({ reminderTasks: st.reminderTasks.filter((x) => x.id !== id) })),
 
+      addIntranet: (r) => set((st) => ({ intranet: [...st.intranet, { id: uid(), ...r }] })),
+      updateIntranet: (id, patch) =>
+        set((st) => ({ intranet: st.intranet.map((x) => (x.id === id ? { ...x, ...patch } : x)) })),
+      deleteIntranet: (id) => set((st) => ({ intranet: st.intranet.filter((x) => x.id !== id) })),
+
       resetAll: () => set(initial),
     }),
     { name: "plexa-playbook-v2" }
