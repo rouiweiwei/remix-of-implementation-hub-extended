@@ -825,53 +825,217 @@ export function DefinitionOfDoneSection() {
 
 // =============== INTRANET ===============
 export function IntranetSection() {
-  const sessions = usePlaybook((s) => s.sessions);
-  const issues = usePlaybook((s) => s.issues);
-  const champions = usePlaybook((s) => s.champions);
   const client = usePlaybook((s) => s.client);
-  const signOffs = usePlaybook((s) => s.signOffs);
+  const intranet = usePlaybook((s) => s.intranet);
+  const addIntranet = usePlaybook((s) => s.addIntranet);
+  const updateIntranet = usePlaybook((s) => s.updateIntranet);
+  const deleteIntranet = usePlaybook((s) => s.deleteIntranet);
 
-  const items = [
-    { title: "Session Recordings", desc: `${sessions.length} sessions logged`, owner: "Plexa", status: "In Progress", icon: "🎥" },
-    { title: "Attendance Registers", desc: "Complete signed register per session", owner: "Plexa", status: "In Progress", icon: "✅" },
-    { title: "Training Competency Records", desc: `${signOffs.filter((s) => s.status === "COMPLETE").length} of ${signOffs.length} signed off`, owner: "Plexa", status: "In Progress", icon: "🖊️" },
-    { title: "Query Summary", desc: `${issues.length} raised · ${issues.filter((i) => i.status === "Closed").length} resolved`, owner: "Plexa", status: "Pending", icon: "⚠️" },
-    { title: "Champion Roster", desc: `${champions.length} certified internal experts`, owner: "Plexa", status: "Pending", icon: "🏆" },
-    { title: "Quick-Start Guides (QSGs)", desc: "Module-by-module how-tos", owner: "Plexa", status: "Pending", icon: "📚" },
-    { title: "Configuration Manual", desc: "Folder structure, workflows, cost codes", owner: "Plexa", status: "Pending", icon: "⚙️" },
-    { title: "Post-Implementation Email", desc: "Automated handover email + analytics", owner: "Plexa", status: "Pending", icon: "📧" },
+  const [tab, setTab] = useState<"Recording" | "Quick-Start Guide" | "Resource">("Recording");
+  const filtered = intranet.filter((x) => x.kind === tab);
+
+  const add = () =>
+    addIntranet({
+      kind: tab,
+      title: "",
+      module: "",
+      sessionId: "",
+      url: "",
+      format: tab === "Recording" ? "Video" : tab === "Quick-Start Guide" ? "PDF" : "Link",
+      duration: "",
+      presenter: "",
+      recordedOn: new Date().toISOString().slice(0, 10),
+      description: "",
+      status: "DRAFT",
+    });
+
+  const counts = {
+    recordings: intranet.filter((x) => x.kind === "Recording").length,
+    guides: intranet.filter((x) => x.kind === "Quick-Start Guide").length,
+    resources: intranet.filter((x) => x.kind === "Resource").length,
+    published: intranet.filter((x) => x.status === "PUBLISHED").length,
+  };
+
+  const tabs: Array<{ id: typeof tab; label: string; icon: string; count: number }> = [
+    { id: "Recording", label: "Session Recordings", icon: "🎥", count: counts.recordings },
+    { id: "Quick-Start Guide", label: "Quick-Start Guides", icon: "📚", count: counts.guides },
+    { id: "Resource", label: "Supporting Resources", icon: "📎", count: counts.resources },
   ];
+
+  const hostFromUrl = (url: string) => {
+    try { return new URL(url).hostname.replace(/^www\./, ""); } catch { return ""; }
+  };
 
   return (
     <div className="space-y-5">
-      <SectionHeader title="🌐 Client Intranet Pack" subtitle="The complete Plexa training library, delivered at implementation close." />
+      <SectionHeader
+        title="🌐 Client Intranet Pack"
+        subtitle="The handover library for the client — recorded workshops & training, quick-start guides per module, and supporting resources."
+      />
 
       <div className="rounded-xl border bg-brand-gradient text-primary-foreground p-6 relative overflow-hidden">
         <div className="absolute inset-0 bg-grid opacity-15" />
-        <div className="relative">
-          <div className="text-[11px] font-semibold uppercase tracking-[0.18em] opacity-80">Prepared for</div>
-          <h3 className="text-2xl font-bold mt-1">{client.clientName}</h3>
-          <p className="text-sm opacity-90 mt-1">Handover date · {new Date().toISOString().slice(0, 10)} · Prepared by Plexa Customer Success</p>
+        <div className="relative flex flex-col md:flex-row md:items-end md:justify-between gap-3">
+          <div>
+            <div className="text-[11px] font-semibold uppercase tracking-[0.18em] opacity-80">Prepared for</div>
+            <h3 className="text-2xl font-bold mt-1">{client.clientName}</h3>
+            <p className="text-sm opacity-90 mt-1">Handover library · Prepared by Plexa Customer Success</p>
+          </div>
+          <div className="grid grid-cols-4 gap-3 text-center">
+            {[
+              { l: "RECORDINGS", v: counts.recordings },
+              { l: "GUIDES", v: counts.guides },
+              { l: "RESOURCES", v: counts.resources },
+              { l: "PUBLISHED", v: counts.published },
+            ].map((s) => (
+              <div key={s.l} className="rounded-lg bg-background/15 ring-1 ring-background/30 px-3 py-2 min-w-[80px]">
+                <div className="text-[9px] font-semibold uppercase tracking-wider opacity-80">{s.l}</div>
+                <div className="text-lg font-bold tabular-nums">{s.v}</div>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
 
-      <div className="rounded-xl border bg-card overflow-hidden">
-        <div className="grid grid-cols-[40px_1fr_1fr_120px_140px] gap-2 px-3 py-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground bg-muted/30 border-b">
-          <div></div><div>Item</div><div>Description</div><div>Owner</div><div>Status</div>
-        </div>
-        {items.map((x) => (
-          <div key={x.title} className="grid grid-cols-[40px_1fr_1fr_120px_140px] gap-2 px-3 py-3 items-center border-b last:border-0">
-            <div className="text-xl text-center">{x.icon}</div>
-            <div className="text-sm font-semibold">{x.title}</div>
-            <div className="text-xs text-muted-foreground">{x.desc}</div>
-            <div className="text-xs">{x.owner}</div>
-            <StatusBadge status={x.status === "Pending" ? "NOT STARTED" : "IN PROGRESS"} />
-          </div>
+      <div className="flex flex-wrap items-center gap-2">
+        {tabs.map((t) => (
+          <button
+            key={t.id}
+            onClick={() => setTab(t.id)}
+            className={cn(
+              "inline-flex items-center gap-2 rounded-lg border px-3 py-1.5 text-sm transition-colors",
+              tab === t.id ? "bg-primary text-primary-foreground border-primary" : "bg-card hover:bg-muted"
+            )}
+          >
+            <span>{t.icon}</span>
+            <span className="font-semibold">{t.label}</span>
+            <span className={cn("text-[10px] rounded-full px-1.5 py-0.5 tabular-nums",
+              tab === t.id ? "bg-primary-foreground/20" : "bg-muted text-muted-foreground")}>{t.count}</span>
+          </button>
         ))}
+        <div className="ml-auto">
+          <Button size="sm" onClick={add}><Plus className="h-4 w-4 mr-1" /> Add {tab}</Button>
+        </div>
       </div>
+
+      {filtered.length === 0 ? (
+        <div className="rounded-xl border border-dashed bg-card p-10 text-center text-sm text-muted-foreground">
+          No {tab.toLowerCase()}s yet. Click <span className="font-semibold text-foreground">Add {tab}</span> to drop in the first link.
+          {tab === "Recording" && <div className="mt-1 text-xs">Paste Loom / Zoom / SharePoint / YouTube links to each recorded workshop or training session.</div>}
+          {tab === "Quick-Start Guide" && <div className="mt-1 text-xs">Add module-by-module how-to PDFs or doc links (e.g. 4A Site, Safety & Quality).</div>}
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+          {filtered.map((r) => {
+            const session = SESSIONS.find((s) => s.id === r.sessionId);
+            return (
+              <div key={r.id} className="rounded-xl border bg-card overflow-hidden">
+                <div className="flex items-center justify-between gap-2 px-3 py-2 bg-muted/30 border-b">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span className="text-lg">{tabs.find((t) => t.id === r.kind)?.icon}</span>
+                    <Input
+                      className="h-7 text-sm font-semibold border-0 bg-transparent focus-visible:ring-1 px-1"
+                      placeholder={r.kind === "Recording" ? "e.g. W1 — HOD Workshop Recording" : r.kind === "Quick-Start Guide" ? "e.g. 4A Site, Safety & Quality QSG" : "e.g. Configuration Manual"}
+                      value={r.title}
+                      onChange={(e) => updateIntranet(r.id, { title: e.target.value })}
+                    />
+                  </div>
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    <Select value={r.status} onValueChange={(v: IntranetStatusValue) => updateIntranet(r.id, { status: v })}>
+                      <SelectTrigger className={cn("h-7 text-[10px] font-semibold w-[110px]",
+                        r.status === "PUBLISHED" ? "text-success" : "text-muted-foreground")}>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="DRAFT">DRAFT</SelectItem>
+                        <SelectItem value="PUBLISHED">PUBLISHED</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <Button size="icon" variant="ghost" className="h-7 w-7 text-destructive" onClick={() => deleteIntranet(r.id)}>
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </Button>
+                  </div>
+                </div>
+
+                <div className="p-3 space-y-2">
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-0.5">Linked Session</div>
+                      <Select value={r.sessionId || "none"} onValueChange={(v) => updateIntranet(r.id, { sessionId: v === "none" ? "" : v, module: v === "none" ? r.module : (SESSIONS.find((s) => s.id === v)?.module || r.module) })}>
+                        <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="—" /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="none">— None —</SelectItem>
+                          {SESSIONS.map((s) => <SelectItem key={s.id} value={s.id}>{s.id} · {s.name}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-0.5">Module</div>
+                      <Input className="h-8 text-xs" placeholder="e.g. 4A" value={r.module} onChange={(e) => updateIntranet(r.id, { module: e.target.value })} />
+                    </div>
+                  </div>
+
+                  <div>
+                    <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-0.5">Link</div>
+                    <div className="flex gap-1.5">
+                      <Input
+                        className="h-8 text-xs font-mono"
+                        placeholder="https://… (Loom, Zoom, SharePoint, YouTube, PDF)"
+                        value={r.url}
+                        onChange={(e) => updateIntranet(r.id, { url: e.target.value })}
+                      />
+                      {r.url && (
+                        <Button size="sm" variant="outline" className="h-8 shrink-0" asChild>
+                          <a href={r.url} target="_blank" rel="noreferrer">Open</a>
+                        </Button>
+                      )}
+                    </div>
+                    {r.url && hostFromUrl(r.url) && (
+                      <div className="text-[10px] text-muted-foreground mt-0.5">{hostFromUrl(r.url)}</div>
+                    )}
+                  </div>
+
+                  <div className="grid grid-cols-3 gap-2">
+                    <div>
+                      <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-0.5">Format</div>
+                      <Input className="h-8 text-xs" placeholder={r.kind === "Recording" ? "Video / Loom" : "PDF / Doc"} value={r.format} onChange={(e) => updateIntranet(r.id, { format: e.target.value })} />
+                    </div>
+                    <div>
+                      <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-0.5">{r.kind === "Recording" ? "Duration" : "Length"}</div>
+                      <Input className="h-8 text-xs" placeholder={r.kind === "Recording" ? "42:10" : "5 pages"} value={r.duration} onChange={(e) => updateIntranet(r.id, { duration: e.target.value })} />
+                    </div>
+                    <div>
+                      <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-0.5">{r.kind === "Recording" ? "Recorded" : "Updated"}</div>
+                      <Input type="date" className="h-8 text-xs" value={r.recordedOn} onChange={(e) => updateIntranet(r.id, { recordedOn: e.target.value })} />
+                    </div>
+                  </div>
+
+                  <div>
+                    <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-0.5">{r.kind === "Recording" ? "Presenter" : "Author"}</div>
+                    <Input className="h-8 text-xs" placeholder="Name" value={r.presenter} onChange={(e) => updateIntranet(r.id, { presenter: e.target.value })} />
+                  </div>
+
+                  <div>
+                    <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-0.5">Description / Notes</div>
+                    <Textarea className="text-xs min-h-[60px]" placeholder="What this covers, key timestamps, prerequisites…" value={r.description} onChange={(e) => updateIntranet(r.id, { description: e.target.value })} />
+                  </div>
+
+                  {session && (
+                    <div className="text-[10px] text-muted-foreground border-t pt-1.5">
+                      Linked to <span className="font-mono text-primary">{session.id}</span> · {session.type} · Module {session.module}
+                    </div>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }
+
+type IntranetStatusValue = "DRAFT" | "PUBLISHED";
 
 // =============== SESSION CONTENT LOG ===============
 type TopicRow = { topic: string; notes: string; covered: string; duration: string; followUp: string; followUpAction: string };

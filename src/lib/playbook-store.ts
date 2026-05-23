@@ -215,6 +215,24 @@ export interface ReminderTask {
   completedAt?: string;    // ISO
 }
 
+export type IntranetKind = "Recording" | "Quick-Start Guide" | "Resource";
+export type IntranetStatus = "DRAFT" | "PUBLISHED";
+
+export interface IntranetResource {
+  id: string;
+  kind: IntranetKind;
+  title: string;
+  module: string;        // e.g. "4A", "All", "Workshop"
+  sessionId?: string;    // optional link to a Session/SessionDef id
+  url: string;           // recording link / guide link
+  format: string;        // e.g. "Video", "PDF", "Loom", "MP4", "Doc"
+  duration: string;      // e.g. "42:10" or "5 pages"
+  presenter: string;
+  recordedOn: string;    // YYYY-MM-DD
+  description: string;
+  status: IntranetStatus;
+}
+
 interface PlaybookState {
   client: ClientInfo;
   tasks: Task[];
@@ -237,6 +255,7 @@ interface PlaybookState {
   contractors: Contractor[];
   costCodes: CostCode[];
   reminderTasks: ReminderTask[];
+  intranet: IntranetResource[];
 
   // actions
   setClient: (c: Partial<ClientInfo>) => void;
@@ -303,6 +322,10 @@ interface PlaybookState {
   updateReminderTask: (id: string, patch: Partial<ReminderTask>) => void;
   deleteReminderTask: (id: string) => void;
 
+  addIntranet: (r: Omit<IntranetResource, "id">) => void;
+  updateIntranet: (id: string, patch: Partial<IntranetResource>) => void;
+  deleteIntranet: (id: string) => void;
+
   resetAll: () => void;
 }
 
@@ -368,6 +391,7 @@ const initial = {
   contractors: [] as Contractor[],
   costCodes: [] as CostCode[],
   reminderTasks: [] as ReminderTask[],
+  intranet: [] as IntranetResource[],
 };
 
 export const usePlaybook = create<PlaybookState>()(
@@ -479,6 +503,11 @@ export const usePlaybook = create<PlaybookState>()(
         })),
       deleteReminderTask: (id) =>
         set((st) => ({ reminderTasks: st.reminderTasks.filter((x) => x.id !== id) })),
+
+      addIntranet: (r) => set((st) => ({ intranet: [...st.intranet, { id: uid(), ...r }] })),
+      updateIntranet: (id, patch) =>
+        set((st) => ({ intranet: st.intranet.map((x) => (x.id === id ? { ...x, ...patch } : x)) })),
+      deleteIntranet: (id) => set((st) => ({ intranet: st.intranet.filter((x) => x.id !== id) })),
 
       resetAll: () => set(initial),
     }),
