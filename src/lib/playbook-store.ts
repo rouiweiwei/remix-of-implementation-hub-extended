@@ -404,7 +404,15 @@ export const usePlaybook = create<PlaybookState>()(
       ...initial,
       setClient: (c) => set((s) => ({ client: { ...s.client, ...c } })),
       updateTaskStatus: (id, status) =>
-        set((s) => ({ tasks: s.tasks.map((t) => (t.id === id ? { ...t, status } : t)) })),
+        set((s) => ({
+          tasks: s.tasks.map((t) => {
+            if (t.id !== id) return t;
+            const next: Task = { ...t, status };
+            if (status === "COMPLETE" && !t.completedAt) next.completedAt = new Date().toISOString();
+            if (status !== "COMPLETE") next.completedAt = undefined;
+            return next;
+          }),
+        })),
       updateTaskNotes: (id, notes, by = "You") =>
         set((s) => {
           const prev = s.tasks.find((t) => t.id === id)?.notes || "";

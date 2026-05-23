@@ -27,6 +27,7 @@ export interface Task {
   owner: "PLEXA" | "CLIENT" | "PLEXA + CLIENT";
   status: TaskStatus;
   notes?: string;
+  completedAt?: string; // ISO timestamp — stamped when status moves to COMPLETE
 }
 
 export const SEED_TASKS: Task[] = [
