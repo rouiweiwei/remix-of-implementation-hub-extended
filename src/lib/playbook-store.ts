@@ -460,6 +460,26 @@ export const usePlaybook = create<PlaybookState>()(
       deleteCostCode: (id) => set((st) => ({ costCodes: st.costCodes.filter((x) => x.id !== id) })),
       replaceCostCodes: (rows) => set({ costCodes: rows }),
 
+      addReminderTask: (r) =>
+        set((st) => ({
+          reminderTasks: [
+            ...st.reminderTasks,
+            { id: uid(), createdAt: new Date().toISOString(), ...r },
+          ],
+        })),
+      updateReminderTask: (id, patch) =>
+        set((st) => ({
+          reminderTasks: st.reminderTasks.map((x) => {
+            if (x.id !== id) return x;
+            const merged = { ...x, ...patch };
+            if (patch.status === "DONE" && !merged.completedAt) merged.completedAt = new Date().toISOString();
+            if (patch.status && patch.status !== "DONE") merged.completedAt = undefined;
+            return merged;
+          }),
+        })),
+      deleteReminderTask: (id) =>
+        set((st) => ({ reminderTasks: st.reminderTasks.filter((x) => x.id !== id) })),
+
       resetAll: () => set(initial),
     }),
     { name: "plexa-playbook-v2" }
