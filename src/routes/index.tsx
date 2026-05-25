@@ -4,7 +4,8 @@ import { ChevronDown } from "lucide-react";
 import { PhaseBanner } from "@/components/workbench/PhaseBanner";
 import { CoverSection, MissionControlSection } from "@/components/workbench/sections/CoverMission";
 import { TimelineSection, ImplementationPlanSection, Phase3Section, Phase4Section, TrainingScheduleSection } from "@/components/workbench/sections/Phases";
-import { SessionRegisterSection, AttendanceSection, SignOffSection, EmailLogSection, IssuesSection, StakeholdersSection, ChampionsSection, DefinitionOfDoneSection, IntranetSection, ContentLogSection, UserAccountsSection, ProjectDetailsSection, ContractorsSection, CostCodesSection, PostImplementationEmailSection, TemplatesLibrarySection } from "@/components/workbench/sections/Registers";
+import { SessionRegisterSection, AttendanceSection, SignOffSection, EmailLogSection, IssuesSection, StakeholdersSection, ChampionsSection, DefinitionOfDoneSection, IntranetSection, ContentLogSection, UserAccountsSection, ProjectDetailsSection, ContractorsSection, CostCodesSection, PostImplementationEmailSection, TemplatesLibrarySection, TasksRegisterSection } from "@/components/workbench/sections/Registers";
+import { GanttSection } from "@/components/workbench/sections/Gantt";
 import { cn } from "@/lib/utils";
 import type { PhaseId } from "@/lib/playbook-data";
 
@@ -22,6 +23,7 @@ const NAV = [
   { id: "cover", label: "Cover", icon: "📖", group: "Overview" },
   { id: "mission", label: "Mission Control", icon: "🎯", group: "Overview" },
   { id: "timeline", label: "Timeline Planner", icon: "📆", group: "Overview" },
+  { id: "gantt", label: "Day-by-Day Gantt", icon: "📊", group: "Overview" },
   { id: "plan", label: "Implementation Plan", icon: "🗺️", group: "Phases" },
   { id: "phase3", label: "Phase 3 — Workshops", icon: "🎯", group: "Phases" },
   { id: "phase4", label: "Phase 4 — Training", icon: "🏋️", group: "Phases" },
@@ -31,12 +33,13 @@ const NAV = [
   { id: "contractors", label: "Contractor Database", icon: "🔧", group: "Data" },
   { id: "costcodes", label: "Cost Codes", icon: "💷", group: "Data" },
   { id: "templates", label: "Templates Library", icon: "📁", group: "Data" },
+  { id: "tasks", label: "Tasks & Reminders", icon: "🔔", group: "Registers" },
   { id: "sessions", label: "Session Register", icon: "📅", group: "Registers" },
   { id: "attendance", label: "Attendance", icon: "✅", group: "Registers" },
   { id: "signoff", label: "Training Sign-Off", icon: "🖊️", group: "Registers" },
   { id: "content", label: "Session Content Log", icon: "📚", group: "Registers" },
   { id: "email", label: "Weekly Email Log", icon: "📧", group: "Registers" },
-  { id: "issues", label: "Issues Register", icon: "⚠️", group: "Registers" },
+  { id: "issues", label: "Queries Register", icon: "⚠️", group: "Registers" },
   { id: "stakeholders", label: "Stakeholder Map", icon: "👥", group: "People" },
   { id: "champions", label: "Champion Register", icon: "🏆", group: "People" },
   { id: "dod", label: "Definition of Done", icon: "📋", group: "Close-out" },
@@ -62,7 +65,7 @@ function Workbench() {
   return (
     <div className="min-h-screen bg-background">
       <header className="sticky top-0 z-30 border-b bg-background/80 backdrop-blur">
-        <div className="mx-auto max-w-[1600px] flex items-center justify-between px-6 h-14">
+        <div className="w-full flex items-center justify-between px-6 h-14">
           <div className="flex items-center gap-3">
             <div className="h-8 w-8 rounded-lg bg-brand-gradient flex items-center justify-center text-primary-foreground font-bold text-sm">P</div>
             <div>
@@ -74,7 +77,7 @@ function Workbench() {
         </div>
       </header>
 
-      <div className="mx-auto max-w-[1600px] px-6 py-6">
+      <div className="w-full px-6 py-6">
         <PhaseBanner
           activePhase={phaseFilter}
           onPickPhase={(p) => { setPhaseFilter(p); setTab("plan"); }}
@@ -122,10 +125,12 @@ function Workbench() {
             {tab === "cover" && <CoverSection />}
             {tab === "mission" && <MissionControlSection />}
             {tab === "timeline" && <TimelineSection />}
+            {tab === "gantt" && <GanttSection />}
             {tab === "plan" && <ImplementationPlanSection filterPhase={phaseFilter} />}
             {tab === "phase3" && <Phase3Section />}
             {tab === "phase4" && <Phase4Section />}
             {tab === "schedule" && <TrainingScheduleSection />}
+            {tab === "tasks" && <TasksRegisterSection />}
             {tab === "sessions" && <SessionRegisterSection />}
             {tab === "attendance" && <AttendanceSection />}
             {tab === "signoff" && <SignOffSection />}
