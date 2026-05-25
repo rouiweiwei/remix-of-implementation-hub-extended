@@ -19,6 +19,7 @@ export default defineConfig({
     outDir: path.resolve(__dirname, "../standalone-dist"),
     emptyOutDir: true,
     cssCodeSplit: false,
+    minify: false,
     assetsInlineLimit: 100_000_000,
     chunkSizeWarningLimit: 100_000,
     rollupOptions: {
