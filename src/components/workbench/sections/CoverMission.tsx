@@ -4,8 +4,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { SectionHeader, StatusBadge } from "../shared";
 import { cn } from "@/lib/utils";
-import { AlertTriangle, Bell, CheckCircle2, Clock, Flag, ShieldCheck, Target, TrendingUp, Users, X } from "lucide-react";
-import { useEffect, useState } from "react";
+import { AlertTriangle, CheckCircle2, Clock, Flag, ShieldCheck, Target, TrendingUp, Users, X } from "lucide-react";
+import { useState } from "react";
 
 function MultiUserField({ label, value, onChange }: { label: string; value: string; onChange: (v: string) => void }) {
   const [draft, setDraft] = useState("");
@@ -111,7 +111,6 @@ export function MissionControlSection() {
   const client = usePlaybook((s) => s.client);
   const startDate = usePlaybook((s) => s.startDate);
   const timelineMode = usePlaybook((s) => s.timelineMode);
-  const reminders = usePlaybook((s) => s.reminderTasks);
 
   const overall = overallProgress(tasks);
   const openIssues = issues.filter((i) => i.status !== "Closed");
@@ -133,22 +132,16 @@ export function MissionControlSection() {
     .slice(0, 6);
 
   const goLiveTarget = client.goLiveDate || calcEndDate(startDate, timelineMode);
-  const [now, setNow] = useState<Date | null>(null);
-  useEffect(() => {
-    setNow(new Date());
-    const id = setInterval(() => setNow(new Date()), 60_000);
-    return () => clearInterval(id);
-  }, []);
-  const today = now ?? new Date(0);
+  const today = new Date();
   const target = new Date(goLiveTarget);
-  const msToGoLive = now ? target.getTime() - today.getTime() : 0;
+  const msToGoLive = target.getTime() - today.getTime();
   const daysToGoLive = Math.ceil(msToGoLive / 86400000);
   const absMs = Math.max(0, msToGoLive);
   const cdWeeks = Math.floor(absMs / (7 * 86400000));
   const cdDays = Math.floor((absMs % (7 * 86400000)) / 86400000);
   const cdHours = Math.floor((absMs % 86400000) / 3600000);
   const cdMinutes = Math.floor((absMs % 3600000) / 60000);
-  const goLivePast = now ? msToGoLive < 0 : false;
+  const goLivePast = msToGoLive < 0;
   const start = new Date(startDate);
   const totalDays = Math.max(1, Math.ceil((target.getTime() - start.getTime()) / 86400000));
   const elapsed = Math.max(0, Math.ceil((today.getTime() - start.getTime()) / 86400000));
@@ -159,7 +152,7 @@ export function MissionControlSection() {
 
   const risks: { level: "danger" | "warning"; text: string }[] = [];
   if (blockedTasks.length > 0) risks.push({ level: "danger", text: `${blockedTasks.length} blocked task${blockedTasks.length > 1 ? "s" : ""} holding up delivery` });
-  if (criticalIssues.length > 0) risks.push({ level: "danger", text: `${criticalIssues.length} high/critical quer${criticalIssues.length > 1 ? "ies" : "y"} open` });
+  if (criticalIssues.length > 0) risks.push({ level: "danger", text: `${criticalIssues.length} high/critical issue${criticalIssues.length > 1 ? "s" : ""} open` });
   if (drift > 10) risks.push({ level: "warning", text: `Delivery is ${drift}% behind schedule (work vs. time elapsed)` });
   if (daysToGoLive < 14 && workPct < 80) risks.push({ level: "danger", text: `Go-live in ${daysToGoLive} days but only ${workPct}% of work complete` });
   const pendingEmails = emails.filter((e) => !e.sent).length;
@@ -279,72 +272,8 @@ export function MissionControlSection() {
         </div>
       )}
 
-
-      {/* Reminders & assigned tasks */}
-      {(() => {
-        const todayIso = new Date().toISOString().slice(0, 10);
-        const open = reminders.filter((r) => r.status !== "DONE");
-        const overdue = open.filter((r) => r.dueDate && r.dueDate < todayIso);
-        const dueToday = open.filter((r) => r.dueDate === todayIso);
-        const remindNow = open.filter((r) => r.remindAt && r.remindAt <= todayIso && r.dueDate !== todayIso && !(r.dueDate && r.dueDate < todayIso));
-        const upcoming = open.filter((r) => r.dueDate && r.dueDate > todayIso && (new Date(r.dueDate).getTime() - new Date(todayIso).getTime()) <= 7 * 86400000);
-        const sorted = [...overdue, ...dueToday, ...remindNow, ...upcoming].slice(0, 6);
-        const priTone = (p: string) => p === "URGENT" ? "bg-destructive/15 text-destructive border-destructive/40" : p === "HIGH" ? "bg-yellow-400/20 text-yellow-700 dark:text-yellow-300 border-yellow-400/40" : p === "MEDIUM" ? "bg-primary/15 text-primary border-primary/30" : "bg-muted text-muted-foreground border-border";
-        return (
-          <div className="rounded-xl border bg-card p-5">
-            <div className="flex items-center justify-between mb-3">
-              <div className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.15em] text-primary">
-                <Bell className="h-3.5 w-3.5" /> Reminders & assigned tasks
-              </div>
-              <div className="text-[11px] text-muted-foreground">
-                {open.length} open · {dueToday.length} due today · <span className={cn(overdue.length && "text-destructive font-semibold")}>{overdue.length} overdue</span>
-              </div>
-            </div>
-            {sorted.length === 0 ? (
-              <div className="text-sm text-muted-foreground text-center py-6 flex items-center justify-center gap-2">
-                <CheckCircle2 className="h-4 w-4 text-success" />
-                No reminders due. Add one from <span className="font-semibold">Registers → Tasks & Reminders</span>.
-              </div>
-            ) : (
-              <ul className="space-y-2">
-                {sorted.map((r) => {
-                  const isOverdue = r.dueDate && r.dueDate < todayIso;
-                  const isToday = r.dueDate === todayIso;
-                  const dueText = !r.dueDate
-                    ? "No due date"
-                    : isOverdue
-                      ? `Overdue · ${r.dueDate}`
-                      : isToday
-                        ? "Due today"
-                        : `Due ${r.dueDate}`;
-                  return (
-                    <li key={r.id} className={cn(
-                      "flex items-start gap-3 text-sm border-l-2 pl-3 py-1",
-                      isOverdue ? "border-destructive" : isToday ? "border-warning" : "border-primary/40"
-                    )}>
-                      <div className="min-w-0 flex-1">
-                        <div className="truncate font-medium">{r.title}</div>
-                        <div className="text-[11px] text-muted-foreground flex flex-wrap items-center gap-x-2 gap-y-0.5 mt-0.5">
-                          <span>{r.assignee || "Unassigned"}</span>
-                          <span>·</span>
-                          <span className={cn(isOverdue && "text-destructive font-semibold", isToday && "text-warning-foreground font-semibold")}>{dueText}</span>
-                        </div>
-                      </div>
-                      <span className={cn("rounded border px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider flex-none", priTone(r.priority))}>
-                        {r.priority}
-                      </span>
-                    </li>
-                  );
-                })}
-              </ul>
-            )}
-          </div>
-        );
-      })()}
-
       {/* Granular analytics & progress */}
       <div className="rounded-xl border bg-card p-5">
-
         <div className="flex items-center justify-between mb-4">
           <div>
             <div className="text-[11px] font-bold uppercase tracking-[0.15em] text-primary">Live analytics & progress</div>
@@ -362,7 +291,7 @@ export function MissionControlSection() {
           <Stat label="Blocked" value={overall.blocked} tone={overall.blocked ? "danger" : undefined} />
           <Stat label="Sessions held" value={`${sessionsHeld}/${sessions.length}`} />
           <Stat label="Champions" value={champions.length} />
-          <Stat label="Queries open" value={openIssues.length} tone={openIssues.length ? "warning" : undefined} />
+          <Stat label="Issues open" value={openIssues.length} tone={openIssues.length ? "warning" : undefined} />
           <Stat label="Critical" value={criticalIssues.length} tone={criticalIssues.length ? "danger" : undefined} />
           <Stat label="Emails sent" value={`${emailsSent}/${emails.length}`} tone={emailsSent === emails.length ? "success" : pendingEmails >= 2 ? "warning" : undefined} />
           <Stat label="DoD confirmed" value={`${dodDone}/${dod.length}`} />

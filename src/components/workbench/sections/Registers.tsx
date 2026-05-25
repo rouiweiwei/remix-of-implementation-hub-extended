@@ -7,8 +7,6 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Plus, Trash2, Check, Download, Upload, Send, Sparkles, FileSpreadsheet } from "lucide-react";
-import { EmailAutomationPanel } from "./EmailAutomation";
-import { buildWeeklyAutoFill } from "@/lib/email-templates";
 import { cn } from "@/lib/utils";
 
 import { SESSIONS, CONTENT_TOPICS, COMPETENCY_MODULES, ATTENDEES_PER_SESSION, COMPETENCY_ROWS, ISSUE_ROWS, EMAIL_WEEKS, USER_DIRECTORY } from "@/lib/registers-data";
@@ -425,106 +423,57 @@ export function EmailLogSection() {
     Array.from({ length: EMAIL_WEEKS }, () => ({ dateSent: "", phase: "", completed: "", planned: "", openIssues: "", sentTo: "CEO, CFO, IT Lead, Site Teams, Ops Managers", status: "PENDING" }))
   );
   const upd = (i: number, patch: Partial<EmailRow>) => setRows((p) => p.map((r, idx) => idx === i ? { ...r, ...patch } : r));
-  const [tab, setTab] = useState<"log" | "auto">("auto");
-
-  const ctx = usePlaybook((s) => ({
-    client: s.client, tasks: s.tasks, taskOverrides: s.taskOverrides, timelineMode: s.timelineMode,
-    startDate: s.startDate, issues: s.issues, stakeholders: s.stakeholders, champions: s.champions,
-    dod: s.dod, intranet: s.intranet, sessions: s.sessions,
-  }));
-
-  const autoFill = (i: number) => {
-    const dateAnchor = rows[i].dateSent || new Date().toISOString().slice(0, 10);
-    const fill = buildWeeklyAutoFill(ctx, { weekEndingDate: dateAnchor, weekNumber: i + 1 });
-    upd(i, {
-      completed: fill.completed,
-      planned: fill.planned,
-      openIssues: fill.openIssues,
-      status: rows[i].status === "PENDING" ? "DRAFTED" : rows[i].status,
-    });
-  };
 
   return (
     <div className="space-y-5">
-      <SectionHeader title="📧 Weekly Client Email Log" subtitle="Auto-drafted from your live registers. Preview, copy, and send from your own inbox — or fill the weekly log table by hand." />
+      <SectionHeader title="📧 Weekly Client Email Log" subtitle="Every hold-point communication. Every Friday. No exceptions. Distribution: CEO, CFO, IT Lead, Site Teams, Ops Managers." />
 
-      <div className="inline-flex rounded-lg border bg-card p-0.5">
-        {([
-          { id: "auto", label: "✨ Auto-Drafts" },
-          { id: "log", label: "📋 Weekly Log" },
-        ] as const).map((t) => (
-          <button
-            key={t.id}
-            onClick={() => setTab(t.id)}
-            className={cn(
-              "px-3 py-1.5 text-xs font-semibold rounded-md transition-colors",
-              tab === t.id ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"
-            )}
-          >
-            {t.label}
-          </button>
-        ))}
+      <div className="rounded-xl border bg-primary-soft px-4 py-3 text-xs">
+        <div className="font-semibold mb-1">TEMPLATE — Subject: Weekly Implementation Update — [CLIENT] | Week of [DATE]</div>
+        <div className="text-muted-foreground">STATUS: [GREEN/AMBER/RED]  |  ✅ DONE THIS WEEK: [bullet list]  |  📅 NEXT WEEK: [bullet list]  |  ⚠️ OPEN ISSUES: [from Issues Register]  |  📸 PHOTOS / SIGNED SHEETS: [attached]</div>
       </div>
 
-      {tab === "auto" && <EmailAutomationPanel />}
-
-      {tab === "log" && (
-        <>
-          <div className="rounded-xl border bg-primary-soft px-4 py-3 text-xs">
-            <div className="font-semibold mb-1">TEMPLATE — Subject: Weekly Implementation Update — [CLIENT] | Week of [DATE]</div>
-            <div className="text-muted-foreground">STATUS: [GREEN/AMBER/RED]  |  ✅ DONE THIS WEEK: [bullet list]  |  📅 NEXT WEEK: [bullet list]  |  ⚠️ OPEN ISSUES: [from Issues Register]  |  📸 PHOTOS / SIGNED SHEETS: [attached]</div>
-          </div>
-
-          <div className="rounded-xl border bg-card overflow-x-auto">
-            <table className="w-full text-xs min-w-[1400px]">
-              <thead className="bg-muted/30 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-                <tr>
-                  <th className="px-2 py-2 text-left w-12">Wk</th>
-                  <th className="px-2 py-2 text-left w-32">Date Sent</th>
-                  <th className="px-2 py-2 text-left w-28">Phase</th>
-                  <th className="px-2 py-2 text-left">Completed This Week</th>
-                  <th className="px-2 py-2 text-left">Planned Next Week</th>
-                  <th className="px-2 py-2 text-left">Open Issues</th>
-                  <th className="px-2 py-2 text-left w-40">Sent To</th>
-                  <th className="px-2 py-2 text-left w-28">Status</th>
-                  <th className="px-2 py-2 text-left w-24">Auto</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y">
-                {rows.map((r, i) => (
-                  <tr key={i} className="hover:bg-muted/20 align-top">
-                    <td className="px-2 py-1.5 font-mono font-semibold">W{i + 1}</td>
-                    <td className="px-2 py-1.5"><Input type="date" className="h-7 text-xs" value={r.dateSent} onChange={(e) => upd(i, { dateSent: e.target.value })} /></td>
-                    <td className="px-2 py-1.5"><Input className="h-7 text-xs" value={r.phase} onChange={(e) => upd(i, { phase: e.target.value })} placeholder="Phase 1A…" /></td>
-                    <td className="px-2 py-1.5"><Textarea className="text-xs min-h-[28px]" rows={1} value={r.completed} onChange={(e) => upd(i, { completed: e.target.value })} /></td>
-                    <td className="px-2 py-1.5"><Textarea className="text-xs min-h-[28px]" rows={1} value={r.planned} onChange={(e) => upd(i, { planned: e.target.value })} /></td>
-                    <td className="px-2 py-1.5"><Textarea className="text-xs min-h-[28px]" rows={1} value={r.openIssues} onChange={(e) => upd(i, { openIssues: e.target.value })} /></td>
-                    <td className="px-2 py-1.5"><Input className="h-7 text-xs" value={r.sentTo} onChange={(e) => upd(i, { sentTo: e.target.value })} /></td>
-                    <td className="px-2 py-1.5">
-                      <Select value={r.status} onValueChange={(v) => upd(i, { status: v })}>
-                        <SelectTrigger className={cn("h-7 text-[11px] font-semibold",
-                          r.status === "SENT" && "text-success",
-                          r.status === "DRAFTED" && "text-yellow-600 dark:text-yellow-400",
-                          r.status === "PENDING" && "text-warning-foreground")}><SelectValue /></SelectTrigger>
-                        <SelectContent>{EMAIL_STATUSES.map((x) => <SelectItem key={x} value={x}>{x}</SelectItem>)}</SelectContent>
-                      </Select>
-                    </td>
-                    <td className="px-2 py-1.5">
-                      <Button size="sm" variant="outline" className="h-7 text-[10px]" onClick={() => autoFill(i)} title="Auto-fill from live task data">
-                        <Sparkles className="h-3 w-3 mr-1" /> Fill
-                      </Button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </>
-      )}
+      <div className="rounded-xl border bg-card overflow-x-auto">
+        <table className="w-full text-xs min-w-[1300px]">
+          <thead className="bg-muted/30 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+            <tr>
+              <th className="px-2 py-2 text-left w-12">Wk</th>
+              <th className="px-2 py-2 text-left w-32">Date Sent</th>
+              <th className="px-2 py-2 text-left w-32">Phase</th>
+              <th className="px-2 py-2 text-left">Completed This Week</th>
+              <th className="px-2 py-2 text-left">Planned Next Week</th>
+              <th className="px-2 py-2 text-left">Open Issues</th>
+              <th className="px-2 py-2 text-left w-44">Sent To</th>
+              <th className="px-2 py-2 text-left w-28">Status</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y">
+            {rows.map((r, i) => (
+              <tr key={i} className="hover:bg-muted/20 align-top">
+                <td className="px-2 py-1.5 font-mono font-semibold">W{i + 1}</td>
+                <td className="px-2 py-1.5"><Input type="date" className="h-7 text-xs" value={r.dateSent} onChange={(e) => upd(i, { dateSent: e.target.value })} /></td>
+                <td className="px-2 py-1.5"><Input className="h-7 text-xs" value={r.phase} onChange={(e) => upd(i, { phase: e.target.value })} placeholder="Phase 1A…" /></td>
+                <td className="px-2 py-1.5"><Textarea className="text-xs min-h-[28px]" rows={1} value={r.completed} onChange={(e) => upd(i, { completed: e.target.value })} /></td>
+                <td className="px-2 py-1.5"><Textarea className="text-xs min-h-[28px]" rows={1} value={r.planned} onChange={(e) => upd(i, { planned: e.target.value })} /></td>
+                <td className="px-2 py-1.5"><Textarea className="text-xs min-h-[28px]" rows={1} value={r.openIssues} onChange={(e) => upd(i, { openIssues: e.target.value })} /></td>
+                <td className="px-2 py-1.5"><Input className="h-7 text-xs" value={r.sentTo} onChange={(e) => upd(i, { sentTo: e.target.value })} /></td>
+                <td className="px-2 py-1.5">
+                  <Select value={r.status} onValueChange={(v) => upd(i, { status: v })}>
+                    <SelectTrigger className={cn("h-7 text-[11px] font-semibold",
+                      r.status === "SENT" && "text-success",
+                      r.status === "DRAFTED" && "text-yellow-600 dark:text-yellow-400",
+                      r.status === "PENDING" && "text-warning-foreground")}><SelectValue /></SelectTrigger>
+                    <SelectContent>{EMAIL_STATUSES.map((x) => <SelectItem key={x} value={x}>{x}</SelectItem>)}</SelectContent>
+                  </Select>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }
-
 
 // =============== ISSUES REGISTER ===============
 const ISSUE_TYPES = ["🐛 Bug/Defect", "👤 User Error", "✨ Feature Request", "⚙️ Configuration", "🔗 Integration", "📋 Process Gap", "🎓 Training Gap", "❓ Question", "📦 Data"] as const;
@@ -557,7 +506,7 @@ export function IssuesSection() {
 
   return (
     <div className="space-y-5">
-      <SectionHeader title="⚠️ Queries Register" subtitle="All types · implementation + training. Every query logged, typed, owned. Feature Requests go to the product roadmap. User Errors feed back into training. Nothing slips." />
+      <SectionHeader title="⚠️ Issues Register" subtitle="All types · implementation + training. Every issue logged, typed, owned. Feature Requests go to the product roadmap. User Errors feed back into training. Nothing slips." />
 
       <div className="rounded-xl border bg-muted/30 px-4 py-2 text-xs">
         <span className="font-semibold">TYPES:</span> 🐛 Bug/Defect · 👤 User Error · ✨ Feature Request · ⚙️ Configuration · 🔗 Integration · 📋 Process Gap · 🎓 Training Gap · ❓ Question · 📦 Data
@@ -644,7 +593,7 @@ export function IssuesSection() {
               </tr>
             ))}
             {visibleRows.length === 0 && (
-              <tr><td colSpan={11} className="px-2 py-6 text-center text-muted-foreground text-xs">{showArchived ? "No archived queries." : "No queries."}</td></tr>
+              <tr><td colSpan={11} className="px-2 py-6 text-center text-muted-foreground text-xs">{showArchived ? "No archived issues." : "No issues."}</td></tr>
             )}
           </tbody>
         </table>
@@ -876,281 +825,53 @@ export function DefinitionOfDoneSection() {
 
 // =============== INTRANET ===============
 export function IntranetSection() {
+  const sessions = usePlaybook((s) => s.sessions);
+  const issues = usePlaybook((s) => s.issues);
+  const champions = usePlaybook((s) => s.champions);
   const client = usePlaybook((s) => s.client);
-  const intranet = usePlaybook((s) => s.intranet);
-  const addIntranet = usePlaybook((s) => s.addIntranet);
-  const updateIntranet = usePlaybook((s) => s.updateIntranet);
-  const deleteIntranet = usePlaybook((s) => s.deleteIntranet);
+  const signOffs = usePlaybook((s) => s.signOffs);
 
-  const [tab, setTab] = useState<"Recording" | "Quick-Start Guide" | "Resource">("Recording");
-  const filtered = intranet.filter((x) => x.kind === tab);
-
-  const add = () =>
-    addIntranet({
-      kind: tab,
-      title: "",
-      module: "",
-      sessionId: "",
-      url: "",
-      format: tab === "Recording" ? "Video" : tab === "Quick-Start Guide" ? "PDF" : "Link",
-      duration: "",
-      presenter: "",
-      recordedOn: new Date().toISOString().slice(0, 10),
-      description: "",
-      status: "DRAFT",
-    });
-
-  const counts = {
-    recordings: intranet.filter((x) => x.kind === "Recording").length,
-    guides: intranet.filter((x) => x.kind === "Quick-Start Guide").length,
-    resources: intranet.filter((x) => x.kind === "Resource").length,
-    published: intranet.filter((x) => x.status === "PUBLISHED").length,
-  };
-
-  const tabs: Array<{ id: typeof tab; label: string; icon: string; count: number }> = [
-    { id: "Recording", label: "Session Recordings", icon: "🎥", count: counts.recordings },
-    { id: "Quick-Start Guide", label: "Quick-Start Guides", icon: "📚", count: counts.guides },
-    { id: "Resource", label: "Supporting Resources", icon: "📎", count: counts.resources },
+  const items = [
+    { title: "Session Recordings", desc: `${sessions.length} sessions logged`, owner: "Plexa", status: "In Progress", icon: "🎥" },
+    { title: "Attendance Registers", desc: "Complete signed register per session", owner: "Plexa", status: "In Progress", icon: "✅" },
+    { title: "Training Competency Records", desc: `${signOffs.filter((s) => s.status === "COMPLETE").length} of ${signOffs.length} signed off`, owner: "Plexa", status: "In Progress", icon: "🖊️" },
+    { title: "Issue Summary", desc: `${issues.length} raised · ${issues.filter((i) => i.status === "Closed").length} resolved`, owner: "Plexa", status: "Pending", icon: "⚠️" },
+    { title: "Champion Roster", desc: `${champions.length} certified internal experts`, owner: "Plexa", status: "Pending", icon: "🏆" },
+    { title: "Quick-Start Guides (QSGs)", desc: "Module-by-module how-tos", owner: "Plexa", status: "Pending", icon: "📚" },
+    { title: "Configuration Manual", desc: "Folder structure, workflows, cost codes", owner: "Plexa", status: "Pending", icon: "⚙️" },
+    { title: "Post-Implementation Email", desc: "Automated handover email + analytics", owner: "Plexa", status: "Pending", icon: "📧" },
   ];
-
-  const hostFromUrl = (url: string) => {
-    try { return new URL(url).hostname.replace(/^www\./, ""); } catch { return ""; }
-  };
 
   return (
     <div className="space-y-5">
-      <SectionHeader
-        title="🌐 Client Intranet Pack"
-        subtitle="The handover library for the client — recorded workshops & training, quick-start guides per module, and supporting resources."
-      />
+      <SectionHeader title="🌐 Client Intranet Pack" subtitle="The complete Plexa training library, delivered at implementation close." />
 
       <div className="rounded-xl border bg-brand-gradient text-primary-foreground p-6 relative overflow-hidden">
         <div className="absolute inset-0 bg-grid opacity-15" />
-        <div className="relative flex flex-col md:flex-row md:items-end md:justify-between gap-3">
-          <div>
-            <div className="text-[11px] font-semibold uppercase tracking-[0.18em] opacity-80">Prepared for</div>
-            <h3 className="text-2xl font-bold mt-1">{client.clientName}</h3>
-            <p className="text-sm opacity-90 mt-1">Handover library · Prepared by Plexa Customer Success</p>
-          </div>
-          <div className="grid grid-cols-4 gap-3 text-center">
-            {[
-              { l: "RECORDINGS", v: counts.recordings },
-              { l: "GUIDES", v: counts.guides },
-              { l: "RESOURCES", v: counts.resources },
-              { l: "PUBLISHED", v: counts.published },
-            ].map((s) => (
-              <div key={s.l} className="rounded-lg bg-background/15 ring-1 ring-background/30 px-3 py-2 min-w-[80px]">
-                <div className="text-[9px] font-semibold uppercase tracking-wider opacity-80">{s.l}</div>
-                <div className="text-lg font-bold tabular-nums">{s.v}</div>
-              </div>
-            ))}
-          </div>
+        <div className="relative">
+          <div className="text-[11px] font-semibold uppercase tracking-[0.18em] opacity-80">Prepared for</div>
+          <h3 className="text-2xl font-bold mt-1">{client.clientName}</h3>
+          <p className="text-sm opacity-90 mt-1">Handover date · {new Date().toISOString().slice(0, 10)} · Prepared by Plexa Customer Success</p>
         </div>
       </div>
 
-      <div className="flex flex-wrap items-center gap-2">
-        {tabs.map((t) => (
-          <button
-            key={t.id}
-            onClick={() => setTab(t.id)}
-            className={cn(
-              "inline-flex items-center gap-2 rounded-lg border px-3 py-1.5 text-sm transition-colors",
-              tab === t.id ? "bg-primary text-primary-foreground border-primary" : "bg-card hover:bg-muted"
-            )}
-          >
-            <span>{t.icon}</span>
-            <span className="font-semibold">{t.label}</span>
-            <span className={cn("text-[10px] rounded-full px-1.5 py-0.5 tabular-nums",
-              tab === t.id ? "bg-primary-foreground/20" : "bg-muted text-muted-foreground")}>{t.count}</span>
-          </button>
+      <div className="rounded-xl border bg-card overflow-hidden">
+        <div className="grid grid-cols-[40px_1fr_1fr_120px_140px] gap-2 px-3 py-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground bg-muted/30 border-b">
+          <div></div><div>Item</div><div>Description</div><div>Owner</div><div>Status</div>
+        </div>
+        {items.map((x) => (
+          <div key={x.title} className="grid grid-cols-[40px_1fr_1fr_120px_140px] gap-2 px-3 py-3 items-center border-b last:border-0">
+            <div className="text-xl text-center">{x.icon}</div>
+            <div className="text-sm font-semibold">{x.title}</div>
+            <div className="text-xs text-muted-foreground">{x.desc}</div>
+            <div className="text-xs">{x.owner}</div>
+            <StatusBadge status={x.status === "Pending" ? "NOT STARTED" : "IN PROGRESS"} />
+          </div>
         ))}
-        <div className="ml-auto">
-          <Button size="sm" onClick={add}><Plus className="h-4 w-4 mr-1" /> Add {tab}</Button>
-        </div>
       </div>
-
-      {filtered.length === 0 ? (
-        <div className="rounded-xl border border-dashed bg-card p-10 text-center text-sm text-muted-foreground">
-          No {tab.toLowerCase()}s yet. Click <span className="font-semibold text-foreground">Add {tab}</span> to drop in the first link.
-          {tab === "Recording" && <div className="mt-1 text-xs">Paste Loom / Zoom / SharePoint / YouTube links to each recorded workshop or training session.</div>}
-          {tab === "Quick-Start Guide" && <div className="mt-1 text-xs">Add module-by-module how-to PDFs or doc links (e.g. 4A Site, Safety & Quality).</div>}
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-          {filtered.map((r) => {
-            const session = SESSIONS.find((s) => s.id === r.sessionId);
-            return (
-              <div key={r.id} className="rounded-xl border bg-card overflow-hidden">
-                <div className="flex items-center justify-between gap-2 px-3 py-2 bg-muted/30 border-b">
-                  <div className="flex items-center gap-2 min-w-0">
-                    <span className="text-lg">{tabs.find((t) => t.id === r.kind)?.icon}</span>
-                    <Input
-                      className="h-7 text-sm font-semibold border-0 bg-transparent focus-visible:ring-1 px-1"
-                      placeholder={r.kind === "Recording" ? "e.g. W1 — HOD Workshop Recording" : r.kind === "Quick-Start Guide" ? "e.g. 4A Site, Safety & Quality QSG" : "e.g. Configuration Manual"}
-                      value={r.title}
-                      onChange={(e) => updateIntranet(r.id, { title: e.target.value })}
-                    />
-                  </div>
-                  <div className="flex items-center gap-1.5 shrink-0">
-                    <Select value={r.status} onValueChange={(v: IntranetStatusValue) => updateIntranet(r.id, { status: v })}>
-                      <SelectTrigger className={cn("h-7 text-[10px] font-semibold w-[110px]",
-                        r.status === "PUBLISHED" ? "text-success" : "text-muted-foreground")}>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="DRAFT">DRAFT</SelectItem>
-                        <SelectItem value="PUBLISHED">PUBLISHED</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <Button size="icon" variant="ghost" className="h-7 w-7 text-destructive" onClick={() => deleteIntranet(r.id)}>
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </Button>
-                  </div>
-                </div>
-
-                <div className="p-3 space-y-2">
-                  <div className="grid grid-cols-2 gap-2">
-                    <div>
-                      <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-0.5">Linked Session</div>
-                      <Select value={r.sessionId || "none"} onValueChange={(v) => updateIntranet(r.id, { sessionId: v === "none" ? "" : v, module: v === "none" ? r.module : (SESSIONS.find((s) => s.id === v)?.module || r.module) })}>
-                        <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="—" /></SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="none">— None —</SelectItem>
-                          {SESSIONS.map((s) => <SelectItem key={s.id} value={s.id}>{s.id} · {s.name}</SelectItem>)}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div>
-                      <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-0.5">Module</div>
-                      <Input className="h-8 text-xs" placeholder="e.g. 4A" value={r.module} onChange={(e) => updateIntranet(r.id, { module: e.target.value })} />
-                    </div>
-                  </div>
-
-                  <div>
-                    <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-0.5">Link</div>
-                    <div className="flex gap-1.5">
-                      <Input
-                        className="h-8 text-xs font-mono"
-                        placeholder="https://… (Loom, Zoom, SharePoint, YouTube, PDF)"
-                        value={r.url}
-                        onChange={(e) => updateIntranet(r.id, { url: e.target.value })}
-                      />
-                      {r.url && (
-                        <Button size="sm" variant="outline" className="h-8 shrink-0" asChild>
-                          <a href={r.url} target="_blank" rel="noreferrer">Open</a>
-                        </Button>
-                      )}
-                    </div>
-                    {r.url && hostFromUrl(r.url) && (
-                      <div className="text-[10px] text-muted-foreground mt-0.5">{hostFromUrl(r.url)}</div>
-                    )}
-                  </div>
-
-                  <div className="grid grid-cols-3 gap-2">
-                    <div>
-                      <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-0.5">Format</div>
-                      <Input className="h-8 text-xs" placeholder={r.kind === "Recording" ? "Video / Loom" : "PDF / Doc"} value={r.format} onChange={(e) => updateIntranet(r.id, { format: e.target.value })} />
-                    </div>
-                    <div>
-                      <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-0.5">{r.kind === "Recording" ? "Duration" : "Length"}</div>
-                      <Input className="h-8 text-xs" placeholder={r.kind === "Recording" ? "42:10" : "5 pages"} value={r.duration} onChange={(e) => updateIntranet(r.id, { duration: e.target.value })} />
-                    </div>
-                    <div>
-                      <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-0.5">{r.kind === "Recording" ? "Recorded" : "Updated"}</div>
-                      <Input type="date" className="h-8 text-xs" value={r.recordedOn} onChange={(e) => updateIntranet(r.id, { recordedOn: e.target.value })} />
-                    </div>
-                  </div>
-
-                  <div>
-                    <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-0.5">{r.kind === "Recording" ? "Presenter" : "Author"}</div>
-                    <Input className="h-8 text-xs" placeholder="Name" value={r.presenter} onChange={(e) => updateIntranet(r.id, { presenter: e.target.value })} />
-                  </div>
-
-                  {r.kind !== "Recording" && (
-                    <div>
-                      <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-0.5">Attachment</div>
-                      {r.fileName ? (
-                        <div className="flex items-center gap-2 rounded-lg border bg-muted/30 px-2.5 py-1.5">
-                          <span className="text-lg leading-none">📎</span>
-                          <div className="min-w-0 flex-1">
-                            <div className="text-xs font-semibold truncate">{r.fileName}</div>
-                            <div className="text-[10px] text-muted-foreground">
-                              {r.fileType || "file"}{r.fileSize ? ` · ${(r.fileSize / 1024).toFixed(0)} KB` : ""}
-                            </div>
-                          </div>
-                          {r.fileData && (
-                            <Button size="sm" variant="outline" className="h-7 shrink-0" asChild>
-                              <a href={r.fileData} download={r.fileName} target="_blank" rel="noreferrer">Download</a>
-                            </Button>
-                          )}
-                          <Button
-                            size="icon"
-                            variant="ghost"
-                            className="h-7 w-7 text-destructive shrink-0"
-                            onClick={() => updateIntranet(r.id, { fileName: undefined, fileType: undefined, fileSize: undefined, fileData: undefined })}
-                            title="Remove attachment"
-                          >
-                            <Trash2 className="h-3.5 w-3.5" />
-                          </Button>
-                        </div>
-                      ) : (
-                        <label className="flex flex-col items-center justify-center gap-1 rounded-lg border-2 border-dashed bg-muted/10 hover:bg-muted/30 cursor-pointer px-3 py-4 text-center transition-colors">
-                          <Upload className="h-4 w-4 text-muted-foreground" />
-                          <div className="text-xs font-semibold">Click to attach a file</div>
-                          <div className="text-[10px] text-muted-foreground">PDF, DOCX, PPTX, image — up to ~5MB</div>
-                          <input
-                            type="file"
-                            className="hidden"
-                            accept=".pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,image/*"
-                            onChange={(e) => {
-                              const f = e.target.files?.[0];
-                              if (!f) return;
-                              if (f.size > 5 * 1024 * 1024) {
-                                alert("Attachment must be 5MB or smaller. For larger files, paste a SharePoint/Drive link in the Link field.");
-                                e.target.value = "";
-                                return;
-                              }
-                              const reader = new FileReader();
-                              reader.onload = () => {
-                                updateIntranet(r.id, {
-                                  fileName: f.name,
-                                  fileType: f.type || "application/octet-stream",
-                                  fileSize: f.size,
-                                  fileData: String(reader.result),
-                                  format: r.format || (f.type.includes("pdf") ? "PDF" : f.type.split("/")[1]?.toUpperCase() || "File"),
-                                });
-                              };
-                              reader.readAsDataURL(f);
-                              e.target.value = "";
-                            }}
-                          />
-                        </label>
-                      )}
-                    </div>
-                  )}
-
-                  <div>
-                    <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-0.5">Description / Notes</div>
-                    <Textarea className="text-xs min-h-[60px]" placeholder="What this covers, key timestamps, prerequisites…" value={r.description} onChange={(e) => updateIntranet(r.id, { description: e.target.value })} />
-                  </div>
-
-
-                  {session && (
-                    <div className="text-[10px] text-muted-foreground border-t pt-1.5">
-                      Linked to <span className="font-mono text-primary">{session.id}</span> · {session.type} · Module {session.module}
-                    </div>
-                  )}
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      )}
     </div>
   );
 }
-
-type IntranetStatusValue = "DRAFT" | "PUBLISHED";
 
 // =============== SESSION CONTENT LOG ===============
 type TopicRow = { topic: string; notes: string; covered: string; duration: string; followUp: string; followUpAction: string };
@@ -1548,7 +1269,7 @@ THE NUMBERS
 • ${tasksDone}/${tasks.length} tasks completed (${Math.round((tasksDone / tasks.length) * 100)}%)
 • ${sessionsDone}/${sessions.length} sessions delivered
 • ${competencyComplete}/${signOffs.length} users signed off across training modules
-• ${issuesClosed}/${issues.length} queries resolved
+• ${issuesClosed}/${issues.length} issues resolved
 • ${dodDone}/${dod.length} Definition of Done criteria confirmed
 • ${champions.length} certified Plexa Champions inside ${client.clientName}
 
@@ -1599,7 +1320,7 @@ Welcome to the Plexa family. Here's to building something great together.
               <Snap label="Tasks complete" value={`${Math.round((tasksDone / tasks.length) * 100)}%`} sub={`${tasksDone}/${tasks.length}`} tone="brand" />
               <Snap label="Sessions delivered" value={`${sessionsDone}`} sub={`of ${sessions.length}`} tone="success" />
               <Snap label="Users signed off" value={`${competencyComplete}`} sub={`of ${signOffs.length}`} tone="success" />
-              <Snap label="Queries resolved" value={`${issuesClosed}`} sub={`of ${issues.length}`} />
+              <Snap label="Issues resolved" value={`${issuesClosed}`} sub={`of ${issues.length}`} />
               <Snap label="DoD confirmed" value={`${dodDone}/${dod.length}`} tone="brand" />
               <Snap label="Champions" value={`${champions.length}`} tone="success" />
             </div>
@@ -1788,271 +1509,6 @@ export function TemplatesLibrarySection() {
         })}
       </div>
       <p className="text-xs text-muted-foreground">Note: uploads are kept in this browser session. Connect Lovable Cloud to persist files across reloads and team members.</p>
-    </div>
-  );
-}
-
-// =================== TASKS & REMINDERS REGISTER ===================
-const REMINDER_PRIORITIES = ["LOW", "MEDIUM", "HIGH", "URGENT"] as const;
-const REMINDER_STATUSES = ["OPEN", "IN PROGRESS", "DONE"] as const;
-const PRIORITY_CLS: Record<string, string> = {
-  LOW: "bg-muted text-muted-foreground border-border",
-  MEDIUM: "bg-primary/15 text-primary border-primary/30",
-  HIGH: "bg-yellow-400/20 text-yellow-700 dark:text-yellow-300 border-yellow-400/40",
-  URGENT: "bg-destructive/15 text-destructive border-destructive/40",
-};
-const STATUS_CLS: Record<string, string> = {
-  OPEN: "bg-muted text-foreground border-border",
-  "IN PROGRESS": "bg-primary/15 text-primary border-primary/30",
-  DONE: "bg-success/15 text-success border-success/40",
-};
-
-function todayIso() {
-  return new Date().toISOString().slice(0, 10);
-}
-
-function dueLabel(dueDate: string, status: string) {
-  if (!dueDate) return { text: "No due date", tone: "muted" as const };
-  if (status === "DONE") return { text: `Due ${dueDate}`, tone: "success" as const };
-  const today = new Date(todayIso());
-  const due = new Date(dueDate);
-  const days = Math.round((due.getTime() - today.getTime()) / 86400000);
-  if (days < 0) return { text: `${Math.abs(days)}d overdue`, tone: "danger" as const };
-  if (days === 0) return { text: "Due today", tone: "danger" as const };
-  if (days === 1) return { text: "Due tomorrow", tone: "warning" as const };
-  if (days <= 7) return { text: `Due in ${days}d`, tone: "warning" as const };
-  return { text: `Due in ${days}d`, tone: "muted" as const };
-}
-
-export function TasksRegisterSection() {
-  const reminders = usePlaybook((s) => s.reminderTasks);
-  const addReminderTask = usePlaybook((s) => s.addReminderTask);
-  const updateReminderTask = usePlaybook((s) => s.updateReminderTask);
-  const deleteReminderTask = usePlaybook((s) => s.deleteReminderTask);
-
-  const [filter, setFilter] = useState<"all" | "open" | "due" | "overdue" | "done">("all");
-  const [draft, setDraft] = useState({
-    title: "",
-    details: "",
-    assignee: "",
-    dueDate: "",
-    remindAt: "",
-    priority: "MEDIUM" as (typeof REMINDER_PRIORITIES)[number],
-  });
-
-  const today = todayIso();
-  const open = reminders.filter((r) => r.status !== "DONE");
-  const overdue = open.filter((r) => r.dueDate && r.dueDate < today);
-  const dueToday = open.filter((r) => r.dueDate === today);
-  const dueSoon = open.filter((r) => r.dueDate && r.dueDate > today && (new Date(r.dueDate).getTime() - new Date(today).getTime()) <= 7 * 86400000);
-  const done = reminders.filter((r) => r.status === "DONE");
-
-  const visible = reminders
-    .filter((r) => {
-      if (filter === "all") return true;
-      if (filter === "open") return r.status !== "DONE";
-      if (filter === "done") return r.status === "DONE";
-      if (filter === "due") return r.status !== "DONE" && (r.dueDate === today || (r.dueDate && r.dueDate > today && new Date(r.dueDate).getTime() - new Date(today).getTime() <= 7 * 86400000));
-      if (filter === "overdue") return r.status !== "DONE" && r.dueDate && r.dueDate < today;
-      return true;
-    })
-    .sort((a, b) => {
-      if (a.status === "DONE" && b.status !== "DONE") return 1;
-      if (b.status === "DONE" && a.status !== "DONE") return -1;
-      const da = a.dueDate || "9999-12-31";
-      const db = b.dueDate || "9999-12-31";
-      return da.localeCompare(db);
-    });
-
-  const submit = () => {
-    if (!draft.title.trim()) return;
-    addReminderTask({
-      title: draft.title.trim(),
-      details: draft.details.trim(),
-      assignee: draft.assignee.trim(),
-      dueDate: draft.dueDate,
-      remindAt: draft.remindAt || draft.dueDate,
-      priority: draft.priority,
-      status: "OPEN",
-    });
-    setDraft({ title: "", details: "", assignee: "", dueDate: "", remindAt: "", priority: "MEDIUM" });
-  };
-
-  return (
-    <div className="space-y-5">
-      <SectionHeader
-        title="🔔 Tasks & Reminders"
-        subtitle="Assign a task, set a due date and a reminder. Anything due today, due soon, or overdue is surfaced on Mission Control."
-      />
-
-      {/* KPI strip */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-2 text-center">
-        {[
-          { label: "TOTAL", value: reminders.length, tone: "text-foreground" },
-          { label: "OPEN", value: open.length, tone: "text-primary" },
-          { label: "DUE TODAY", value: dueToday.length, tone: dueToday.length ? "text-destructive" : "text-muted-foreground" },
-          { label: "OVERDUE", value: overdue.length, tone: overdue.length ? "text-destructive" : "text-muted-foreground" },
-          { label: "DONE", value: done.length, tone: "text-success" },
-        ].map((t) => (
-          <div key={t.label} className="rounded-lg border bg-card px-3 py-2">
-            <div className="text-[9px] font-semibold uppercase tracking-wider text-muted-foreground">{t.label}</div>
-            <div className={cn("text-lg font-bold tabular-nums", t.tone)}>{t.value}</div>
-          </div>
-        ))}
-      </div>
-
-      {/* Add form */}
-      <div className="rounded-xl border bg-card p-4 space-y-3">
-        <div className="text-[11px] font-bold uppercase tracking-[0.15em] text-primary">Add a task / reminder</div>
-        <div className="grid md:grid-cols-12 gap-2">
-          <Input
-            className="md:col-span-4 h-9 text-sm"
-            placeholder="Task title (e.g. Send cost code template to Bec)"
-            value={draft.title}
-            onChange={(e) => setDraft({ ...draft, title: e.target.value })}
-          />
-          <Input
-            className="md:col-span-2 h-9 text-sm"
-            list="reminder-assignees"
-            placeholder="Assign to…"
-            value={draft.assignee}
-            onChange={(e) => setDraft({ ...draft, assignee: e.target.value })}
-          />
-          <datalist id="reminder-assignees">
-            {USER_DIRECTORY.map((u) => (
-              <option key={`${u.firstName}-${u.lastName}`} value={`${u.firstName} ${u.lastName}`}>
-                {u.role}
-              </option>
-            ))}
-          </datalist>
-          <div className="md:col-span-2">
-            <label className="text-[9px] font-semibold uppercase tracking-wider text-muted-foreground block mb-0.5">Due date</label>
-            <Input type="date" className="h-9 text-sm" value={draft.dueDate} onChange={(e) => setDraft({ ...draft, dueDate: e.target.value })} />
-          </div>
-          <div className="md:col-span-2">
-            <label className="text-[9px] font-semibold uppercase tracking-wider text-muted-foreground block mb-0.5">Remind on</label>
-            <Input type="date" className="h-9 text-sm" value={draft.remindAt} onChange={(e) => setDraft({ ...draft, remindAt: e.target.value })} />
-          </div>
-          <Select value={draft.priority} onValueChange={(v) => setDraft({ ...draft, priority: v as (typeof REMINDER_PRIORITIES)[number] })}>
-            <SelectTrigger className={cn("md:col-span-2 h-9 text-sm font-semibold border self-end", PRIORITY_CLS[draft.priority])}>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {REMINDER_PRIORITIES.map((p) => <SelectItem key={p} value={p}>{p}</SelectItem>)}
-            </SelectContent>
-          </Select>
-        </div>
-        <Textarea
-          className="text-sm min-h-[64px]"
-          placeholder="Details (optional) — what specifically needs doing"
-          value={draft.details}
-          onChange={(e) => setDraft({ ...draft, details: e.target.value })}
-        />
-        <div className="flex justify-end">
-          <Button size="sm" onClick={submit} disabled={!draft.title.trim()}>
-            <Plus className="h-4 w-4" /> Add reminder
-          </Button>
-        </div>
-      </div>
-
-      {/* Filter chips */}
-      <div className="flex flex-wrap gap-2">
-        {([
-          { id: "all", label: `All (${reminders.length})` },
-          { id: "open", label: `Open (${open.length})` },
-          { id: "due", label: `Due / soon (${dueToday.length + dueSoon.length})` },
-          { id: "overdue", label: `Overdue (${overdue.length})` },
-          { id: "done", label: `Done (${done.length})` },
-        ] as const).map((f) => (
-          <button
-            key={f.id}
-            type="button"
-            onClick={() => setFilter(f.id)}
-            className={cn(
-              "px-3 py-1 rounded-full text-xs font-semibold border transition-colors",
-              filter === f.id ? "bg-primary text-primary-foreground border-primary" : "bg-card text-foreground border-border hover:bg-muted"
-            )}
-          >
-            {f.label}
-          </button>
-        ))}
-      </div>
-
-      {/* List */}
-      <div className="rounded-xl border bg-card overflow-hidden">
-        {visible.length === 0 ? (
-          <div className="px-4 py-10 text-center text-sm text-muted-foreground">
-            No tasks match this filter. Add one above to get started.
-          </div>
-        ) : (
-          <div className="divide-y">
-            {visible.map((r) => {
-              const due = dueLabel(r.dueDate, r.status);
-              return (
-                <div key={r.id} className={cn("p-4 space-y-2", r.status === "DONE" && "bg-muted/30")}>
-                  <div className="flex flex-wrap items-start gap-2">
-                    <div className="min-w-0 flex-1">
-                      <div className={cn("font-semibold text-sm", r.status === "DONE" && "line-through text-muted-foreground")}>{r.title}</div>
-                      {r.details && <div className="text-xs text-muted-foreground mt-0.5 whitespace-pre-wrap">{r.details}</div>}
-                    </div>
-                    <span className={cn("rounded border px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider", PRIORITY_CLS[r.priority])}>{r.priority}</span>
-                    <span className={cn(
-                      "rounded border px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider",
-                      due.tone === "danger" && "bg-destructive/15 text-destructive border-destructive/40",
-                      due.tone === "warning" && "bg-yellow-400/20 text-yellow-700 dark:text-yellow-300 border-yellow-400/40",
-                      due.tone === "success" && "bg-success/15 text-success border-success/40",
-                      due.tone === "muted" && "bg-muted text-muted-foreground border-border"
-                    )}>{due.text}</span>
-                  </div>
-
-                  <div className="grid md:grid-cols-12 gap-2 items-end">
-                    <div className="md:col-span-3">
-                      <label className="text-[9px] font-semibold uppercase tracking-wider text-muted-foreground block mb-0.5">Assigned to</label>
-                      <Input className="h-8 text-xs" value={r.assignee} list="reminder-assignees" onChange={(e) => updateReminderTask(r.id, { assignee: e.target.value })} />
-                    </div>
-                    <div className="md:col-span-2">
-                      <label className="text-[9px] font-semibold uppercase tracking-wider text-muted-foreground block mb-0.5">Due</label>
-                      <Input type="date" className="h-8 text-xs" value={r.dueDate} onChange={(e) => updateReminderTask(r.id, { dueDate: e.target.value })} />
-                    </div>
-                    <div className="md:col-span-2">
-                      <label className="text-[9px] font-semibold uppercase tracking-wider text-muted-foreground block mb-0.5">Remind on</label>
-                      <Input type="date" className="h-8 text-xs" value={r.remindAt} onChange={(e) => updateReminderTask(r.id, { remindAt: e.target.value })} />
-                    </div>
-                    <div className="md:col-span-2">
-                      <label className="text-[9px] font-semibold uppercase tracking-wider text-muted-foreground block mb-0.5">Priority</label>
-                      <Select value={r.priority} onValueChange={(v) => updateReminderTask(r.id, { priority: v as (typeof REMINDER_PRIORITIES)[number] })}>
-                        <SelectTrigger className={cn("h-8 text-[11px] font-semibold border", PRIORITY_CLS[r.priority])}><SelectValue /></SelectTrigger>
-                        <SelectContent>{REMINDER_PRIORITIES.map((p) => <SelectItem key={p} value={p}>{p}</SelectItem>)}</SelectContent>
-                      </Select>
-                    </div>
-                    <div className="md:col-span-2">
-                      <label className="text-[9px] font-semibold uppercase tracking-wider text-muted-foreground block mb-0.5">Status</label>
-                      <Select value={r.status} onValueChange={(v) => updateReminderTask(r.id, { status: v as (typeof REMINDER_STATUSES)[number] })}>
-                        <SelectTrigger className={cn("h-8 text-[11px] font-semibold border", STATUS_CLS[r.status])}><SelectValue /></SelectTrigger>
-                        <SelectContent>{REMINDER_STATUSES.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
-                      </Select>
-                    </div>
-                    <div className="md:col-span-1 flex md:justify-end gap-1">
-                      {r.status !== "DONE" ? (
-                        <Button size="sm" variant="outline" className="h-8 px-2" title="Mark as done" onClick={() => updateReminderTask(r.id, { status: "DONE" })}>
-                          <Check className="h-4 w-4" />
-                        </Button>
-                      ) : (
-                        <Button size="sm" variant="outline" className="h-8 px-2" title="Re-open" onClick={() => updateReminderTask(r.id, { status: "OPEN" })}>
-                          ↺
-                        </Button>
-                      )}
-                      <Button size="sm" variant="ghost" className="h-8 px-2 text-destructive hover:text-destructive" title="Delete" onClick={() => deleteReminderTask(r.id)}>
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
-      </div>
     </div>
   );
 }

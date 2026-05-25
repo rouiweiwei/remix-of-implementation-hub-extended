@@ -194,54 +194,10 @@ export interface CostCode {
   notes: string;
 }
 
-export interface TaskScheduleOverride {
-  start?: string; // YYYY-MM-DD
-  end?: string;   // YYYY-MM-DD (inclusive)
-}
-
-export type ReminderPriority = "LOW" | "MEDIUM" | "HIGH" | "URGENT";
-export type ReminderStatus = "OPEN" | "IN PROGRESS" | "DONE";
-
-export interface ReminderTask {
-  id: string;
-  title: string;
-  details: string;
-  assignee: string;        // free-text name (or pick from directory)
-  dueDate: string;         // YYYY-MM-DD
-  remindAt: string;        // YYYY-MM-DD — when to surface on dashboard
-  priority: ReminderPriority;
-  status: ReminderStatus;
-  createdAt: string;       // ISO
-  completedAt?: string;    // ISO
-}
-
-export type IntranetKind = "Recording" | "Quick-Start Guide" | "Resource";
-export type IntranetStatus = "DRAFT" | "PUBLISHED";
-
-export interface IntranetResource {
-  id: string;
-  kind: IntranetKind;
-  title: string;
-  module: string;        // e.g. "4A", "All", "Workshop"
-  sessionId?: string;    // optional link to a Session/SessionDef id
-  url: string;           // recording link / guide link
-  format: string;        // e.g. "Video", "PDF", "Loom", "MP4", "Doc"
-  duration: string;      // e.g. "42:10" or "5 pages"
-  presenter: string;
-  recordedOn: string;    // YYYY-MM-DD
-  description: string;
-  status: IntranetStatus;
-  fileName?: string;     // attached file name
-  fileType?: string;     // MIME type
-  fileSize?: number;     // bytes
-  fileData?: string;     // base64 data URL of attachment
-}
-
 interface PlaybookState {
   client: ClientInfo;
   tasks: Task[];
   noteHistory: Record<string, NoteHistoryEntry[]>;
-  taskOverrides: Record<string, TaskScheduleOverride>;
   timelineMode: TimelineMode;
   startDate: string;
   trainingModules: TrainingModuleState[];
@@ -258,14 +214,11 @@ interface PlaybookState {
   projectDetails: ProjectDetail[];
   contractors: Contractor[];
   costCodes: CostCode[];
-  reminderTasks: ReminderTask[];
-  intranet: IntranetResource[];
 
   // actions
   setClient: (c: Partial<ClientInfo>) => void;
   updateTaskStatus: (id: string, status: TaskStatus) => void;
   updateTaskNotes: (id: string, notes: string, by?: string) => void;
-  setTaskSchedule: (id: string, patch: TaskScheduleOverride | null) => void;
   setTimeline: (mode: TimelineMode, startDate: string) => void;
   updateModule: (id: string, patch: Partial<TrainingModuleState>) => void;
 
@@ -322,14 +275,6 @@ interface PlaybookState {
   deleteCostCode: (id: string) => void;
   replaceCostCodes: (rows: CostCode[]) => void;
 
-  addReminderTask: (r: Omit<ReminderTask, "id" | "createdAt">) => void;
-  updateReminderTask: (id: string, patch: Partial<ReminderTask>) => void;
-  deleteReminderTask: (id: string) => void;
-
-  addIntranet: (r: Omit<IntranetResource, "id">) => void;
-  updateIntranet: (id: string, patch: Partial<IntranetResource>) => void;
-  deleteIntranet: (id: string) => void;
-
   resetAll: () => void;
 }
 
@@ -345,7 +290,6 @@ const initial = {
   } as ClientInfo,
   tasks: SEED_TASKS,
   noteHistory: {} as Record<string, NoteHistoryEntry[]>,
-  taskOverrides: {} as Record<string, TaskScheduleOverride>,
   timelineMode: "Medium (6 Weeks)" as TimelineMode,
   startDate: new Date().toISOString().slice(0, 10),
   trainingModules: TRAINING_MODULES.map((m) => ({
@@ -394,8 +338,6 @@ const initial = {
   projectDetails: [] as ProjectDetail[],
   contractors: [] as Contractor[],
   costCodes: [] as CostCode[],
-  reminderTasks: [] as ReminderTask[],
-  intranet: [] as IntranetResource[],
 };
 
 export const usePlaybook = create<PlaybookState>()(
@@ -404,15 +346,7 @@ export const usePlaybook = create<PlaybookState>()(
       ...initial,
       setClient: (c) => set((s) => ({ client: { ...s.client, ...c } })),
       updateTaskStatus: (id, status) =>
-        set((s) => ({
-          tasks: s.tasks.map((t) => {
-            if (t.id !== id) return t;
-            const next: Task = { ...t, status };
-            if (status === "COMPLETE" && !t.completedAt) next.completedAt = new Date().toISOString();
-            if (status !== "COMPLETE") next.completedAt = undefined;
-            return next;
-          }),
-        })),
+        set((s) => ({ tasks: s.tasks.map((t) => (t.id === id ? { ...t, status } : t)) })),
       updateTaskNotes: (id, notes, by = "You") =>
         set((s) => {
           const prev = s.tasks.find((t) => t.id === id)?.notes || "";
@@ -427,16 +361,6 @@ export const usePlaybook = create<PlaybookState>()(
           };
         }),
       setTimeline: (timelineMode, startDate) => set({ timelineMode, startDate }),
-      setTaskSchedule: (id, patch) =>
-        set((s) => {
-          const next = { ...s.taskOverrides };
-          if (patch === null) {
-            delete next[id];
-          } else {
-            next[id] = { ...next[id], ...patch };
-          }
-          return { taskOverrides: next };
-        }),
       updateModule: (id, patch) =>
         set((s) => ({ trainingModules: s.trainingModules.map((m) => (m.id === id ? { ...m, ...patch } : m)) })),
 
@@ -496,31 +420,6 @@ export const usePlaybook = create<PlaybookState>()(
       deleteCostCode: (id) => set((st) => ({ costCodes: st.costCodes.filter((x) => x.id !== id) })),
       replaceCostCodes: (rows) => set({ costCodes: rows }),
 
-      addReminderTask: (r) =>
-        set((st) => ({
-          reminderTasks: [
-            ...st.reminderTasks,
-            { id: uid(), createdAt: new Date().toISOString(), ...r },
-          ],
-        })),
-      updateReminderTask: (id, patch) =>
-        set((st) => ({
-          reminderTasks: st.reminderTasks.map((x) => {
-            if (x.id !== id) return x;
-            const merged = { ...x, ...patch };
-            if (patch.status === "DONE" && !merged.completedAt) merged.completedAt = new Date().toISOString();
-            if (patch.status && patch.status !== "DONE") merged.completedAt = undefined;
-            return merged;
-          }),
-        })),
-      deleteReminderTask: (id) =>
-        set((st) => ({ reminderTasks: st.reminderTasks.filter((x) => x.id !== id) })),
-
-      addIntranet: (r) => set((st) => ({ intranet: [...st.intranet, { id: uid(), ...r }] })),
-      updateIntranet: (id, patch) =>
-        set((st) => ({ intranet: st.intranet.map((x) => (x.id === id ? { ...x, ...patch } : x)) })),
-      deleteIntranet: (id) => set((st) => ({ intranet: st.intranet.filter((x) => x.id !== id) })),
-
       resetAll: () => set(initial),
     }),
     { name: "plexa-playbook-v2" }
@@ -574,61 +473,3 @@ export function calcEndDate(startDate: string, mode: TimelineMode): string {
 }
 
 export { PHASES };
-
-// ─── Schedule computation ─────────────────────────────────────────────
-// Auto-derive a start & end date for every task by spreading them evenly
-// across their phase's date range. Overrides win.
-export interface ScheduledTask {
-  task: Task;
-  start: string; // YYYY-MM-DD
-  end: string;   // YYYY-MM-DD (inclusive)
-  isOverride: boolean;
-}
-
-function isoDay(d: Date) {
-  return d.toISOString().slice(0, 10);
-}
-
-export function computeSchedule(
-  tasks: Task[],
-  startDate: string,
-  mode: TimelineMode,
-  overrides: Record<string, TaskScheduleOverride>
-): ScheduledTask[] {
-  const totalBizDays = weeksForMode(mode) * 5;
-  const perPhase = Math.max(1, Math.floor(totalBizDays / PHASES.length));
-  const phaseRanges: Record<string, { startOffset: number; endOffset: number }> = {};
-  let cursor = 0;
-  PHASES.forEach((p, i) => {
-    const isLast = i === PHASES.length - 1;
-    const endOffset = isLast ? totalBizDays : cursor + perPhase;
-    phaseRanges[p.id] = { startOffset: cursor, endOffset };
-    cursor = endOffset;
-  });
-
-  const result: ScheduledTask[] = [];
-  PHASES.forEach((p) => {
-    const phaseTasks = tasks.filter((t) => t.phase === p.id);
-    const { startOffset, endOffset } = phaseRanges[p.id];
-    const span = Math.max(1, endOffset - startOffset);
-    const slot = Math.max(1, Math.floor(span / Math.max(1, phaseTasks.length)));
-    phaseTasks.forEach((t, idx) => {
-      const o = overrides[t.id];
-      let start: string;
-      let end: string;
-      const taskStartOffset = startOffset + idx * slot;
-      const taskEndOffset = idx === phaseTasks.length - 1
-        ? endOffset
-        : Math.min(endOffset, taskStartOffset + slot);
-      const autoStart = taskStartOffset === 0
-        ? new Date(startDate)
-        : addBusinessDays(startDate, taskStartOffset);
-      const autoEnd = addBusinessDays(startDate, Math.max(taskEndOffset - 1, taskStartOffset));
-      start = o?.start || isoDay(autoStart);
-      end = o?.end || isoDay(autoEnd);
-      if (new Date(end) < new Date(start)) end = start;
-      result.push({ task: t, start, end, isOverride: !!(o?.start || o?.end) });
-    });
-  });
-  return result;
-}

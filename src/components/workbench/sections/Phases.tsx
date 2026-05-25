@@ -354,25 +354,6 @@ export function TrainingScheduleSection() {
   );
   const update = (n: number, patch: Partial<ItemState>) =>
     setState((p) => ({ ...p, [n]: { ...p[n], ...patch } }));
-  const bulkApply = (nums: number[], key: "teach" | "practice" | "observe", value: boolean) =>
-    setState((p) => {
-      const next = { ...p };
-      for (const n of nums) {
-        const cur = next[n];
-        const merged = { ...cur, [key]: value };
-        const allDone = merged.teach && merged.practice && merged.observe;
-        const anyDone = merged.teach || merged.practice || merged.observe;
-        merged.status = allDone
-          ? "COMPLETE"
-          : anyDone
-            ? "IN PROGRESS"
-            : cur.status === "COMPLETE"
-              ? "IN PROGRESS"
-              : cur.status;
-        next[n] = merged;
-      }
-      return next;
-    });
 
   const total = allItems.length;
   const complete = Object.values(state).filter((s) => s.status === "COMPLETE").length;
@@ -443,31 +424,9 @@ export function TrainingScheduleSection() {
                         <th className="px-2 py-2 text-left w-32">Status</th>
                         <th className="px-2 py-2 text-left w-32">Session Date</th>
                         <th className="px-2 py-2 text-left w-32">Facilitator</th>
-                        {(["teach","practice","observe"] as const).map((k, idx) => {
-                          const nums = sub.items.map((i) => i.n);
-                          const allOn = nums.every((n) => state[n]?.[k]);
-                          const label = idx === 0 ? "Pt 1 Teach" : idx === 1 ? "Pt 2 Practice" : "Pt 3 Observe";
-                          return (
-                            <th key={k} className="px-2 py-2 text-center w-24">
-                              <div className="flex flex-col items-center gap-1">
-                                <span>{label}</span>
-                                <button
-                                  type="button"
-                                  onClick={() => bulkApply(nums, k, !allOn)}
-                                  className={cn(
-                                    "px-1.5 py-0.5 rounded border text-[9px] font-bold normal-case tracking-normal transition-colors",
-                                    allOn
-                                      ? "bg-destructive/15 text-destructive border-destructive/40 hover:bg-destructive/25"
-                                      : "bg-success/15 text-success border-success/40 hover:bg-success/25"
-                                  )}
-                                  title={allOn ? "Click to clear all in this sub-module" : "Click to mark all done in this sub-module"}
-                                >
-                                  {allOn ? "✗ Clear all" : "✓ Apply to all"}
-                                </button>
-                              </div>
-                            </th>
-                          );
-                        })}
+                        <th className="px-2 py-2 text-center w-20">Pt 1 Teach</th>
+                        <th className="px-2 py-2 text-center w-20">Pt 2 Practice</th>
+                        <th className="px-2 py-2 text-center w-20">Pt 3 Observe</th>
                         <th className="px-2 py-2 text-center w-20">Sign-Off</th>
                       </tr>
                     </thead>
