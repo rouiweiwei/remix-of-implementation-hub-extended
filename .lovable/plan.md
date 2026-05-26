@@ -1,91 +1,69 @@
-# Auto-Drafted Emails (no backend required)
 
-You hit "Generate" on any email and the app builds the subject + HTML body + plain-text version from the live data in your playbook. You preview it, then either **Copy** it or click **Open in Outlook/Gmail** (mailto link with subject + body pre-filled) and send from your own inbox.
+# Path B — Single-File Rewrite Plan
 
-Nothing leaves the browser. No Cloud, no API keys, no sending limits.
+Goal: produce one hand-written `index.html` that opens by double-click, contains all UI, logic, and sample data inline, with no build step and no network calls.
 
----
+This is a multi-turn rewrite. Each phase is shippable on its own — the normal app keeps working after every phase, and the final phase emits the single file.
 
-## 1. Five email generators
+## Constraints I will hold to
 
-A new `src/lib/email-templates.ts` builds each email from the Zustand store:
+- All ~25 workbench sections remain present and navigable.
+- All interactions (filters, tabs, dialogs, edits, persistence to `localStorage`, exports) keep working.
+- Mock datasets (`playbook-data.ts`, `registers-data.ts`, `email-templates.ts`, `training-schedule.ts`) are **trimmed to 2–4 representative rows per module** for the single-file output — you already approved this. The normal app keeps the full dataset.
+- No feature is removed. Where a Radix primitive has subtle a11y behavior (focus trap, typeahead in Select), the hand-rolled replacement will match the *user-visible* behavior, not necessarily every ARIA edge case.
 
-| Email | Auto-populated from |
-|---|---|
-| **Kickoff** | Project Details, Client info, Stakeholder Map, Timeline (start/go-live), Phase 1 task list |
-| **Weekly status** (one per week row in the Email Log) | Tasks by status + Gantt schedule + Queries Register (see §2) |
-| **Workshop email** (one per W-session) | Session Register row + CONTENT_TOPICS agenda + facilitator + location |
-| **Training email** (one per T-session / module) | Session row + Training Module state + Quick-Start Guide link from Intranet Pack |
-| **Implementation complete** | Definition of Done (signed items), Champion Register, Intranet Pack (recordings + guides) |
+## Phase 1 — De-Tailwind-v4 the codebase
 
-Each generator returns `{ subject, html, plainText, recipients }`.
+Replace `src/styles.css` (Tailwind v4 `@theme` / `@source` / `tw-animate-css` / `oklch` tokens) with a Tailwind **v3-compatible** stylesheet:
+- Convert OKLCH tokens to HSL equivalents (Play CDN config supports HSL via `hsl(var(--token))`).
+- Move design tokens into a plain `:root { --... }` block + matching `tailwind.config` shape.
+- Keep all utility classes used across components unchanged (`bg-primary`, `text-muted-foreground`, `bg-brand-gradient`, `bg-grid`, etc.).
+- Verify the normal dev build still renders identically.
 
-## 2. Weekly email — auto-populated sections
+No component code changes in this phase.
 
-For Week N (anchored to the row's date), the generator computes:
+## Phase 2 — Replace shadcn/Radix primitives
 
-```text
-✅ Completed this week     → tasks where status=COMPLETE AND completedAt within last 7d
-🚧 In progress now         → tasks where status=IN PROGRESS (grouped by phase, with owner + latest note)
-📅 Coming next week        → tasks whose scheduled start (from computeSchedule) falls in next 7d
-⚠️  Blockers & open queries → tasks status=BLOCKED  +  Queries Register where status≠Closed
-```
+Rewrite the shadcn components that are actually imported by the workbench (audit shows: `dialog`, `tabs`, `select`, `popover`, `dropdown-menu`, `tooltip`, `accordion`, `button`, `card`, `input`, `textarea`, `label`, `badge`, `checkbox`, `switch`, `separator`, `table`, `sheet`, `scroll-area`, `progress`, `toast/sonner`) as **plain React components with no Radix dependency**.
 
-To know *when* a task was completed I'll add a tiny field to the store:
+- Same file paths (`src/components/ui/*.tsx`), same exported names, same props the workbench uses.
+- Behavior parity for: open/close, controlled/uncontrolled, click-outside-to-close, escape-to-close, basic focus management.
+- Animations done with plain CSS transitions (no `tw-animate-css`).
+- Verify every workbench section still renders and interacts correctly in the normal app.
 
-- `task.completedAt?: string` (ISO) — stamped automatically inside `updateTaskStatus` when status moves to COMPLETE, cleared when moved off. Non-breaking, persists with existing `plexa-playbook-v2`.
+## Phase 3 — De-TanStack the routing
 
-"Coming next week" uses the existing `computeSchedule()` so it respects your Timeline mode and any manual overrides on the Gantt.
+The workbench is effectively a single page with internal tab state, so routing is light:
+- Replace `src/router.tsx` + `src/routes/__root.tsx` + `src/routes/index.tsx` with a minimal `App.tsx` that just renders `<Workbench />`.
+- Remove `@tanstack/react-query` usage if any (the workbench doesn't fetch — it uses `zustand/persist`).
+- Verify the normal app still boots.
 
-## 3. New "Automation" tab in the Email Log section
+## Phase 4 — Emit the single inline `index.html`
 
-Adds a tabbed header to `EmailLogSection`:
+This is the only phase that produces the deliverable. I will hand-author one file containing, in order:
 
-- **Weekly Log** (existing 6-week table, unchanged)
-- **Auto-Drafts** (new)
+1. `<style>` block — all CSS tokens + utility classes the app uses, plus a small reset. No Tailwind CDN runtime (avoids the FOUC and 200 KB JIT compiler); I'll ship the *resolved* CSS for the classes actually used.
+2. CDN `<script>` tags (UMD, pinned versions) for: React 18, ReactDOM 18, Recharts, Lucide (UMD), Zustand (UMD), Babel Standalone (for JSX only — TS already stripped).
+3. `<script type="text/babel">` containing, in order:
+   - Inlined sample datasets (`PLAYBOOK_DATA`, `REGISTERS_DATA`, `EMAIL_TEMPLATES`, `TRAINING_SCHEDULE`) — 2–4 rows each, as plain `const` JS objects.
+   - The zustand store (plain JS, no TS).
+   - The hand-rolled UI primitives from Phase 2 (plain JS).
+   - Every workbench section component (plain JS, JSX).
+   - `<Workbench />` root component and `ReactDOM.createRoot(...).render(...)`.
 
-The Auto-Drafts tab shows four cards:
+Expected size: ~1.5–2.5 MB of readable JSX + CSS.
 
-```text
-┌─ Kickoff Email ──────────────────┐  ┌─ Implementation Complete ────────┐
-│ Recipients: HODs, Site Leads     │  │ Triggers on go-live date         │
-│ [Generate] [Preview] [Copy] [✉]  │  │ [Generate] [Preview] [Copy] [✉]  │
-└──────────────────────────────────┘  └──────────────────────────────────┘
+Deliverable: `/mnt/documents/plexa-workbench-standalone.html`. After the file is written I'll QA it by opening it in a headless browser and checking that the main sections render without console errors. I'll then post a `<presentation-artifact>` so you can download it.
 
-Workshop Emails (one row per W1–W6)
-  W1 HOD Workshop — Site, Safety & Quality   [Generate] [Copy] [Open ✉]
-  W2 HOD Workshop — Document Control          [Generate] [Copy] [Open ✉]
-  …
+## Things to know up front
 
-Training Emails (one row per T1–T7)
-  T1 Training — 4A Site, Safety & Quality     [Generate] [Copy] [Open ✉]
-  …
-```
+- **xlsx export**: if the workbench has Excel export, the inline file will use the `xlsx` UMD build (~900 KB on its own). If you'd rather drop Excel export from the standalone, the file shrinks to ~1 MB. I'll ask before Phase 4 if I find xlsx usage.
+- **Recharts** is heavy (~600 KB UMD). It stays — the Gantt and Mission Control rely on it.
+- **Persistence**: `zustand/persist` writes to `localStorage`. That works from `file://` in Chrome and Edge. Safari sometimes blocks `localStorage` on `file://` URLs — I'll note this in the file's header comment.
+- Phases 1–3 will visibly touch your normal app (you'll see CSS/components change). If anything looks off after a phase, we fix it before moving on.
 
-For each weekly-log row I also add an **"Auto-fill from this week"** button that pours the generated summary/highlights/blockers straight into the existing fields, so the table you already have stays the source of truth — you just stop typing it by hand.
+## How many turns
 
-## 4. Preview + handoff
+Roughly: Phase 1 = 1 turn, Phase 2 = 2–3 turns, Phase 3 = 1 turn, Phase 4 = 1–2 turns. So ~5–7 build turns total before you get the downloadable file.
 
-Clicking **Preview** opens a dialog with:
-- Subject line (editable)
-- Recipient chips pulled from Stakeholder Map / User Accounts (toggle to add/remove)
-- Rendered HTML preview (right pane) and plain-text fallback (left pane)
-- Buttons: **Copy HTML**, **Copy as Plain Text**, **Open in Email Client** (uses `mailto:` with subject + plain body + recipients pre-filled — works with Outlook, Gmail, Apple Mail, whatever's default)
-
-## Files touched
-
-- New: `src/lib/email-templates.ts` (5 generators + shared HTML shell matching Plexa brand)
-- New: `src/components/workbench/sections/EmailAutomation.tsx` (Auto-Drafts tab + preview dialog)
-- Edit: `src/lib/playbook-store.ts` — add `completedAt` stamping inside `updateTaskStatus`
-- Edit: `src/components/workbench/sections/Registers.tsx` — tab switch in `EmailLogSection`, "Auto-fill from this week" button on weekly rows
-
-## When you share the screenshot
-
-Once you drop the email design screenshot in chat, I'll match the HTML shell (header, brand colors, section dividers, signature block) to it exactly — so the generated drafts look identical to your current Plexa email style.
-
----
-
-**Out of scope for this plan** (say the word and I'll add it):
-- Actually sending emails on a schedule (needs Lovable Cloud + verified domain)
-- Tracking opens/clicks
-- Per-recipient personalization (e.g. "Hi {firstName}")
+If you approve, I'll start with Phase 1 (de-Tailwind-v4) and ship the final file at the end of Phase 4.
