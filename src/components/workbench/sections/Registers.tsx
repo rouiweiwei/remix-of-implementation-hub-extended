@@ -1,39 +1,70 @@
-import { useState, useRef } from "react";
+﻿import { useState, useRef, useMemo, useEffect } from "react";
 import * as XLSX from "xlsx";
-import { usePlaybook } from "@/lib/playbook-store";
+import { ensureOrganizationUUID, usePlaybook, type Attendee, type EmailLog, type Issue, type SignOff } from "@/lib/playbook-store";
+import { PLAYBOOK_TABLES } from "@/lib/playbook-data";
 import { SectionHeader, StatusBadge } from "../shared";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { Plus, Trash2, Check, Download, Upload, Send, Sparkles, FileSpreadsheet } from "lucide-react";
+import { Plus, Trash2, Check, Download, Upload, Send, Sparkles, FileSpreadsheet, Save } from "lucide-react";
 import { EmailAutomationPanel } from "./EmailAutomation";
 import { buildWeeklyAutoFill } from "@/lib/email-templates";
 import { cn } from "@/lib/utils";
 
-import { SESSIONS, CONTENT_TOPICS, COMPETENCY_MODULES, ATTENDEES_PER_SESSION, COMPETENCY_ROWS, ISSUE_ROWS, EMAIL_WEEKS, USER_DIRECTORY } from "@/lib/registers-data";
+import { CONTENT_TOPICS, COMPETENCY_MODULES } from "@/lib/registers-data";
 
 // =============== SESSION REGISTER ===============
 type SessionRow = { date: string; facilitator: string; status: string; location: string };
-const SESSION_STATUSES = ["SCHEDULED", "IN PROGRESS", "COMPLETE", "BLOCKED"] as const;
+const SESSION_STATUSES = ["Scheduled", "In Progress", "Completed", "Blocked"] as const;
 const SESSION_STATUS_CLS: Record<string, string> = {
-  "SCHEDULED": "bg-primary/15 text-primary border-primary/30",
-  "IN PROGRESS": "bg-yellow-400/20 text-yellow-700 dark:text-yellow-300 border-yellow-400/40",
-  "COMPLETE": "bg-success/15 text-success border-success/30",
-  "BLOCKED": "bg-destructive/15 text-destructive border-destructive/30",
+  Scheduled: "bg-primary/15 text-primary border-primary/30",
+  "In Progress": "bg-yellow-400/20 text-yellow-700 dark:text-yellow-300 border-yellow-400/40",
+  Completed: "bg-success/15 text-success border-success/30",
+  Blocked: "bg-destructive/15 text-destructive border-destructive/30",
 };
 
 export function SessionRegisterSection() {
-  const [rows, setRows] = useState<Record<string, SessionRow>>(() =>
-    Object.fromEntries(SESSIONS.map((s) => [s.id, { date: "", facilitator: "", status: "SCHEDULED", location: "" }]))
-  );
-  const upd = (id: string, patch: Partial<SessionRow>) => setRows((p) => ({ ...p, [id]: { ...p[id], ...patch } }));
+  const sessions = usePlaybook((s) => s.sessions);
+  const updateSession = usePlaybook((s) => s.updateSession);
+  const deleteSession = usePlaybook((s) => s.deleteSession);
+  const saveSessions = usePlaybook((s) => s.saveSessions);
+  const syncSessionsFromTable = usePlaybook((s) => s.syncSessionsFromTable);
+  const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
 
-  const total = SESSIONS.length;
-  const complete = Object.values(rows).filter((r) => r.status === "COMPLETE").length;
-  const scheduled = Object.values(rows).filter((r) => r.status === "SCHEDULED").length;
-  const workshops = SESSIONS.filter((s) => s.type === "Workshop").length;
-  const trainings = SESSIONS.filter((s) => s.type === "Training").length;
+  useEffect(() => {
+    void syncSessionsFromTable();
+  }, [syncSessionsFromTable]);
+
+  const upd = (id: string, patch: Partial<SessionRow>) => {
+    const session = sessions.find((s) => s.id === id);
+    if (!session) return;
+    updateSession(id, {
+      date: patch.date ?? session.date,
+      facilitator: patch.facilitator ?? session.facilitator,
+      status: (patch.status as any) ?? session.status,
+      location: patch.location ?? session.location,
+    });
+  };
+
+  const handleSave = async () => {
+    try {
+      setSaveStatus("saving");
+      await saveSessions();
+      setSaveStatus("saved");
+      window.setTimeout(() => setSaveStatus("idle"), 1500);
+    } catch (error) {
+      console.error("Session save failed", error);
+      setSaveStatus("error");
+      window.setTimeout(() => setSaveStatus("idle"), 2500);
+    }
+  };
+
+  const total = sessions.length;
+  const complete = sessions.filter((r) => r.status === "Completed").length;
+  const scheduled = sessions.filter((r) => r.status === "Scheduled").length;
+  const workshops = sessions.filter((s) => s.type === "Workshop").length;
+  const trainings = sessions.filter((s) => s.type === "Training").length;
 
   return (
     <div className="space-y-5">
@@ -54,8 +85,27 @@ export function SessionRegisterSection() {
         ))}
       </div>
 
-      <div className="rounded-xl border bg-card overflow-x-auto">
-        <table className="w-full text-xs min-w-[1100px]">
+      <div className="rounded-xl border bg-card overflow-hidden">
+        <div className="bg-primary-soft px-4 py-3 border-b">
+          <div className="text-[10px] font-semibold uppercase tracking-wider text-primary flex flex-wrap items-center justify-between gap-3">
+            Session Register · Live table sync
+            <button
+              type="button"
+              onClick={handleSave}
+              disabled={saveStatus === "saving"}
+              className={cn(
+                "inline-flex h-10 items-center gap-2 rounded-md bg-primary px-3 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-60",
+                saveStatus === "saved" && "bg-success hover:bg-success",
+                saveStatus === "error" && "bg-destructive hover:bg-destructive"
+              )}
+            >
+              <Save className="h-4 w-4" />
+              {saveStatus === "saving" ? "Saving..." : saveStatus === "saved" ? "Saved" : saveStatus === "error" ? "Retry Save" : "Save Changes"}
+            </button>
+          </div>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="w-full text-xs min-w-[1100px]">
           <thead className="bg-muted/30 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
             <tr>
               <th className="px-2 py-2 text-left w-12">ID</th>
@@ -67,15 +117,14 @@ export function SessionRegisterSection() {
               <th className="px-2 py-2 text-left w-32">Status</th>
               <th className="px-2 py-2 text-left w-48">Location / Link</th>
               <th className="px-2 py-2 text-left w-36">Attendance Sheet</th>
+              <th className="px-2 py-2 text-left w-28">Actions</th>
             </tr>
           </thead>
           <tbody className="divide-y">
-            {SESSIONS.map((s) => {
-              const r = rows[s.id];
-              return (
-                <tr key={s.id} className="hover:bg-muted/20">
-                  <td className="px-2 py-1.5 font-mono font-semibold">{s.id}</td>
-                  <td className="px-2 py-1.5">{s.name}</td>
+            {sessions.map((s) => (
+              <tr key={s.id} className="hover:bg-muted/20">
+                <td className="px-2 py-1.5 font-mono font-semibold">{s.id}</td>
+                <td className="px-2 py-1.5">{s.topic || "(untitled session)"}</td>
                   <td className="px-2 py-1.5">
                     <span className={cn("inline-flex px-2 py-0.5 rounded-full text-[10px] font-semibold border",
                       s.type === "Workshop" ? "bg-primary-soft text-primary border-primary/30" : "bg-accent text-foreground border-border")}>
@@ -83,31 +132,35 @@ export function SessionRegisterSection() {
                     </span>
                   </td>
                   <td className="px-2 py-1.5 font-mono">{s.module || "—"}</td>
-                  <td className="px-2 py-1.5"><Input type="date" className="h-7 text-xs" value={r.date} onChange={(e) => upd(s.id, { date: e.target.value })} /></td>
-                  <td className="px-2 py-1.5"><Input className="h-7 text-xs" value={r.facilitator} onChange={(e) => upd(s.id, { facilitator: e.target.value })} placeholder="Name…" /></td>
+                  <td className="px-2 py-1.5"><Input type="date" className="h-7 text-xs" value={s.date || ""} onChange={(e) => upd(s.id, { date: e.target.value })} /></td>
+                  <td className="px-2 py-1.5"><Input className="h-7 text-xs" value={s.facilitator || ""} onChange={(e) => upd(s.id, { facilitator: e.target.value })} placeholder="Name…" /></td>
                   <td className="px-2 py-1.5">
-                    <Select value={r.status} onValueChange={(v) => upd(s.id, { status: v })}>
-                      <SelectTrigger className={cn("h-7 text-[11px] font-semibold border", SESSION_STATUS_CLS[r.status])}><SelectValue /></SelectTrigger>
+                    <Select value={s.status || "Scheduled"} onValueChange={(v) => upd(s.id, { status: v })}>
+                      <SelectTrigger className={cn("h-7 text-[11px] font-semibold border", SESSION_STATUS_CLS[s.status || "Scheduled"])}><SelectValue /></SelectTrigger>
                       <SelectContent>{SESSION_STATUSES.map((x) => <SelectItem key={x} value={x}>{x}</SelectItem>)}</SelectContent>
                     </Select>
                   </td>
-                  <td className="px-2 py-1.5"><Input className="h-7 text-xs" value={r.location} onChange={(e) => upd(s.id, { location: e.target.value })} placeholder="Address or video link" /></td>
+                  <td className="px-2 py-1.5"><Input className="h-7 text-xs" value={s.location || ""} onChange={(e) => upd(s.id, { location: e.target.value })} placeholder="Address or video link" /></td>
                   <td className="px-2 py-1.5 text-[11px] text-primary">→ Attendance: {s.id}</td>
+                  <td className="px-2 py-1.5 whitespace-nowrap">
+                    <Button size="sm" variant="ghost" className="h-7 px-2 text-destructive hover:text-destructive" onClick={() => void deleteSession(s.id)} title="Delete session row">
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </Button>
+                  </td>
                 </tr>
-              );
-            })}
+            ))}
           </tbody>
-        </table>
+          </table>
+        </div>
       </div>
     </div>
   );
 }
 
 // =============== ATTENDANCE REGISTER ===============
-type AttendeeRow = { firstName: string; lastName: string; role: string; department: string; attendance: string; signed: string; notes: string };
 const ATTENDANCE_STATES = ["✅ Present", "❌ Absent", "📅 Rescheduled"] as const;
 const SIGNED_STATES = ["⏳ Pending", "✅ Signed", "❌ Not Signed"] as const;
-const emptyAttendee = (): AttendeeRow => ({ firstName: "", lastName: "", role: "", department: "", attendance: "✅ Present", signed: "⏳ Pending", notes: "" });
+const emptyAttendee = (): Omit<Attendee, "id" | "_id"> => ({ sessionId: "", firstName: "", lastName: "", role: "", department: "", attendance: "✅ Present", signed: "⏳ Pending", notes: "" });
 
 function splitFullName(full: string): { firstName: string; lastName: string } {
   const parts = String(full || "").trim().split(/\s+/);
@@ -117,36 +170,42 @@ function splitFullName(full: string): { firstName: string; lastName: string } {
 }
 
 export function AttendanceSection() {
-  const [meta, setMeta] = useState<Record<string, { date: string; facilitator: string; location: string }>>(() =>
-    Object.fromEntries(SESSIONS.map((s) => [s.id, { date: "", facilitator: "", location: "" }]))
-  );
-  const [rows, setRows] = useState<Record<string, AttendeeRow[]>>(() =>
-    Object.fromEntries(SESSIONS.map((s) => [s.id, Array.from({ length: ATTENDEES_PER_SESSION }, emptyAttendee)]))
-  );
+  const attendees = usePlaybook((s) => s.attendees);
+  const sessions = usePlaybook((s) => s.sessions);
+  const userAccounts = usePlaybook((s) => s.userAccounts);
+  const addAttendee = usePlaybook((s) => s.addAttendee);
+  const updateAttendee = usePlaybook((s) => s.updateAttendee);
+  const deleteAttendee = usePlaybook((s) => s.deleteAttendee);
+  const saveAttendee = usePlaybook((s) => s.saveAttendee);
+  const syncAttendeesFromTable = usePlaybook((s) => s.syncAttendeesFromTable);
+  const syncUsersFromTable = usePlaybook((s) => s.syncUsersFromTable);
+  const [savingId, setSavingId] = useState<string | null>(null);
   const fileRefs = useRef<Record<string, HTMLInputElement | null>>({});
+  const [meta, setMeta] = useState<Record<string, { date: string; facilitator: string; location: string }>>(() =>
+    Object.fromEntries(sessions.map((s) => [s.id, { date: s.date, facilitator: s.facilitator, location: s.location }]))
+  );
+
+  useEffect(() => {
+    void syncAttendeesFromTable();
+    void syncUsersFromTable();
+  }, [syncAttendeesFromTable, syncUsersFromTable]);
 
   const updMeta = (id: string, patch: Partial<{ date: string; facilitator: string; location: string }>) =>
     setMeta((p) => ({ ...p, [id]: { ...p[id], ...patch } }));
-  const updRow = (id: string, idx: number, patch: Partial<AttendeeRow>) =>
-    setRows((p) => ({ ...p, [id]: p[id].map((r, i) => i === idx ? { ...r, ...patch } : r) }));
-  const addRow = (id: string) =>
-    setRows((p) => ({ ...p, [id]: [...p[id], emptyAttendee()] }));
-  const deleteRow = (id: string, idx: number) =>
-    setRows((p) => ({ ...p, [id]: p[id].filter((_, i) => i !== idx) }));
+  const addRow = (sessionId: string) => {
+    addAttendee({ sessionId, ...emptyAttendee(), firstName: "", lastName: "" });
+  };
+  const saveRow = async (id: string) => {
+    setSavingId(id);
+    try {
+      await saveAttendee(id);
+    } finally {
+      setSavingId(null);
+    }
+  };
 
-  const mergeImported = (id: string, imported: AttendeeRow[]) => {
-    if (!imported.length) return;
-    setRows((p) => {
-      const existing = p[id];
-      // fill blank rows first, then append remainder
-      const out = [...existing];
-      let i = 0;
-      for (const row of imported) {
-        while (i < out.length && (out[i].firstName || out[i].lastName)) i++;
-        if (i < out.length) { out[i] = row; i++; } else { out.push(row); }
-      }
-      return { ...p, [id]: out };
-    });
+  const mergeImported = (sessionId: string, imported: Omit<Attendee, "id" | "_id">[]) => {
+    imported.forEach((row) => addAttendee({ sessionId, ...row }));
   };
 
   const downloadTemplate = () => {
@@ -166,7 +225,7 @@ export function AttendanceSection() {
     const wb = XLSX.read(buf, { type: "array" });
     const ws = wb.Sheets[wb.SheetNames[0]];
     const data = XLSX.utils.sheet_to_json<Record<string, unknown>>(ws, { defval: "" });
-    const imported: AttendeeRow[] = data.map((r) => {
+    const imported: Omit<Attendee, "id" | "_id">[] = data.map((r) => {
       const fullKey = Object.keys(r).find((k) => /full\s*name|name/i.test(k));
       const roleKey = Object.keys(r).find((k) => /role|title|position/i.test(k));
       const deptKey = Object.keys(r).find((k) => /department|dept|team/i.test(k));
@@ -186,15 +245,18 @@ export function AttendanceSection() {
   };
 
   const importFromUsers = (id: string) => {
-    const imported = USER_DIRECTORY.map((u) => ({
-      firstName: u.firstName,
-      lastName: u.lastName,
-      role: u.role,
-      department: u.department,
-      attendance: "✅ Present",
-      signed: "⏳ Pending",
-      notes: "",
-    }));
+    const imported = userAccounts.map((u) => {
+      const parts = String(u.name || "").trim().split(/\s+/);
+      return {
+        firstName: parts.shift() || "",
+        lastName: parts.join(" ") || "",
+        role: u.role || u.position || "",
+        department: u.department || "",
+        attendance: "✅ Present",
+        signed: "⏳ Pending",
+        notes: "",
+      };
+    });
     mergeImported(id, imported);
   };
 
@@ -210,7 +272,7 @@ export function AttendanceSection() {
         <span className="text-[10px] text-muted-foreground">Template columns: Full Name · Role · Department. Per-session Import / Add Row / Auto-fill from User Accounts below.</span>
       </div>
 
-      {SESSIONS.map((s) => (
+      {sessions.map((s) => (
         <div key={s.id} className="rounded-xl border bg-card overflow-hidden">
           <div className="px-4 py-2 bg-primary/10 border-b border-primary/30 flex flex-wrap items-center justify-between gap-2">
             <div className="text-sm font-bold">
@@ -262,17 +324,17 @@ export function AttendanceSection() {
                 </tr>
               </thead>
               <tbody className="divide-y">
-                {rows[s.id].map((r, i) => {
+                {attendees.filter((r) => r.sessionId === s.id).map((r, i) => {
                   const ref = `${s.id}-${String(i + 1).padStart(2, "0")}`;
                   return (
-                    <tr key={ref} className="hover:bg-muted/20">
+                    <tr key={r.id || ref} className="hover:bg-muted/20">
                       <td className="px-2 py-1 font-mono">{ref}</td>
-                      <td className="px-2 py-1"><Input className="h-7 text-xs" value={r.firstName} onChange={(e) => updRow(s.id, i, { firstName: e.target.value })} /></td>
-                      <td className="px-2 py-1"><Input className="h-7 text-xs" value={r.lastName} onChange={(e) => updRow(s.id, i, { lastName: e.target.value })} /></td>
-                      <td className="px-2 py-1"><Input className="h-7 text-xs" value={r.role} onChange={(e) => updRow(s.id, i, { role: e.target.value })} /></td>
-                      <td className="px-2 py-1"><Input className="h-7 text-xs" value={r.department} onChange={(e) => updRow(s.id, i, { department: e.target.value })} /></td>
+                      <td className="px-2 py-1"><Input className="h-7 text-xs" value={r.firstName} onChange={(e) => updateAttendee(r.id, { firstName: e.target.value })} /></td>
+                      <td className="px-2 py-1"><Input className="h-7 text-xs" value={r.lastName} onChange={(e) => updateAttendee(r.id, { lastName: e.target.value })} /></td>
+                      <td className="px-2 py-1"><Input className="h-7 text-xs" value={r.role} onChange={(e) => updateAttendee(r.id, { role: e.target.value })} /></td>
+                      <td className="px-2 py-1"><Input className="h-7 text-xs" value={r.department} onChange={(e) => updateAttendee(r.id, { department: e.target.value })} /></td>
                       <td className="px-2 py-1">
-                        <Select value={r.attendance} onValueChange={(v) => updRow(s.id, i, { attendance: v })}>
+                        <Select value={r.attendance} onValueChange={(v) => updateAttendee(r.id, { attendance: v as Attendee["attendance"] })}>
                           <SelectTrigger className={cn("h-7 text-[11px] font-semibold",
                             r.attendance === "✅ Present" && "text-success",
                             r.attendance === "❌ Absent" && "text-destructive",
@@ -281,23 +343,21 @@ export function AttendanceSection() {
                         </Select>
                       </td>
                       <td className="px-2 py-1">
-                        <Select value={r.signed} onValueChange={(v) => updRow(s.id, i, { signed: v })}>
+                        <Select value={r.signed} onValueChange={(v) => updateAttendee(r.id, { signed: v as Attendee["signed"] })}>
                           <SelectTrigger className={cn("h-7 text-[11px] font-semibold",
                             r.signed === "✅ Signed" && "text-success",
                             r.signed === "❌ Not Signed" && "text-destructive")}><SelectValue /></SelectTrigger>
                           <SelectContent>{SIGNED_STATES.map((x) => <SelectItem key={x} value={x}>{x}</SelectItem>)}</SelectContent>
                         </Select>
                       </td>
-                      <td className="px-2 py-1"><Input className="h-7 text-xs" value={r.notes} onChange={(e) => updRow(s.id, i, { notes: e.target.value })} /></td>
-                      <td className="px-2 py-1">
-                        <button
-                          type="button"
-                          onClick={() => deleteRow(s.id, i)}
-                          className="text-muted-foreground hover:text-destructive p-1"
-                          title="Delete row"
-                        >
+                      <td className="px-2 py-1"><Input className="h-7 text-xs" value={r.notes} onChange={(e) => updateAttendee(r.id, { notes: e.target.value })} /></td>
+                      <td className="px-2 py-1 whitespace-nowrap text-right">
+                        <Button size="sm" variant={r._id ? "outline" : "default"} className="h-7 px-2 mr-1" disabled={savingId === r.id} onClick={() => void saveRow(r.id)} title={r._id ? "Update saved attendee" : "Save attendee to table"}>
+                          <Save className="h-3.5 w-3.5" />
+                        </Button>
+                        <Button size="sm" variant="ghost" className="h-7 px-2 text-destructive hover:text-destructive" onClick={() => void deleteAttendee(r.id)} title="Delete attendee row">
                           <Trash2 className="h-3.5 w-3.5" />
-                        </button>
+                        </Button>
                       </td>
                     </tr>
                   );
@@ -313,34 +373,55 @@ export function AttendanceSection() {
 
 
 // =============== TRAINING COMPETENCY (Sign-Off) ===============
-const MODULE_STATES = ["❌ Not Started", "🟡 In Progress", "✅ Signed Off"] as const;
-type CompetencyRow = { name: string; role: string; department: string; modules: Record<string, string> };
-
 export function SignOffSection() {
-  const [rows, setRows] = useState<CompetencyRow[]>(() =>
-    Array.from({ length: COMPETENCY_ROWS }, () => ({
-      name: "", role: "", department: "",
-      modules: Object.fromEntries(COMPETENCY_MODULES.map((m) => [m.id, "❌ Not Started"])),
-    }))
-  );
-  const upd = (i: number, patch: Partial<CompetencyRow>) => setRows((p) => p.map((r, idx) => idx === i ? { ...r, ...patch } : r));
-  const updMod = (i: number, modId: string, v: string) => setRows((p) => p.map((r, idx) => idx === i ? { ...r, modules: { ...r.modules, [modId]: v } } : r));
+  const rows = usePlaybook((s) => s.signOffs);
+  const addSignOff = usePlaybook((s) => s.addSignOff);
+  const updateSignOff = usePlaybook((s) => s.updateSignOff);
+  const deleteSignOff = usePlaybook((s) => s.deleteSignOff);
+  const saveSignOff = usePlaybook((s) => s.saveSignOff);
+  const syncSignOffsFromTable = usePlaybook((s) => s.syncSignOffsFromTable);
+  const [savingId, setSavingId] = useState<string | null>(null);
 
-  const overall = (r: CompetencyRow) => {
-    const vals = Object.values(r.modules);
-    if (vals.every((v) => v === "✅ Signed Off")) return "COMPLETE";
-    if (vals.every((v) => v === "❌ Not Started")) return "NOT STARTED";
-    return "IN PROGRESS";
+  useEffect(() => {
+    void syncSignOffsFromTable();
+  }, [syncSignOffsFromTable]);
+
+  const addRow = () => {
+    const id = Math.random().toString(36).slice(2, 10);
+    addSignOff({
+      id,
+      person: "",
+      jobTitle: "",
+      module: COMPETENCY_MODULES[0]?.id || "",
+      competency: "Novice",
+      status: "NOT STARTED",
+      signedBy: "",
+      date: "",
+    });
+  };
+
+  const saveRow = async (id: string) => {
+    setSavingId(id);
+    try {
+      await saveSignOff(id);
+    } finally {
+      setSavingId(null);
+    }
   };
 
   const total = rows.length;
-  const inProg = rows.filter((r) => overall(r) === "IN PROGRESS").length;
-  const complete = rows.filter((r) => overall(r) === "COMPLETE").length;
-  const notStarted = rows.filter((r) => overall(r) === "NOT STARTED").length;
+  const complete = rows.filter((r) => r.status === "COMPLETE").length;
+  const inProg = rows.filter((r) => r.status === "IN PROGRESS").length;
+  const notStarted = rows.filter((r) => r.status === "NOT STARTED").length;
 
   return (
     <div className="space-y-5">
-      <SectionHeader title="🖊️ Training Sign-Off Register" subtitle="Individual Competency Record — each person confirms training on every module. This is the legal record, kept on file and delivered in the Client Intranet Pack." />
+      <SectionHeader
+        title="🖊️ Training Sign-Off Register"
+        subtitle="Individual competency records loaded from playbook_signoffs. Add a new signer, update the row, and save or delete it from the live table."
+      >
+        <Button size="sm" onClick={addRow}><Plus className="h-4 w-4" /> Add sign-off</Button>
+      </SectionHeader>
 
       <div className="rounded-xl border bg-warning/10 border-warning/40 px-4 py-2 text-xs">
         <span className="font-semibold">HOW TO USE:</span> One row per trained person. Mark each module ✅ Signed Off once Part 3 (Observe) is complete AND the paper training form is signed.
@@ -367,48 +448,57 @@ export function SignOffSection() {
               <th className="px-2 py-2 text-left w-10">#</th>
               <th className="px-2 py-2 text-left">Full Name</th>
               <th className="px-2 py-2 text-left w-40">Role</th>
-              <th className="px-2 py-2 text-left w-32">Department</th>
-              <th className="px-2 py-2 text-left w-32">Overall Status</th>
-              {COMPETENCY_MODULES.map((m) => (
-                <th key={m.id} className="px-2 py-2 text-center w-28">
-                  <div className="font-mono">{m.id}</div>
-                  <div className="text-[9px] normal-case font-medium text-muted-foreground">{m.name}</div>
-                </th>
-              ))}
+              <th className="px-2 py-2 text-left w-32">Module</th>
+              <th className="px-2 py-2 text-left w-32">Status</th>
+              <th className="px-2 py-2 text-left w-32">Competency</th>
+              <th className="px-2 py-2 text-left w-32">Signed By</th>
+              <th className="px-2 py-2 text-left w-32">Date</th>
+              <th className="px-2 py-2 text-left w-24">Actions</th>
             </tr>
           </thead>
           <tbody className="divide-y">
-            {rows.map((r, i) => {
-              const ov = overall(r);
-              return (
-                <tr key={i} className="hover:bg-muted/20">
-                  <td className="px-2 py-1 font-mono tabular-nums text-muted-foreground">{i + 1}</td>
-                  <td className="px-2 py-1"><Input className="h-7 text-xs" value={r.name} onChange={(e) => upd(i, { name: e.target.value })} /></td>
-                  <td className="px-2 py-1"><Input className="h-7 text-xs" value={r.role} onChange={(e) => upd(i, { role: e.target.value })} /></td>
-                  <td className="px-2 py-1"><Input className="h-7 text-xs" value={r.department} onChange={(e) => upd(i, { department: e.target.value })} /></td>
-                  <td className="px-2 py-1">
-                    <span className={cn("inline-flex px-2 py-0.5 rounded text-[10px] font-bold border",
-                      ov === "COMPLETE" && "bg-success/15 text-success border-success/40",
-                      ov === "IN PROGRESS" && "bg-yellow-400/20 text-yellow-700 dark:text-yellow-300 border-yellow-400/40",
-                      ov === "NOT STARTED" && "bg-warning/15 text-warning-foreground border-warning/40")}>{ov}</span>
-                  </td>
-                  {COMPETENCY_MODULES.map((m) => {
-                    const v = r.modules[m.id];
-                    return (
-                      <td key={m.id} className="px-1 py-1">
-                        <Select value={v} onValueChange={(nv) => updMod(i, m.id, nv)}>
-                          <SelectTrigger className={cn("h-7 text-[10px] font-semibold",
-                            v === "✅ Signed Off" && "text-success",
-                            v === "🟡 In Progress" && "text-yellow-600 dark:text-yellow-400",
-                            v === "❌ Not Started" && "text-warning-foreground")}><SelectValue /></SelectTrigger>
-                          <SelectContent>{MODULE_STATES.map((x) => <SelectItem key={x} value={x}>{x}</SelectItem>)}</SelectContent>
-                        </Select>
-                      </td>
-                    );
-                  })}
-                </tr>
-              );
-            })}
+            {rows.map((r, i) => (
+              <tr key={r.id || i} className="hover:bg-muted/20 align-top">
+                <td className="px-2 py-1 font-mono tabular-nums text-muted-foreground">{i + 1}</td>
+                <td className="px-2 py-1"><Input className="h-7 text-xs" value={r.person} onChange={(e) => updateSignOff(r.id, { person: e.target.value })} /></td>
+                <td className="px-2 py-1"><Input className="h-7 text-xs" value={r.jobTitle} onChange={(e) => updateSignOff(r.id, { jobTitle: e.target.value })} /></td>
+                <td className="px-2 py-1">
+                  <Select value={r.module} onValueChange={(v) => updateSignOff(r.id, { module: v })}>
+                    <SelectTrigger className="h-7 text-[10px] font-semibold"><SelectValue placeholder="Select module" /></SelectTrigger>
+                    <SelectContent>
+                      {COMPETENCY_MODULES.map((m) => <SelectItem key={m.id} value={m.id}>{m.id} — {m.name}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </td>
+                <td className="px-2 py-1">
+                  <Select value={r.status} onValueChange={(v) => updateSignOff(r.id, { status: v as "NOT STARTED" | "IN PROGRESS" | "COMPLETE" | "BLOCKED" })}>
+                    <SelectTrigger className={cn("h-7 text-[10px] font-semibold", r.status === "COMPLETE" && "text-success", r.status === "IN PROGRESS" && "text-yellow-600 dark:text-yellow-400", r.status === "NOT STARTED" && "text-warning-foreground")}><SelectValue /></SelectTrigger>
+                    <SelectContent>{["NOT STARTED", "IN PROGRESS", "COMPLETE", "BLOCKED"].map((x) => <SelectItem key={x} value={x}>{x}</SelectItem>)}</SelectContent>
+                  </Select>
+                </td>
+                <td className="px-2 py-1">
+                  <Select value={r.competency} onValueChange={(v) => updateSignOff(r.id, { competency: v as SignOff["competency"] })}>
+                    <SelectTrigger className="h-7 text-[10px] font-semibold"><SelectValue /></SelectTrigger>
+                    <SelectContent>{["Novice", "Capable", "Proficient", "Expert"].map((x) => <SelectItem key={x} value={x}>{x}</SelectItem>)}</SelectContent>
+                  </Select>
+                </td>
+                <td className="px-2 py-1"><Input className="h-7 text-xs" value={r.signedBy} onChange={(e) => updateSignOff(r.id, { signedBy: e.target.value })} /></td>
+                <td className="px-2 py-1"><Input type="date" className="h-7 text-xs" value={r.date} onChange={(e) => updateSignOff(r.id, { date: e.target.value })} /></td>
+                <td className="px-2 py-1 text-right whitespace-nowrap">
+                  <Button size="sm" variant="outline" className="h-7 px-2 mr-1" disabled={savingId === r.id} onClick={() => void saveRow(r.id)}>
+                    <Save className="h-3.5 w-3.5" />
+                  </Button>
+                  <Button size="sm" variant="ghost" className="h-7 px-2 text-destructive hover:text-destructive" onClick={() => void deleteSignOff(r.id)}>
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </Button>
+                </td>
+              </tr>
+            ))}
+            {rows.length === 0 && (
+              <tr>
+                <td colSpan={9} className="px-4 py-6 text-center text-xs text-muted-foreground">No sign-off rows yet. Add one to create the first entry.</td>
+              </tr>
+            )}
           </tbody>
         </table>
       </div>
@@ -417,36 +507,98 @@ export function SignOffSection() {
 }
 
 // =============== WEEKLY EMAIL LOG ===============
-type EmailRow = { dateSent: string; phase: string; completed: string; planned: string; openIssues: string; sentTo: string; status: string };
 const EMAIL_STATUSES = ["PENDING", "DRAFTED", "SENT"] as const;
 
 export function EmailLogSection() {
-  const [rows, setRows] = useState<EmailRow[]>(() =>
-    Array.from({ length: EMAIL_WEEKS }, () => ({ dateSent: "", phase: "", completed: "", planned: "", openIssues: "", sentTo: "CEO, CFO, IT Lead, Site Teams, Ops Managers", status: "PENDING" }))
-  );
-  const upd = (i: number, patch: Partial<EmailRow>) => setRows((p) => p.map((r, idx) => idx === i ? { ...r, ...patch } : r));
+  const emailLogs = usePlaybook((s) => s.emails);
+  const addEmail = usePlaybook((s) => s.addEmail);
+  const updateEmail = usePlaybook((s) => s.updateEmail);
+  const deleteEmail = usePlaybook((s) => s.deleteEmail);
+  const saveEmail = usePlaybook((s) => s.saveEmail);
+  const syncEmailLogsFromTable = usePlaybook((s) => s.syncEmailLogsFromTable);
+  const [savingId, setSavingId] = useState<string | null>(null);
   const [tab, setTab] = useState<"log" | "auto">("auto");
 
-  const ctx = usePlaybook((s) => ({
-    client: s.client, tasks: s.tasks, taskOverrides: s.taskOverrides, timelineMode: s.timelineMode,
-    startDate: s.startDate, issues: s.issues, stakeholders: s.stakeholders, champions: s.champions,
-    dod: s.dod, intranet: s.intranet, sessions: s.sessions,
-  }));
+  const client = usePlaybook((s) => s.client);
+  const tasks = usePlaybook((s) => s.tasks);
+  const taskOverrides = usePlaybook((s) => s.taskOverrides);
+  const timelineMode = usePlaybook((s) => s.timelineMode);
+  const startDate = usePlaybook((s) => s.startDate);
+  const issues = usePlaybook((s) => s.issues);
+  const stakeholders = usePlaybook((s) => s.stakeholders);
+  const champions = usePlaybook((s) => s.champions);
+  const dod = usePlaybook((s) => s.dod);
+  const intranet = usePlaybook((s) => s.intranet);
+  const sessions = usePlaybook((s) => s.sessions);
 
-  const autoFill = (i: number) => {
-    const dateAnchor = rows[i].dateSent || new Date().toISOString().slice(0, 10);
-    const fill = buildWeeklyAutoFill(ctx, { weekEndingDate: dateAnchor, weekNumber: i + 1 });
-    upd(i, {
+  const ctx = useMemo(() => ({
+    client,
+    tasks,
+    taskOverrides,
+    timelineMode,
+    startDate,
+    issues,
+    stakeholders,
+    champions,
+    dod,
+    intranet,
+    sessions,
+  }), [client, tasks, taskOverrides, timelineMode, startDate, issues, stakeholders, champions, dod, intranet, sessions]);
+
+  useEffect(() => {
+    void syncEmailLogsFromTable();
+  }, [syncEmailLogsFromTable]);
+
+  const addRow = () => {
+    const id = Math.random().toString(36).slice(2, 10);
+    addEmail({
+      id,
+      week: emailLogs.length + 1,
+      date: "",
+      subject: "",
+      recipients: "CEO, CFO, IT Lead, Site Teams, Ops Managers",
+      status: "PENDING",
+      summary: "",
+      highlights: "",
+      blockers: "",
+      sent: false,
+      dateSent: "",
+      phase: "",
+      completed: "",
+      planned: "",
+      openIssues: "",
+      sentTo: "CEO, CFO, IT Lead, Site Teams, Ops Managers",
+    });
+  };
+
+  const saveRow = async (id: string) => {
+    setSavingId(id);
+    try {
+      await saveEmail(id);
+    } finally {
+      setSavingId(null);
+    }
+  };
+
+  const autoFill = (row: EmailLog) => {
+    const dateAnchor = row.dateSent || row.date || new Date().toISOString().slice(0, 10);
+    const fill = buildWeeklyAutoFill(ctx, { weekEndingDate: dateAnchor, weekNumber: (row.week || 1) });
+    updateEmail(row.id, {
       completed: fill.completed,
       planned: fill.planned,
       openIssues: fill.openIssues,
-      status: rows[i].status === "PENDING" ? "DRAFTED" : rows[i].status,
+      status: row.status === "PENDING" ? "DRAFTED" : row.status,
+      summary: fill.completed,
+      highlights: fill.planned,
+      blockers: fill.openIssues,
     });
   };
 
   return (
     <div className="space-y-5">
-      <SectionHeader title="📧 Weekly Client Email Log" subtitle="Auto-drafted from your live registers. Preview, copy, and send from your own inbox — or fill the weekly log table by hand." />
+      <SectionHeader title="📧 Weekly Client Email Log" subtitle="Auto-drafted from your live registers. Preview, copy, and send from your own inbox — or fill the weekly log table by hand.">
+        <Button size="sm" onClick={addRow}><Plus className="h-4 w-4" /> Add email log</Button>
+      </SectionHeader>
 
       <div className="inline-flex rounded-lg border bg-card p-0.5">
         {([
@@ -487,30 +639,39 @@ export function EmailLogSection() {
                   <th className="px-2 py-2 text-left">Open Issues</th>
                   <th className="px-2 py-2 text-left w-40">Sent To</th>
                   <th className="px-2 py-2 text-left w-28">Status</th>
+                  <th className="px-2 py-2 text-left w-28">Action</th>
                   <th className="px-2 py-2 text-left w-24">Auto</th>
                 </tr>
               </thead>
               <tbody className="divide-y">
-                {rows.map((r, i) => (
-                  <tr key={i} className="hover:bg-muted/20 align-top">
-                    <td className="px-2 py-1.5 font-mono font-semibold">W{i + 1}</td>
-                    <td className="px-2 py-1.5"><Input type="date" className="h-7 text-xs" value={r.dateSent} onChange={(e) => upd(i, { dateSent: e.target.value })} /></td>
-                    <td className="px-2 py-1.5"><Input className="h-7 text-xs" value={r.phase} onChange={(e) => upd(i, { phase: e.target.value })} placeholder="Phase 1A…" /></td>
-                    <td className="px-2 py-1.5"><Textarea className="text-xs min-h-[28px]" rows={1} value={r.completed} onChange={(e) => upd(i, { completed: e.target.value })} /></td>
-                    <td className="px-2 py-1.5"><Textarea className="text-xs min-h-[28px]" rows={1} value={r.planned} onChange={(e) => upd(i, { planned: e.target.value })} /></td>
-                    <td className="px-2 py-1.5"><Textarea className="text-xs min-h-[28px]" rows={1} value={r.openIssues} onChange={(e) => upd(i, { openIssues: e.target.value })} /></td>
-                    <td className="px-2 py-1.5"><Input className="h-7 text-xs" value={r.sentTo} onChange={(e) => upd(i, { sentTo: e.target.value })} /></td>
+                {emailLogs.map((r, i) => (
+                  <tr key={r.id || i} className="hover:bg-muted/20 align-top">
+                    <td className="px-2 py-1.5 font-mono font-semibold">W{r.week || i + 1}</td>
+                    <td className="px-2 py-1.5"><Input type="date" className="h-7 text-xs" value={r.dateSent || r.date || ""} onChange={(e) => updateEmail(r.id, { dateSent: e.target.value, date: e.target.value })} /></td>
+                    <td className="px-2 py-1.5"><Input className="h-7 text-xs" value={r.phase || ""} onChange={(e) => updateEmail(r.id, { phase: e.target.value })} placeholder="Phase 1A…" /></td>
+                    <td className="px-2 py-1.5"><Textarea className="text-xs min-h-[28px]" rows={1} value={r.completed || r.summary || ""} onChange={(e) => updateEmail(r.id, { completed: e.target.value, summary: e.target.value })} /></td>
+                    <td className="px-2 py-1.5"><Textarea className="text-xs min-h-[28px]" rows={1} value={r.planned || r.highlights || ""} onChange={(e) => updateEmail(r.id, { planned: e.target.value, highlights: e.target.value })} /></td>
+                    <td className="px-2 py-1.5"><Textarea className="text-xs min-h-[28px]" rows={1} value={r.openIssues || r.blockers || ""} onChange={(e) => updateEmail(r.id, { openIssues: e.target.value, blockers: e.target.value })} /></td>
+                    <td className="px-2 py-1.5"><Input className="h-7 text-xs" value={r.sentTo || r.recipients || ""} onChange={(e) => updateEmail(r.id, { sentTo: e.target.value, recipients: e.target.value })} /></td>
                     <td className="px-2 py-1.5">
-                      <Select value={r.status} onValueChange={(v) => upd(i, { status: v })}>
+                      <Select value={(r.status || "PENDING") as string} onValueChange={(v) => updateEmail(r.id, { status: v as EmailLog["status"] })}>
                         <SelectTrigger className={cn("h-7 text-[11px] font-semibold",
-                          r.status === "SENT" && "text-success",
-                          r.status === "DRAFTED" && "text-yellow-600 dark:text-yellow-400",
-                          r.status === "PENDING" && "text-warning-foreground")}><SelectValue /></SelectTrigger>
+                          (r.status || "PENDING") === "SENT" && "text-success",
+                          (r.status || "PENDING") === "DRAFTED" && "text-yellow-600 dark:text-yellow-400",
+                          (r.status || "PENDING") === "PENDING" && "text-warning-foreground")}><SelectValue /></SelectTrigger>
                         <SelectContent>{EMAIL_STATUSES.map((x) => <SelectItem key={x} value={x}>{x}</SelectItem>)}</SelectContent>
                       </Select>
                     </td>
+                    <td className="px-2 py-1.5 whitespace-nowrap">
+                      <Button size="sm" variant={r._id ? "outline" : "default"} className="h-7 px-2 mr-1" disabled={savingId === r.id} onClick={() => void saveRow(r.id)} title={r._id ? "Update saved email log" : "Save email log to table"}>
+                        <Save className="h-3.5 w-3.5" />
+                      </Button>
+                      <Button size="sm" variant="ghost" className="h-7 px-2 text-destructive hover:text-destructive" onClick={() => void deleteEmail(r.id)} title="Delete email log row">
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
+                    </td>
                     <td className="px-2 py-1.5">
-                      <Button size="sm" variant="outline" className="h-7 text-[10px]" onClick={() => autoFill(i)} title="Auto-fill from live task data">
+                      <Button size="sm" variant="outline" className="h-7 text-[10px]" onClick={() => autoFill(r)} title="Auto-fill from live task data">
                         <Sparkles className="h-3 w-3 mr-1" /> Fill
                       </Button>
                     </td>
@@ -530,29 +691,62 @@ export function EmailLogSection() {
 const ISSUE_TYPES = ["🐛 Bug/Defect", "👤 User Error", "✨ Feature Request", "⚙️ Configuration", "🔗 Integration", "📋 Process Gap", "🎓 Training Gap", "❓ Question", "📦 Data"] as const;
 const PRIORITIES = ["LOW", "MEDIUM", "HIGH", "CRITICAL"] as const;
 const ISSUE_STATUSES = ["Open", "In Progress", "Closed"] as const;
-type IssueRow = { phase: string; type: string; description: string; reportedBy: string; owner: string; priority: string; dateRaised: string; status: string; resolution: string; archived?: boolean };
 
 export function IssuesSection() {
-  const [rows, setRows] = useState<IssueRow[]>(() =>
-    Array.from({ length: ISSUE_ROWS }, () => ({ phase: "Phase 4", type: "👤 User Error", description: "", reportedBy: "", owner: "PLEXA", priority: "MEDIUM", dateRaised: "", status: "Open", resolution: "", archived: false }))
-  );
+  const rows = usePlaybook((s) => s.issues);
+  const addIssue = usePlaybook((s) => s.addIssue);
+  const updateIssue = usePlaybook((s) => s.updateIssue);
+  const deleteIssue = usePlaybook((s) => s.deleteIssue);
+  const saveIssue = usePlaybook((s) => s.saveIssue);
+  const syncIssuesFromTable = usePlaybook((s) => s.syncIssuesFromTable);
+  const [savingId, setSavingId] = useState<string | null>(null);
   const [showArchived, setShowArchived] = useState(false);
-  const upd = (i: number, patch: Partial<IssueRow>) => setRows((p) => p.map((r, idx) => idx === i ? { ...r, ...patch } : r));
-  const addRow = () => setRows((p) => [...p, { phase: "Phase 4", type: "👤 User Error", description: "", reportedBy: "", owner: "PLEXA", priority: "MEDIUM", dateRaised: "", status: "Open", resolution: "", archived: false }]);
-  const delRow = (i: number) => setRows((p) => p.filter((_, idx) => idx !== i));
-  const toggleArchive = (i: number) => setRows((p) => p.map((r, idx) => idx === i ? { ...r, archived: !r.archived } : r));
+
+  useEffect(() => {
+    void syncIssuesFromTable();
+  }, [syncIssuesFromTable]);
+
+  const upd = (id: string, patch: Partial<Issue>) => updateIssue(id, patch);
+  const addRow = () => addIssue({
+    id: Math.random().toString(36).slice(2, 10),
+    phase: "Phase 4",
+    type: "👤 User Error",
+    description: "",
+    reportedBy: "",
+    owner: "PLEXA",
+    priority: "MEDIUM",
+    raisedAt: "",
+    status: "Open",
+    resolution: "",
+    archived: false,
+  });
+  const delRow = async (id: string) => {
+    await deleteIssue(id);
+  };
+  const saveRow = async (id: string) => {
+    setSavingId(id);
+    try {
+      await saveIssue(id);
+    } finally {
+      setSavingId(null);
+    }
+  };
+  const toggleArchive = (id: string) => {
+    const row = rows.find((r) => r.id === id);
+    updateIssue(id, { archived: !row?.archived });
+  };
 
   const active = rows.filter((r) => !r.archived);
   const archivedCount = rows.length - active.length;
   const counts = {
-    bug: active.filter((r) => r.type.includes("Bug")).length,
-    user: active.filter((r) => r.type.includes("User Error")).length,
-    feature: active.filter((r) => r.type.includes("Feature")).length,
-    training: active.filter((r) => r.type.includes("Training")).length,
+    bug: active.filter((r) => String(r.type || "").includes("Bug")).length,
+    user: active.filter((r) => String(r.type || "").includes("User Error")).length,
+    feature: active.filter((r) => String(r.type || "").includes("Feature")).length,
+    training: active.filter((r) => String(r.type || "").includes("Training")).length,
     open: active.filter((r) => r.status === "Open" || r.status === "In Progress").length,
     closed: active.filter((r) => r.status === "Closed").length,
   };
-  const visibleRows = rows.map((r, i) => ({ r, i })).filter(({ r }) => showArchived ? r.archived : !r.archived);
+  const visibleRows = rows.map((r) => ({ r })).filter(({ r }) => showArchived ? r.archived : !r.archived);
 
 
   return (
@@ -597,26 +791,28 @@ export function IssuesSection() {
             </tr>
           </thead>
           <tbody className="divide-y">
-            {visibleRows.map(({ r, i }) => (
-              <tr key={i} className={cn("hover:bg-muted/20", r.archived && "opacity-60")}>
-                <td className="px-2 py-1 font-mono tabular-nums text-muted-foreground">{i + 1}</td>
-                <td className="px-2 py-1"><Input className="h-7 text-xs" value={r.phase} onChange={(e) => upd(i, { phase: e.target.value })} /></td>
+            {visibleRows.map((row, index) => {
+              const r = row.r;
+              return (
+              <tr key={r.id || index} className={cn("hover:bg-muted/20", r.archived && "opacity-60")}>
+                <td className="px-2 py-1 font-mono tabular-nums text-muted-foreground">{index + 1}</td>
+                <td className="px-2 py-1"><Input className="h-7 text-xs" value={r.phase || ""} onChange={(e) => upd(r.id, { phase: e.target.value })} /></td>
                 <td className="px-2 py-1">
-                  <Select value={r.type} onValueChange={(v) => upd(i, { type: v })}>
+                  <Select value={r.type || "👤 User Error"} onValueChange={(v) => upd(r.id, { type: v })}>
                     <SelectTrigger className="h-7 text-[11px]"><SelectValue /></SelectTrigger>
                     <SelectContent>{ISSUE_TYPES.map((x) => <SelectItem key={x} value={x}>{x}</SelectItem>)}</SelectContent>
                   </Select>
                 </td>
-                <td className="px-2 py-1"><Input className="h-7 text-xs" value={r.description} onChange={(e) => upd(i, { description: e.target.value })} /></td>
-                <td className="px-2 py-1"><Input className="h-7 text-xs" value={r.reportedBy} onChange={(e) => upd(i, { reportedBy: e.target.value })} /></td>
+                <td className="px-2 py-1"><Input className="h-7 text-xs" value={r.description || ""} onChange={(e) => upd(r.id, { description: e.target.value })} /></td>
+                <td className="px-2 py-1"><Input className="h-7 text-xs" value={r.reportedBy || ""} onChange={(e) => upd(r.id, { reportedBy: e.target.value, assignedTo: e.target.value })} /></td>
                 <td className="px-2 py-1">
-                  <Select value={r.owner} onValueChange={(v) => upd(i, { owner: v })}>
+                  <Select value={r.owner || "PLEXA"} onValueChange={(v) => upd(r.id, { owner: v })}>
                     <SelectTrigger className="h-7 text-[11px]"><SelectValue /></SelectTrigger>
                     <SelectContent><SelectItem value="PLEXA">PLEXA</SelectItem><SelectItem value="CLIENT">CLIENT</SelectItem></SelectContent>
                   </Select>
                 </td>
                 <td className="px-2 py-1">
-                  <Select value={r.priority} onValueChange={(v) => upd(i, { priority: v })}>
+                  <Select value={r.priority || "MEDIUM"} onValueChange={(v) => upd(r.id, { priority: v as Issue["priority"] })}>
                     <SelectTrigger className={cn("h-7 text-[11px] font-semibold",
                       r.priority === "CRITICAL" && "text-destructive",
                       r.priority === "HIGH" && "text-warning-foreground",
@@ -624,9 +820,9 @@ export function IssuesSection() {
                     <SelectContent>{PRIORITIES.map((p) => <SelectItem key={p} value={p}>{p}</SelectItem>)}</SelectContent>
                   </Select>
                 </td>
-                <td className="px-2 py-1"><Input type="date" className="h-7 text-xs" value={r.dateRaised} onChange={(e) => upd(i, { dateRaised: e.target.value })} /></td>
+                <td className="px-2 py-1"><Input type="date" className="h-7 text-xs" value={r.raisedAt || ""} onChange={(e) => upd(r.id, { raisedAt: e.target.value })} /></td>
                 <td className="px-2 py-1">
-                  <Select value={r.status} onValueChange={(v) => upd(i, { status: v })}>
+                  <Select value={r.status || "Open"} onValueChange={(v) => upd(r.id, { status: v as Issue["status"] })}>
                     <SelectTrigger className={cn("h-7 text-[11px] font-semibold",
                       r.status === "Open" && "text-warning-foreground",
                       r.status === "Closed" && "text-success",
@@ -634,15 +830,19 @@ export function IssuesSection() {
                     <SelectContent>{ISSUE_STATUSES.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
                   </Select>
                 </td>
-                <td className="px-2 py-1"><Input className="h-7 text-xs" value={r.resolution} onChange={(e) => upd(i, { resolution: e.target.value })} /></td>
+                <td className="px-2 py-1"><Input className="h-7 text-xs" value={r.resolution || ""} onChange={(e) => upd(r.id, { resolution: e.target.value })} /></td>
                 <td className="px-2 py-1 text-center whitespace-nowrap">
-                  <button onClick={() => toggleArchive(i)} className="text-muted-foreground hover:text-foreground text-xs mr-1" title={r.archived ? "Restore" : "Archive"}>
+                  <Button size="sm" variant="ghost" className="h-7 px-2 mr-1" disabled={savingId === r.id} onClick={() => void saveRow(r.id)} title={r._id ? "Update saved issue" : "Save issue to table"}>
+                    <Save className="h-3.5 w-3.5" />
+                  </Button>
+                  <button onClick={() => toggleArchive(r.id)} className="text-muted-foreground hover:text-foreground text-xs mr-1" title={r.archived ? "Restore" : "Archive"}>
                     {r.archived ? "↺" : "📦"}
                   </button>
-                  <button onClick={() => delRow(i)} className="text-muted-foreground hover:text-destructive text-sm" title="Delete row">×</button>
+                  <button onClick={() => void delRow(r.id)} className="text-muted-foreground hover:text-destructive text-sm" title="Delete row">×</button>
                 </td>
               </tr>
-            ))}
+              );
+            })}
             {visibleRows.length === 0 && (
               <tr><td colSpan={11} className="px-2 py-6 text-center text-muted-foreground text-xs">{showArchived ? "No archived queries." : "No queries."}</td></tr>
             )}
@@ -878,6 +1078,7 @@ export function DefinitionOfDoneSection() {
 export function IntranetSection() {
   const client = usePlaybook((s) => s.client);
   const intranet = usePlaybook((s) => s.intranet);
+  const sessions = usePlaybook((s) => s.sessions);
   const addIntranet = usePlaybook((s) => s.addIntranet);
   const updateIntranet = usePlaybook((s) => s.updateIntranet);
   const deleteIntranet = usePlaybook((s) => s.deleteIntranet);
@@ -978,7 +1179,7 @@ export function IntranetSection() {
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
           {filtered.map((r) => {
-            const session = SESSIONS.find((s) => s.id === r.sessionId);
+            const session = sessions.find((s) => s.id === r.sessionId);
             return (
               <div key={r.id} className="rounded-xl border bg-card overflow-hidden">
                 <div className="flex items-center justify-between gap-2 px-3 py-2 bg-muted/30 border-b">
@@ -1012,11 +1213,11 @@ export function IntranetSection() {
                   <div className="grid grid-cols-2 gap-2">
                     <div>
                       <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-0.5">Linked Session</div>
-                      <Select value={r.sessionId || "none"} onValueChange={(v) => updateIntranet(r.id, { sessionId: v === "none" ? "" : v, module: v === "none" ? r.module : (SESSIONS.find((s) => s.id === v)?.module || r.module) })}>
+                      <Select value={r.sessionId || "none"} onValueChange={(v) => updateIntranet(r.id, { sessionId: v === "none" ? "" : v, module: v === "none" ? r.module : (sessions.find((s) => s.id === v)?.module || r.module) })}>
                         <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="—" /></SelectTrigger>
                         <SelectContent>
                           <SelectItem value="none">— None —</SelectItem>
-                          {SESSIONS.map((s) => <SelectItem key={s.id} value={s.id}>{s.id} · {s.name}</SelectItem>)}
+                          {sessions.map((s) => <SelectItem key={s.id} value={s.id}>{s.id} · {s.name}</SelectItem>)}
                         </SelectContent>
                       </Select>
                     </div>
@@ -1157,8 +1358,13 @@ type TopicRow = { topic: string; notes: string; covered: string; duration: strin
 const COVERED_STATES = ["Covered", "Partially", "Not Covered"] as const;
 
 export function ContentLogSection() {
+  const tableMap = usePlaybook((s) => s.tableMap);
+  const sessions = usePlaybook((s) => s.sessions);
+  const fetchTables = usePlaybook((s) => s.fetchTables);
+  const fetchTableRecords = usePlaybook((s) => s.fetchTableRecords);
+  const [savingSessionId, setSavingSessionId] = useState<string | null>(null);
   const [state, setState] = useState<Record<string, TopicRow[]>>(() =>
-    Object.fromEntries(SESSIONS.map((s) => {
+    Object.fromEntries(sessions.map((s) => {
       const seeded = CONTENT_TOPICS[s.id] || [];
       const len = Math.max(seeded.length, 3);
       return [s.id, Array.from({ length: len }, (_, i) => ({
@@ -1167,16 +1373,128 @@ export function ContentLogSection() {
       }))];
     }))
   );
+
+  useEffect(() => {
+    let cancelled = false;
+    const loadTopics = async () => {
+      try {
+        let tableId = tableMap[PLAYBOOK_TABLES.sessionTopics];
+        if (!tableId) {
+          await fetchTables();
+          tableId = usePlaybook.getState().tableMap[PLAYBOOK_TABLES.sessionTopics];
+        }
+        if (!tableId) return;
+
+        const records = await fetchTableRecords(tableId, PLAYBOOK_TABLES.sessionTopics);
+        if (cancelled) return;
+
+        const bySession = records.reduce<Record<string, TopicRow[]>>((acc, record) => {
+          const sessionId = String(record?.fields?.sessionId || record?.sessionId || record?.["Session ID"] || "");
+          const topic = String(record?.fields?.topic || record?.topic || record?.["Topic"] || "");
+          if (!sessionId) return acc;
+          const nextRow: TopicRow = {
+            topic,
+            notes: String(record?.fields?.notes || record?.notes || record?.["Notes"] || ""),
+            covered: String(record?.fields?.covered || record?.covered || record?.["Covered"] || "Covered"),
+            duration: String(record?.fields?.duration || record?.duration || record?.["Duration"] || ""),
+            followUp: String(record?.fields?.followUp || record?.followUp || record?.["Follow-Up"] || "NO"),
+            followUpAction: String(record?.fields?.followUpAction || record?.followUpAction || record?.["Follow-Up Action"] || ""),
+          };
+          acc[sessionId] = [...(acc[sessionId] || []), nextRow];
+          return acc;
+        }, {});
+
+        setState((prev) => Object.fromEntries(sessions.map((s) => {
+          const apiRows = bySession[s.id] && bySession[s.id].length ? bySession[s.id] : null;
+          return [s.id, apiRows || prev[s.id] || Array.from({ length: Math.max((CONTENT_TOPICS[s.id] || []).length, 3) }, (_, i) => ({
+            topic: (CONTENT_TOPICS[s.id] || [])[i] || "",
+            notes: "",
+            covered: "Covered",
+            duration: "",
+            followUp: "NO",
+            followUpAction: "",
+          }))];
+        })));
+      } catch (error) {
+        console.error("ContentLogSection: failed to load session topics", error);
+      }
+    };
+
+    void loadTopics();
+    return () => {
+      cancelled = true;
+    };
+  }, [fetchTableRecords, fetchTables, tableMap]);
+
   const upd = (id: string, i: number, patch: Partial<TopicRow>) =>
     setState((p) => ({ ...p, [id]: p[id].map((r, idx) => idx === i ? { ...r, ...patch } : r) }));
   const addRow = (id: string) =>
     setState((p) => ({ ...p, [id]: [...p[id], { topic: "", notes: "", covered: "Covered", duration: "", followUp: "NO", followUpAction: "" }] }));
 
+  const saveSessionTopics = async (sessionId: string) => {
+    try {
+      setSavingSessionId(sessionId);
+      const apiBase = (window as any).apiBase as string | undefined;
+      const token = (window as any).authToken as string | undefined;
+      if (!apiBase) throw new Error("apiBase not available");
+
+      const org = await ensureOrganizationUUID(apiBase, token);
+      if (!org) throw new Error("Organization UUID not available");
+
+      let tableId = tableMap[PLAYBOOK_TABLES.sessionTopics];
+      if (!tableId) {
+        await fetchTables();
+        tableId = usePlaybook.getState().tableMap[PLAYBOOK_TABLES.sessionTopics];
+      }
+      if (!tableId) throw new Error("playbook_session_topics table not found in tableMap");
+
+      const records = await fetchTableRecords(tableId, PLAYBOOK_TABLES.sessionTopics);
+      const baseUrl = `${apiBase.replace(/\/+$/, "")}/workbench/organization/${org}`;
+      const headers: HeadersInit = {
+        "Content-Type": "application/json",
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      };
+
+      await Promise.all((state[sessionId] || []).map(async (row, index) => {
+        const existing = records.find((record) => {
+          const recordSessionId = String(record?.fields?.sessionId || record?.sessionId || record?.["Session ID"] || "");
+          const recordTopic = String(record?.fields?.topic || record?.topic || record?.["Topic"] || "");
+          return recordSessionId === sessionId && recordTopic === row.topic;
+        }) || records[index];
+
+        const fields = {
+          sessionId,
+          topic: row.topic || "",
+          notes: row.notes || "",
+          covered: row.covered || "Covered",
+          duration: row.duration || "",
+          followUp: row.followUp || "NO",
+          followUpAction: row.followUpAction || "",
+        };
+
+        const url = `${baseUrl}/tables/${tableId}/records${existing?.id ? `/${existing.id}` : ""}`;
+        const body = existing?.id
+          ? { fieldKeyType: "name", typecast: false, record: { fields } }
+          : { fieldKeyType: "name", typecast: false, p: PLAYBOOK_TABLES.sessionTopics, records: [{ fields }] };
+
+        const res = await fetch(url, {
+          method: existing?.id ? "PATCH" : "POST",
+          headers,
+          body: JSON.stringify(body),
+        });
+
+        if (!res.ok) throw new Error(`Failed to save session topics for ${sessionId} (${res.status})`);
+      }));
+    } finally {
+      setSavingSessionId(null);
+    }
+  };
+
   return (
     <div className="space-y-5">
       <SectionHeader title="📚 Session Content Log" subtitle="What was covered in every session. Every topic per session logged here. Feeds directly into the Client Intranet Handover Pack." />
 
-      {SESSIONS.map((s) => (
+      {sessions.map((s) => (
         <div key={s.id} className="rounded-xl border bg-card overflow-hidden">
           <div className="px-4 py-2 bg-primary/10 border-b border-primary/30">
             <div className="text-sm font-bold">
@@ -1226,8 +1544,11 @@ export function ContentLogSection() {
               </tbody>
             </table>
           </div>
-          <div className="border-t px-3 py-2 bg-muted/10">
+          <div className="border-t px-3 py-2 bg-muted/10 flex items-center justify-between gap-2">
             <Button size="sm" variant="outline" onClick={() => addRow(s.id)}><Plus className="h-4 w-4" /> Add topic</Button>
+            <Button size="sm" onClick={() => void saveSessionTopics(s.id)} disabled={savingSessionId === s.id}>
+              {savingSessionId === s.id ? "Saving…" : "Save session topics"}
+            </Button>
           </div>
         </div>
       ))}
@@ -1326,42 +1647,54 @@ export function UserAccountsSection() {
   const update = usePlaybook((s) => s.updateUser);
   const del = usePlaybook((s) => s.deleteUser);
   const replace = usePlaybook((s) => s.replaceUsers);
-  const COLS = ["name", "email", "phone", "position", "role", "status"];
+  const sync = usePlaybook((s) => s.syncUsersFromTable);
+  const save = usePlaybook((s) => s.saveUserAccount);
+  const [savingId, setSavingId] = useState<string | null>(null);
+  const COLS = ["name", "email", "phone", "position", "role", "department", "status"];
   const csv = toCSV(users as unknown as Record<string, unknown>[], COLS);
+  useEffect(() => { void sync(); }, [sync]);
+  const saveRow = async (id: string) => {
+    setSavingId(id);
+    try { await save(id); } finally { setSavingId(null); }
+  };
 
   return (
     <div className="space-y-5">
-      <SectionHeader title="👤 User Accounts" subtitle="Name, email, phone, position, role — the complete login roster.">
-        <ImportExport filename="user-accounts.csv" csv={csv} columns={COLS} sample={{ name: "Jane Smith", email: "jane@client.com", phone: "0400 000 000", position: "Project Manager", role: "Standard", status: "Pending" }} onImport={(t) => {
+      <SectionHeader title="👤 User Accounts" subtitle="Name, email, phone, position, role, department — the complete login roster.">
+        <ImportExport filename="user-accounts.csv" csv={csv} columns={COLS} sample={{ name: "Jane Smith", email: "jane@client.com", phone: "0400 000 000", position: "Project Manager", role: "Standard", department: "Construction", status: "Pending" }} onImport={(t) => {
           const parsed = fromCSV(t).map((r) => ({
             id: Math.random().toString(36).slice(2),
             name: r.name || "", email: r.email || "", phone: r.phone || "",
-            position: r.position || "", role: r.role || "",
+            position: r.position || "", role: r.role || "", department: r.department || "",
             status: ((["Pending", "Invited", "Active", "Disabled"].includes(r.status) ? r.status : "Pending") as "Pending" | "Invited" | "Active" | "Disabled"),
           }));
           replace(parsed);
         }} />
-        <Button onClick={() => add({ name: "", email: "", phone: "", position: "", role: "Standard", status: "Pending" })}><Plus className="h-4 w-4" /> Add</Button>
+        <Button onClick={() => add({ name: "", email: "", phone: "", position: "", role: "Standard", department: "", status: "Pending" })}><Plus className="h-4 w-4" /> Add</Button>
       </SectionHeader>
 
       <div className="rounded-xl border bg-card overflow-x-auto">
         <div className="min-w-[1100px]">
-          <div className="grid grid-cols-[1fr_1.2fr_140px_180px_160px_140px_40px] gap-2 px-3 py-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground bg-muted/30 border-b">
-            <div>Name</div><div>Email</div><div>Phone</div><div>Position</div><div>Role</div><div>Status</div><div></div>
+          <div className="grid grid-cols-[1fr_1.2fr_140px_180px_160px_160px_140px_80px] gap-2 px-3 py-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground bg-muted/30 border-b">
+            <div>Name</div><div>Email</div><div>Phone</div><div>Position</div><div>Role</div><div>Department</div><div>Status</div><div></div>
           </div>
           {users.length === 0 && <div className="px-4 py-8 text-center text-sm text-muted-foreground">No users yet — add one or import a CSV.</div>}
           {users.map((u) => (
-            <div key={u.id} className="grid grid-cols-[1fr_1.2fr_140px_180px_160px_140px_40px] gap-2 px-3 py-2 items-center border-b last:border-0">
+            <div key={u.id} className="grid grid-cols-[1fr_1.2fr_140px_180px_160px_160px_140px_80px] gap-2 px-3 py-2 items-center border-b last:border-0">
               <Input className="h-8 text-sm" value={u.name} onChange={(e) => update(u.id, { name: e.target.value })} />
               <Input className="h-8 text-xs" value={u.email} onChange={(e) => update(u.id, { email: e.target.value })} />
               <Input className="h-8 text-xs" value={u.phone} onChange={(e) => update(u.id, { phone: e.target.value })} />
               <Input className="h-8 text-xs" value={u.position} onChange={(e) => update(u.id, { position: e.target.value })} />
               <Input className="h-8 text-xs" value={u.role} onChange={(e) => update(u.id, { role: e.target.value })} />
+              <Input className="h-8 text-xs" value={u.department || ""} onChange={(e) => update(u.id, { department: e.target.value })} />
               <Select value={u.status} onValueChange={(v) => update(u.id, { status: v as "Pending" | "Invited" | "Active" | "Disabled" })}>
                 <SelectTrigger className={cn("h-8 text-xs", u.status === "Active" && "text-success", u.status === "Disabled" && "text-destructive")}><SelectValue /></SelectTrigger>
                 <SelectContent>{["Pending", "Invited", "Active", "Disabled"].map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
               </Select>
-              <Button size="icon" variant="ghost" onClick={() => del(u.id)}><Trash2 className="h-4 w-4 text-muted-foreground" /></Button>
+              <div className="flex items-center justify-end gap-1">
+                <Button size="icon" variant="ghost" disabled={savingId === u.id} onClick={() => void saveRow(u.id)}><Save className="h-4 w-4 text-muted-foreground" /></Button>
+                <Button size="icon" variant="ghost" onClick={() => del(u.id)}><Trash2 className="h-4 w-4 text-muted-foreground" /></Button>
+              </div>
             </div>
           ))}
         </div>
@@ -1377,8 +1710,16 @@ export function ProjectDetailsSection() {
   const update = usePlaybook((s) => s.updateProject);
   const del = usePlaybook((s) => s.deleteProject);
   const replace = usePlaybook((s) => s.replaceProjects);
+  const sync = usePlaybook((s) => s.syncProjectsFromTable);
+  const save = usePlaybook((s) => s.saveProjectDetail);
+  const [savingId, setSavingId] = useState<string | null>(null);
   const COLS = ["code", "name", "type", "client", "pm", "startDate", "endDate", "value", "status"];
   const csv = toCSV(rows as unknown as Record<string, unknown>[], COLS);
+  useEffect(() => { void sync(); }, [sync]);
+  const saveRow = async (id: string) => {
+    setSavingId(id);
+    try { await save(id); } finally { setSavingId(null); }
+  };
   return (
     <div className="space-y-5">
       <SectionHeader title="🏗️ Project Details" subtitle="Every project in scope — code, type, PM, dates, value, status.">
@@ -1395,12 +1736,12 @@ export function ProjectDetailsSection() {
 
       <div className="rounded-xl border bg-card overflow-x-auto">
         <div className="min-w-[1300px]">
-          <div className="grid grid-cols-[100px_1.2fr_140px_1fr_140px_120px_120px_120px_120px_40px] gap-2 px-3 py-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground bg-muted/30 border-b">
+          <div className="grid grid-cols-[100px_1.2fr_140px_1fr_140px_120px_120px_120px_120px_80px] gap-2 px-3 py-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground bg-muted/30 border-b">
             <div>Code</div><div>Name</div><div>Type</div><div>Client</div><div>PM</div><div>Start</div><div>End</div><div>Value</div><div>Status</div><div></div>
           </div>
           {rows.length === 0 && <div className="px-4 py-8 text-center text-sm text-muted-foreground">No projects yet.</div>}
           {rows.map((p) => (
-            <div key={p.id} className="grid grid-cols-[100px_1.2fr_140px_1fr_140px_120px_120px_120px_120px_40px] gap-2 px-3 py-2 items-center border-b last:border-0">
+            <div key={p.id} className="grid grid-cols-[100px_1.2fr_140px_1fr_140px_120px_120px_120px_120px_80px] gap-2 px-3 py-2 items-center border-b last:border-0">
               <Input className="h-8 text-xs font-mono" value={p.code} onChange={(e) => update(p.id, { code: e.target.value })} />
               <Input className="h-8 text-sm" value={p.name} onChange={(e) => update(p.id, { name: e.target.value })} />
               <Input className="h-8 text-xs" value={p.type} onChange={(e) => update(p.id, { type: e.target.value })} />
@@ -1413,7 +1754,10 @@ export function ProjectDetailsSection() {
                 <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
                 <SelectContent>{["Tender", "Awarded", "Live", "Complete", "Archived"].map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
               </Select>
-              <Button size="icon" variant="ghost" onClick={() => del(p.id)}><Trash2 className="h-4 w-4 text-muted-foreground" /></Button>
+              <div className="flex items-center justify-end gap-1">
+                <Button size="icon" variant="ghost" disabled={savingId === p.id} onClick={() => void saveRow(p.id)}><Save className="h-4 w-4 text-muted-foreground" /></Button>
+                <Button size="icon" variant="ghost" onClick={() => del(p.id)}><Trash2 className="h-4 w-4 text-muted-foreground" /></Button>
+              </div>
             </div>
           ))}
         </div>
@@ -1430,8 +1774,16 @@ export function ContractorsSection() {
   const update = usePlaybook((s) => s.updateContractor);
   const del = usePlaybook((s) => s.deleteContractor);
   const replace = usePlaybook((s) => s.replaceContractors);
+  const sync = usePlaybook((s) => s.syncContractorsFromTable);
+  const save = usePlaybook((s) => s.saveContractor);
+  const [savingId, setSavingId] = useState<string | null>(null);
   const COLS = ["company", "trade", "contact", "email", "phone", "insurance", "abn", "status"];
   const csv = toCSV(rows as unknown as Record<string, unknown>[], COLS);
+  useEffect(() => { void sync(); }, [sync]);
+  const saveRow = async (id: string) => {
+    setSavingId(id);
+    try { await save(id); } finally { setSavingId(null); }
+  };
   return (
     <div className="space-y-5">
       <SectionHeader title="🔧 Contractor Database" subtitle="Every subcontractor — trade, contact, compliance.">
@@ -1448,12 +1800,12 @@ export function ContractorsSection() {
 
       <div className="rounded-xl border bg-card overflow-x-auto">
         <div className="min-w-[1200px]">
-          <div className="grid grid-cols-[1.2fr_160px_1fr_1fr_140px_180px_140px_140px_40px] gap-2 px-3 py-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground bg-muted/30 border-b">
+          <div className="grid grid-cols-[1.2fr_160px_1fr_1fr_140px_180px_140px_140px_80px] gap-2 px-3 py-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground bg-muted/30 border-b">
             <div>Company</div><div>Trade</div><div>Contact</div><div>Email</div><div>Phone</div><div>Insurance Exp.</div><div>ABN</div><div>Status</div><div></div>
           </div>
           {rows.length === 0 && <div className="px-4 py-8 text-center text-sm text-muted-foreground">No contractors yet.</div>}
           {rows.map((c) => (
-            <div key={c.id} className="grid grid-cols-[1.2fr_160px_1fr_1fr_140px_180px_140px_140px_40px] gap-2 px-3 py-2 items-center border-b last:border-0">
+            <div key={c.id} className="grid grid-cols-[1.2fr_160px_1fr_1fr_140px_180px_140px_140px_80px] gap-2 px-3 py-2 items-center border-b last:border-0">
               <Input className="h-8 text-sm" value={c.company} onChange={(e) => update(c.id, { company: e.target.value })} />
               <Input className="h-8 text-xs" value={c.trade} onChange={(e) => update(c.id, { trade: e.target.value })} />
               <Input className="h-8 text-xs" value={c.contact} onChange={(e) => update(c.id, { contact: e.target.value })} />
@@ -1465,7 +1817,10 @@ export function ContractorsSection() {
                 <SelectTrigger className={cn("h-8 text-xs", c.status === "Approved" && "text-success", c.status === "Rejected" && "text-destructive")}><SelectValue /></SelectTrigger>
                 <SelectContent>{["Pending", "Approved", "Rejected"].map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
               </Select>
-              <Button size="icon" variant="ghost" onClick={() => del(c.id)}><Trash2 className="h-4 w-4 text-muted-foreground" /></Button>
+              <div className="flex items-center justify-end gap-1">
+                <Button size="icon" variant="ghost" disabled={savingId === c.id} onClick={() => void saveRow(c.id)}><Save className="h-4 w-4 text-muted-foreground" /></Button>
+                <Button size="icon" variant="ghost" onClick={() => del(c.id)}><Trash2 className="h-4 w-4 text-muted-foreground" /></Button>
+              </div>
             </div>
           ))}
         </div>
@@ -1481,8 +1836,16 @@ export function CostCodesSection() {
   const update = usePlaybook((s) => s.updateCostCode);
   const del = usePlaybook((s) => s.deleteCostCode);
   const replace = usePlaybook((s) => s.replaceCostCodes);
+  const sync = usePlaybook((s) => s.syncCostCodesFromTable);
+  const save = usePlaybook((s) => s.saveCostCode);
+  const [savingId, setSavingId] = useState<string | null>(null);
   const COLS = ["code", "name", "category", "unit", "rate", "notes"];
   const csv = toCSV(rows as unknown as Record<string, unknown>[], COLS);
+  useEffect(() => { void sync(); }, [sync]);
+  const saveRow = async (id: string) => {
+    setSavingId(id);
+    try { await save(id); } finally { setSavingId(null); }
+  };
   return (
     <div className="space-y-5">
       <SectionHeader title="💰 Company Cost Codes" subtitle="Company-wide cost code structure — synced into Plexa budgets.">
@@ -1498,19 +1861,22 @@ export function CostCodesSection() {
 
       <div className="rounded-xl border bg-card overflow-x-auto">
         <div className="min-w-[1100px]">
-          <div className="grid grid-cols-[120px_1.5fr_180px_100px_120px_1fr_40px] gap-2 px-3 py-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground bg-muted/30 border-b">
+          <div className="grid grid-cols-[120px_1.5fr_180px_100px_120px_1fr_80px] gap-2 px-3 py-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground bg-muted/30 border-b">
             <div>Code</div><div>Name</div><div>Category</div><div>Unit</div><div>Rate</div><div>Notes</div><div></div>
           </div>
           {rows.length === 0 && <div className="px-4 py-8 text-center text-sm text-muted-foreground">No cost codes yet.</div>}
           {rows.map((c) => (
-            <div key={c.id} className="grid grid-cols-[120px_1.5fr_180px_100px_120px_1fr_40px] gap-2 px-3 py-2 items-center border-b last:border-0">
+            <div key={c.id} className="grid grid-cols-[120px_1.5fr_180px_100px_120px_1fr_80px] gap-2 px-3 py-2 items-center border-b last:border-0">
               <Input className="h-8 text-xs font-mono" value={c.code} onChange={(e) => update(c.id, { code: e.target.value })} />
               <Input className="h-8 text-sm" value={c.name} onChange={(e) => update(c.id, { name: e.target.value })} />
               <Input className="h-8 text-xs" value={c.category} onChange={(e) => update(c.id, { category: e.target.value })} />
               <Input className="h-8 text-xs" value={c.unit} onChange={(e) => update(c.id, { unit: e.target.value })} />
               <Input className="h-8 text-xs" value={c.rate} onChange={(e) => update(c.id, { rate: e.target.value })} />
               <Input className="h-8 text-xs" value={c.notes} onChange={(e) => update(c.id, { notes: e.target.value })} />
-              <Button size="icon" variant="ghost" onClick={() => del(c.id)}><Trash2 className="h-4 w-4 text-muted-foreground" /></Button>
+              <div className="flex items-center justify-end gap-1">
+                <Button size="icon" variant="ghost" disabled={savingId === c.id} onClick={() => void saveRow(c.id)}><Save className="h-4 w-4 text-muted-foreground" /></Button>
+                <Button size="icon" variant="ghost" onClick={() => del(c.id)}><Trash2 className="h-4 w-4 text-muted-foreground" /></Button>
+              </div>
             </div>
           ))}
         </div>
@@ -1826,11 +2192,16 @@ function dueLabel(dueDate: string, status: string) {
 
 export function TasksRegisterSection() {
   const reminders = usePlaybook((s) => s.reminderTasks);
+  const userAccounts = usePlaybook((s) => s.userAccounts);
   const addReminderTask = usePlaybook((s) => s.addReminderTask);
   const updateReminderTask = usePlaybook((s) => s.updateReminderTask);
   const deleteReminderTask = usePlaybook((s) => s.deleteReminderTask);
+  const saveReminderTask = usePlaybook((s) => s.saveReminderTask);
+  const syncReminderTasksFromTable = usePlaybook((s) => s.syncReminderTasksFromTable);
+  const syncUsersFromTable = usePlaybook((s) => s.syncUsersFromTable);
 
   const [filter, setFilter] = useState<"all" | "open" | "due" | "overdue" | "done">("all");
+  const [savingId, setSavingId] = useState<string | null>(null);
   const [draft, setDraft] = useState({
     title: "",
     details: "",
@@ -1839,6 +2210,11 @@ export function TasksRegisterSection() {
     remindAt: "",
     priority: "MEDIUM" as (typeof REMINDER_PRIORITIES)[number],
   });
+
+  useEffect(() => {
+    void syncReminderTasksFromTable();
+    void syncUsersFromTable();
+  }, [syncReminderTasksFromTable, syncUsersFromTable]);
 
   const today = todayIso();
   const open = reminders.filter((r) => r.status !== "DONE");
@@ -1864,9 +2240,14 @@ export function TasksRegisterSection() {
       return da.localeCompare(db);
     });
 
-  const submit = () => {
+  const submit = async () => {
     if (!draft.title.trim()) return;
+
+    const id = Math.random().toString(36).slice(2, 10);
+    const createdAt = new Date().toISOString();
     addReminderTask({
+      id,
+      createdAt,
       title: draft.title.trim(),
       details: draft.details.trim(),
       assignee: draft.assignee.trim(),
@@ -1875,7 +2256,14 @@ export function TasksRegisterSection() {
       priority: draft.priority,
       status: "OPEN",
     });
-    setDraft({ title: "", details: "", assignee: "", dueDate: "", remindAt: "", priority: "MEDIUM" });
+
+    setSavingId(id);
+    try {
+      await saveReminderTask(id);
+    } finally {
+      setSavingId(null);
+      setDraft({ title: "", details: "", assignee: "", dueDate: "", remindAt: "", priority: "MEDIUM" });
+    }
   };
 
   return (
@@ -1919,9 +2307,9 @@ export function TasksRegisterSection() {
             onChange={(e) => setDraft({ ...draft, assignee: e.target.value })}
           />
           <datalist id="reminder-assignees">
-            {USER_DIRECTORY.map((u) => (
-              <option key={`${u.firstName}-${u.lastName}`} value={`${u.firstName} ${u.lastName}`}>
-                {u.role}
+            {userAccounts.map((u) => (
+              <option key={u.id} value={u.name}>
+                {u.role || u.position || "User account"}{u.department ? ` — ${u.department}` : ""}
               </option>
             ))}
           </datalist>
@@ -1949,7 +2337,7 @@ export function TasksRegisterSection() {
           onChange={(e) => setDraft({ ...draft, details: e.target.value })}
         />
         <div className="flex justify-end">
-          <Button size="sm" onClick={submit} disabled={!draft.title.trim()}>
+          <Button size="sm" onClick={() => void submit()} disabled={!draft.title.trim() || savingId !== null}>
             <Plus className="h-4 w-4" /> Add reminder
           </Button>
         </div>
@@ -2033,6 +2421,16 @@ export function TasksRegisterSection() {
                       </Select>
                     </div>
                     <div className="md:col-span-1 flex md:justify-end gap-1">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="h-8 px-2"
+                        title="Save reminder"
+                        onClick={() => void saveReminderTask(r.id)}
+                        disabled={savingId === r.id}
+                      >
+                        <Save className="h-4 w-4" />
+                      </Button>
                       {r.status !== "DONE" ? (
                         <Button size="sm" variant="outline" className="h-8 px-2" title="Mark as done" onClick={() => updateReminderTask(r.id, { status: "DONE" })}>
                           <Check className="h-4 w-4" />

@@ -13,10 +13,9 @@ import type {
   TimelineMode,
   TaskScheduleOverride,
 } from "./playbook-store";
-import { computeSchedule } from "./playbook-store";
+import { computeSchedule, usePlaybook } from "./playbook-store";
 import type { Task } from "./playbook-data";
-import { PHASES } from "./playbook-data";
-import { SESSIONS, CONTENT_TOPICS, type SessionDef } from "./registers-data";
+import { CONTENT_TOPICS, type SessionDef } from "./registers-data";
 
 export interface DraftedEmail {
   subject: string;
@@ -149,7 +148,8 @@ const fmtDate = (s: string) => {
 };
 
 function taskLabel(t: Task): string {
-  const phase = PHASES.find((p) => p.id === t.phase);
+  const state = usePlaybook.getState();
+  const phase = state.phases.find((p) => p.id === t.phase);
   return `<strong style="font-family:ui-monospace,monospace;font-size:12px;color:${BRAND_PRIMARY};">${escapeHtml(t.id)}</strong> ${escapeHtml(t.title)}${phase ? ` <span style="color:${MUTED};font-size:11px;">(${escapeHtml(phase.short)})</span>` : ""}${t.owner ? ` <span style="color:${MUTED};font-size:11px;">· ${escapeHtml(t.owner)}</span>` : ""}`;
 }
 
@@ -421,9 +421,6 @@ export function buildCompleteEmail(ctx: BuildContext): DraftedEmail {
     ccDescription: "All stakeholders + champions",
   };
 }
-
-// ─── Helpers exposed for the UI ─────────────────────────────────────
-export { SESSIONS as ALL_SESSIONS };
 
 // Build a mailto: URL that opens the default mail client with everything pre-filled.
 export function buildMailto(d: DraftedEmail): string {

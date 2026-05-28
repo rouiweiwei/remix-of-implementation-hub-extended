@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { ChevronDown } from "lucide-react";
 import { PhaseBanner } from "@/components/workbench/PhaseBanner";
 import { CoverSection, MissionControlSection } from "@/components/workbench/sections/CoverMission";
@@ -8,6 +8,7 @@ import { SessionRegisterSection, AttendanceSection, SignOffSection, EmailLogSect
 import { GanttSection } from "@/components/workbench/sections/Gantt";
 import { cn } from "@/lib/utils";
 import type { PhaseId } from "@/lib/playbook-data";
+import { usePlaybook } from "@/lib/playbook-store";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -52,6 +53,9 @@ type TabId = (typeof NAV)[number]["id"];
 function Workbench() {
   const [tab, setTab] = useState<TabId>("mission");
   const [phaseFilter, setPhaseFilter] = useState<PhaseId | null>(null);
+  const hydrationStatus = usePlaybook((s) => s.hydrationStatus);
+  const hydrationMessage = usePlaybook((s) => s.hydrationMessage);
+  const hydrateFromApi = usePlaybook((s) => s.hydrateFromApi);
 
   const groups = useMemo(() => Array.from(new Set(NAV.map((n) => n.group))), []);
   const activeGroup = NAV.find((n) => n.id === tab)?.group;
@@ -61,6 +65,51 @@ function Workbench() {
   // Make sure the group containing the active tab is always open
   const isOpen = (g: string) => (g === activeGroup ? true : openGroups[g] !== false);
   const toggleGroup = (g: string) => setOpenGroups((prev) => ({ ...prev, [g]: !(prev[g] ?? true) }));
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    window.playbookUrl = '/'
+    window.apiBase = "https://api.staging.plexapro.com";
+    window.authToken = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI3OGUwMThlNS1mZWY5LTQwMTEtYjFiMi1lZjI3OTZhYjlhMDIiLCJ0eXBlIjoiYWNjZXNzX3Rva2VuIiwianRpIjoiY2QxNTEyNDUtNzI5Yi00MTJmLTllMjQtNTgwZTczYWUwYTEyIiwiaWF0IjoxNzgwMDEwNDI4LCJleHAiOjE3ODAwMzkyMjh9.MwEDdLoy9k0tF5pYqjQWPn2KkpD4HGY9oiSowy3H-OI";
+
+    const apiBase = (window as any).apiBase as string | undefined;
+    const playbookUrl = (window as any).playbookUrl as string | undefined;
+
+    if (apiBase || playbookUrl) {
+      void hydrateFromApi(playbookUrl);
+    }
+  }, [hydrateFromApi]);
+
+  if (hydrationStatus === "error") {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background px-6 text-center">
+        <div className="max-w-md rounded-2xl border border-destructive/30 bg-destructive/5 p-8 shadow-sm">
+          <h2 className="text-xl font-semibold tracking-tight">We could not load the data</h2>
+          <p className="mt-2 text-sm text-muted-foreground">{hydrationMessage || "The API sync did not return the expected data. Please try again later."}</p>
+          <button
+            type="button"
+            onClick={() => void hydrateFromApi((window as any).playbookUrl as string | undefined)}
+            className="mt-5 rounded-md bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground hover:bg-primary/90"
+          >
+            Try again
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (hydrationStatus !== "ready") {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background px-6 text-center">
+        <div className="max-w-md rounded-2xl border bg-card p-8 shadow-sm">
+          <div className="mx-auto mb-4 h-10 w-10 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+          <h2 className="text-xl font-semibold tracking-tight">Loading your implementation data…</h2>
+          <p className="mt-2 text-sm text-muted-foreground">We are syncing the latest response from the API before the workbench renders.</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background">
@@ -73,7 +122,7 @@ function Workbench() {
               <div className="text-[10px] uppercase tracking-wider text-muted-foreground leading-none mt-0.5">Implementation Workbench</div>
             </div>
           </div>
-          <div className="text-xs text-muted-foreground hidden md:block">Version 3.0 · Building better, together</div>
+          <HeaderSave />
         </div>
       </header>
 
@@ -150,6 +199,17 @@ function Workbench() {
           </main>
         </div>
       </div>
+    </div>
+  );
+}
+
+function HeaderSave() {
+  return (
+    <div className="flex items-center gap-3">
+      <div className="text-xs text-muted-foreground hidden md:flex items-center gap-3">
+        <div className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">API Synced</div>
+      </div>
+      <div className="text-xs text-muted-foreground hidden md:block">Version 3.0 · Building better, together</div>
     </div>
   );
 }

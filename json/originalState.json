@@ -1,0 +1,1156 @@
+{
+  "state": {
+    "dod": [
+      {
+        "by": "",
+        "id": 1,
+        "cat": "PLATFORM",
+        "date": "",
+        "text": "All active projects created and configured on Plexa",
+        "confirmed": false
+      },
+      {
+        "by": "",
+        "id": 2,
+        "cat": "PLATFORM",
+        "date": "",
+        "text": "All users onboarded — accounts active, roles and permissions set",
+        "confirmed": false
+      },
+      {
+        "by": "",
+        "id": 3,
+        "cat": "PLATFORM",
+        "date": "",
+        "text": "All contractors imported and registered in contractor database",
+        "confirmed": false
+      },
+      {
+        "by": "",
+        "id": 4,
+        "cat": "SITE",
+        "date": "",
+        "text": "All personnel signing in and out via Plexa site module",
+        "confirmed": false
+      },
+      {
+        "by": "",
+        "id": 5,
+        "cat": "SITE",
+        "date": "",
+        "text": "All SWMS uploaded, review checklists completed, signed by all personnel",
+        "confirmed": false
+      },
+      {
+        "by": "",
+        "id": 6,
+        "cat": "SITE",
+        "date": "",
+        "text": "All equipment inductions completed on platform",
+        "confirmed": false
+      },
+      {
+        "by": "",
+        "id": 7,
+        "cat": "SITE",
+        "date": "",
+        "text": "At least one full induction cycle completed per project",
+        "confirmed": false
+      },
+      {
+        "by": "",
+        "id": 8,
+        "cat": "SITE",
+        "date": "",
+        "text": "Permits, ITPs, ITCs, meetings and inspections active on platform",
+        "confirmed": false
+      },
+      {
+        "by": "",
+        "id": 9,
+        "cat": "DOCUMENTS",
+        "date": "",
+        "text": "All project documents uploaded to correct folder structure",
+        "confirmed": false
+      },
+      {
+        "by": "",
+        "id": 10,
+        "cat": "DOCUMENTS",
+        "date": "",
+        "text": "All drawings uploaded and accessible",
+        "confirmed": false
+      },
+      {
+        "by": "",
+        "id": 11,
+        "cat": "DOCUMENTS",
+        "date": "",
+        "text": "At least one transmittal sent through Plexa per project",
+        "confirmed": false
+      },
+      {
+        "by": "",
+        "id": 12,
+        "cat": "DOCUMENTS",
+        "date": "",
+        "text": "At least one workflow completed end-to-end on platform",
+        "confirmed": false
+      },
+      {
+        "by": "",
+        "id": 13,
+        "cat": "FINANCE",
+        "date": "",
+        "text": "Cost codes configured and matching accounting system",
+        "confirmed": false
+      },
+      {
+        "by": "",
+        "id": 14,
+        "cat": "FINANCE",
+        "date": "",
+        "text": "Budget set up for all active projects",
+        "confirmed": false
+      },
+      {
+        "by": "",
+        "id": 15,
+        "cat": "FINANCE",
+        "date": "",
+        "text": "ONE FULL FINANCE CYCLE COMPLETE: invoices, claims, ERP synced, reconciled",
+        "confirmed": false
+      },
+      {
+        "by": "",
+        "id": 16,
+        "cat": "FINANCE",
+        "date": "",
+        "text": "Accounting integration live and tested — sync confirmed",
+        "confirmed": false
+      },
+      {
+        "by": "",
+        "id": 17,
+        "cat": "FINANCE",
+        "date": "",
+        "text": "Head Contract claims and variations set up for applicable projects",
+        "confirmed": false
+      },
+      {
+        "by": "",
+        "id": 18,
+        "cat": "FINANCE",
+        "date": "",
+        "text": "AP module live — at least one invoice approved through Plexa",
+        "confirmed": false
+      },
+      {
+        "by": "",
+        "id": 19,
+        "cat": "ADOPTION",
+        "date": "",
+        "text": "Platform adoption > 70% of licensed users active in past 30 days",
+        "confirmed": false
+      },
+      {
+        "by": "",
+        "id": 20,
+        "cat": "ADOPTION",
+        "date": "",
+        "text": "Plexa Champions identified, trained and certified — self-sufficient",
+        "confirmed": false
+      },
+      {
+        "by": "",
+        "id": 21,
+        "cat": "ADOPTION",
+        "date": "",
+        "text": "All resistant users engaged — documented strategy in place",
+        "confirmed": false
+      },
+      {
+        "by": "",
+        "id": 22,
+        "cat": "TRAINING",
+        "date": "",
+        "text": "All training sessions completed — attendance registers on file",
+        "confirmed": false
+      },
+      {
+        "by": "",
+        "id": 23,
+        "cat": "TRAINING",
+        "date": "",
+        "text": "All trainees signed off on Training Sign-Off register",
+        "confirmed": false
+      },
+      {
+        "by": "",
+        "id": 24,
+        "cat": "SIGN-OFF",
+        "date": "",
+        "text": "CEO confirmed satisfaction in writing",
+        "confirmed": false
+      },
+      {
+        "by": "",
+        "id": 25,
+        "cat": "SIGN-OFF",
+        "date": "",
+        "text": "CFO confirmed satisfaction with finance cycle and reconciliation",
+        "confirmed": false
+      },
+      {
+        "by": "",
+        "id": 26,
+        "cat": "SIGN-OFF",
+        "date": "",
+        "text": "IT Lead confirmed integration and setup satisfactory",
+        "confirmed": false
+      },
+      {
+        "by": "",
+        "id": 27,
+        "cat": "SIGN-OFF",
+        "date": "",
+        "text": "Final implementation summary sent to all stakeholders",
+        "confirmed": false
+      },
+      {
+        "by": "",
+        "id": 28,
+        "cat": "HANDOVER",
+        "date": "",
+        "text": "Client Intranet Pack delivered — recordings, QSGs, registers, champions",
+        "confirmed": false
+      },
+      {
+        "by": "",
+        "id": 29,
+        "cat": "HANDOVER",
+        "date": "",
+        "text": "Ongoing CS program initiated — 90-day check-in schedule agreed",
+        "confirmed": false
+      }
+    ],
+    "tasks": [
+      {
+        "id": "1.01",
+        "notes": "Lead CS Engineer — owns delivery, runs sessions, coordinates internally",
+        "owner": "PLEXA",
+        "phase": "1A",
+        "title": "Nominate Plexa Authorised Representative",
+        "status": "COMPLETE"
+      },
+      {
+        "id": "1.02",
+        "notes": "Decision-maker who can approve, unblock, and attend all sessions",
+        "owner": "CLIENT",
+        "phase": "1A",
+        "title": "Nominate Client Authorised Representative",
+        "status": "COMPLETE"
+      },
+      {
+        "id": "1.03",
+        "owner": "CLIENT",
+        "phase": "1A",
+        "title": "Nominate Client Template & Document Provider",
+        "status": "COMPLETE"
+      },
+      {
+        "id": "1.04",
+        "owner": "PLEXA + CLIENT",
+        "phase": "1A",
+        "title": "Confirm timeline and go-live target date — in writing",
+        "status": "COMPLETE"
+      },
+      {
+        "id": "1.05",
+        "owner": "CLIENT",
+        "phase": "1A",
+        "title": "Capture Company Overview: structure, projects, team, locations",
+        "status": "COMPLETE"
+      },
+      {
+        "id": "1.06",
+        "owner": "CLIENT",
+        "phase": "1A",
+        "title": "Define Key Objectives: what problems is Plexa solving?",
+        "status": "COMPLETE"
+      },
+      {
+        "id": "1.07",
+        "owner": "CLIENT",
+        "phase": "1A",
+        "title": "Define Key Challenges: current pain points across all teams",
+        "status": "COMPLETE"
+      },
+      {
+        "id": "1.08",
+        "owner": "CLIENT",
+        "phase": "1A",
+        "title": "Define Key Advantages: expected outcomes from Plexa",
+        "status": "COMPLETE"
+      },
+      {
+        "id": "1.09",
+        "owner": "PLEXA + CLIENT",
+        "phase": "1A",
+        "title": "Agree on Success Criteria: what does done look like?",
+        "status": "COMPLETE"
+      },
+      {
+        "id": "1.10",
+        "owner": "PLEXA + CLIENT",
+        "phase": "1A",
+        "title": "Agree on Measures of Success: how will adoption be tracked?",
+        "status": "COMPLETE"
+      },
+      {
+        "id": "1.11",
+        "owner": "PLEXA",
+        "phase": "1A",
+        "title": "Lock in weekly email cadence — confirm distribution list",
+        "status": "COMPLETE"
+      },
+      {
+        "id": "1.12",
+        "owner": "PLEXA",
+        "phase": "1A",
+        "title": "Schedule all Phase 1 sessions — send calendar invites",
+        "status": "COMPLETE"
+      },
+      {
+        "id": "1.13",
+        "owner": "PLEXA + CLIENT",
+        "phase": "1B",
+        "title": "Workflows & Approvals: current → Plexa",
+        "status": "IN PROGRESS"
+      },
+      {
+        "id": "1.14",
+        "owner": "PLEXA + CLIENT",
+        "phase": "1B",
+        "title": "Design & Document Management: folders, transmittals, markups",
+        "status": "IN PROGRESS"
+      },
+      {
+        "id": "1.15",
+        "owner": "PLEXA + CLIENT",
+        "phase": "1B",
+        "title": "Procurement & Contracting: tendering, negotiations, scope",
+        "status": "IN PROGRESS"
+      },
+      {
+        "id": "1.16",
+        "owner": "PLEXA + CLIENT",
+        "phase": "1B",
+        "title": "Budgeting & Commercial Management: budget, CTC, forecasting",
+        "status": "IN PROGRESS"
+      },
+      {
+        "id": "1.17",
+        "owner": "PLEXA + CLIENT",
+        "phase": "1B",
+        "title": "Finance & AP: invoice handling, subcontracts, EOM",
+        "status": "IN PROGRESS"
+      },
+      {
+        "id": "1.18",
+        "owner": "PLEXA + CLIENT",
+        "phase": "1B",
+        "title": "Site & Project Ops: contractors, ITPs, goods receipting, defects",
+        "status": "IN PROGRESS"
+      },
+      {
+        "id": "1.19",
+        "owner": "PLEXA + CLIENT",
+        "phase": "1B",
+        "title": "Safety & Quality: SWMS, permits, inductions, observations",
+        "status": "IN PROGRESS"
+      },
+      {
+        "id": "1.20",
+        "owner": "PLEXA + CLIENT",
+        "phase": "1B",
+        "title": "Data Migrations & Integrations: full tech stack review",
+        "status": "IN PROGRESS"
+      },
+      {
+        "id": "1.21",
+        "owner": "PLEXA",
+        "phase": "1B",
+        "title": "Formally document scope: in vs out — client sign-off",
+        "status": "IN PROGRESS"
+      },
+      {
+        "id": "1.22",
+        "owner": "CLIENT",
+        "phase": "1C",
+        "title": "Client provides: User list (name, email, phone, position, role)",
+        "status": "IN PROGRESS"
+      },
+      {
+        "id": "1.23",
+        "owner": "CLIENT",
+        "phase": "1C",
+        "title": "Client confirms: live project count and list",
+        "status": "IN PROGRESS"
+      },
+      {
+        "id": "1.24",
+        "owner": "CLIENT",
+        "phase": "1C",
+        "title": "Client confirms: migrate data OR start fresh",
+        "status": "IN PROGRESS"
+      },
+      {
+        "id": "1.25",
+        "owner": "CLIENT",
+        "phase": "1C",
+        "title": "Client provides: Folder Structure(s) per project type",
+        "status": "IN PROGRESS"
+      },
+      {
+        "id": "1.26",
+        "owner": "CLIENT",
+        "phase": "1C",
+        "title": "Client provides: Workflow Templates (Docs, Finance, HSEQ)",
+        "status": "IN PROGRESS"
+      },
+      {
+        "id": "1.27",
+        "owner": "CLIENT",
+        "phase": "1C",
+        "title": "Client provides: Budget Templates and Cost Code structure",
+        "status": "IN PROGRESS"
+      },
+      {
+        "id": "1.28",
+        "owner": "CLIENT",
+        "phase": "1C",
+        "title": "Client provides: Equipment Checklists",
+        "status": "IN PROGRESS"
+      },
+      {
+        "id": "1.29",
+        "owner": "CLIENT",
+        "phase": "1C",
+        "title": "Client provides: SWMS Review Checklist",
+        "status": "IN PROGRESS"
+      },
+      {
+        "id": "1.30",
+        "owner": "CLIENT",
+        "phase": "1C",
+        "title": "Client provides: Injury / Incident / Observation Forms",
+        "status": "IN PROGRESS"
+      },
+      {
+        "id": "1.31",
+        "owner": "CLIENT",
+        "phase": "1C",
+        "title": "Client provides: Meeting & Inspection Templates",
+        "status": "IN PROGRESS"
+      },
+      {
+        "id": "1.32",
+        "owner": "CLIENT",
+        "phase": "1C",
+        "title": "Client provides: ITP & ITC Templates",
+        "status": "IN PROGRESS"
+      },
+      {
+        "id": "1.33",
+        "owner": "CLIENT",
+        "phase": "1C",
+        "title": "Client provides: Permit Templates",
+        "status": "IN PROGRESS"
+      },
+      {
+        "id": "1.34",
+        "owner": "CLIENT",
+        "phase": "1C",
+        "title": "Client provides: Access to existing system for data export",
+        "status": "IN PROGRESS"
+      },
+      {
+        "id": "2.01",
+        "owner": "PLEXA",
+        "phase": "2A",
+        "title": "Set up production environment and test environment",
+        "status": "NOT STARTED"
+      },
+      {
+        "id": "2.02",
+        "owner": "PLEXA",
+        "phase": "2A",
+        "title": "Set up all folder structures per client templates",
+        "status": "NOT STARTED"
+      },
+      {
+        "id": "2.03",
+        "owner": "PLEXA",
+        "phase": "2A",
+        "title": "Set up workflow templates (Documents, Finance, HSEQ)",
+        "status": "NOT STARTED"
+      },
+      {
+        "id": "2.04",
+        "owner": "PLEXA",
+        "phase": "2A",
+        "title": "Set up cost codes from client budget templates",
+        "status": "NOT STARTED"
+      },
+      {
+        "id": "2.05",
+        "owner": "PLEXA",
+        "phase": "2A",
+        "title": "Set up budget templates",
+        "status": "NOT STARTED"
+      },
+      {
+        "id": "2.06",
+        "owner": "PLEXA",
+        "phase": "2A",
+        "title": "Set up SWMS Review Checklist",
+        "status": "NOT STARTED"
+      },
+      {
+        "id": "2.07",
+        "owner": "PLEXA",
+        "phase": "2A",
+        "title": "Set up Equipment Types and Checklists",
+        "status": "NOT STARTED"
+      },
+      {
+        "id": "2.08",
+        "owner": "PLEXA",
+        "phase": "2A",
+        "title": "Set up Injury / Incident / Observation categories",
+        "status": "NOT STARTED"
+      },
+      {
+        "id": "2.09",
+        "owner": "PLEXA",
+        "phase": "2A",
+        "title": "Set up Permit Types and Checklists",
+        "status": "NOT STARTED"
+      },
+      {
+        "id": "2.10",
+        "owner": "PLEXA",
+        "phase": "2A",
+        "title": "Set up Meetings & Inspections templates",
+        "status": "NOT STARTED"
+      },
+      {
+        "id": "2.11",
+        "owner": "PLEXA",
+        "phase": "2A",
+        "title": "Set up ITP & ITC templates",
+        "status": "NOT STARTED"
+      },
+      {
+        "id": "2.12",
+        "owner": "PLEXA",
+        "phase": "2A",
+        "title": "Set up Roles & Permissions per client org chart",
+        "status": "NOT STARTED"
+      },
+      {
+        "id": "2.13",
+        "owner": "PLEXA",
+        "phase": "2A",
+        "title": "Create all projects from Project Details tab",
+        "status": "NOT STARTED"
+      },
+      {
+        "id": "2.14",
+        "owner": "PLEXA",
+        "phase": "2A",
+        "title": "Import all users from User Accounts tab",
+        "status": "NOT STARTED"
+      },
+      {
+        "id": "2.15",
+        "owner": "PLEXA",
+        "phase": "2A",
+        "title": "Import all contractors from Contractor Database tab",
+        "status": "NOT STARTED"
+      },
+      {
+        "id": "2.16",
+        "owner": "CLIENT",
+        "phase": "2B",
+        "title": "Confirm cut-off date with client for financial data",
+        "status": "NOT STARTED"
+      },
+      {
+        "id": "2.17",
+        "owner": "PLEXA",
+        "phase": "2B",
+        "title": "Export: Project Directory",
+        "status": "NOT STARTED"
+      },
+      {
+        "id": "2.18",
+        "owner": "PLEXA",
+        "phase": "2B",
+        "title": "Export: Documents & Drawings",
+        "status": "NOT STARTED"
+      },
+      {
+        "id": "2.19",
+        "owner": "PLEXA",
+        "phase": "2B",
+        "title": "Export: Correspondence",
+        "status": "NOT STARTED"
+      },
+      {
+        "id": "2.20",
+        "owner": "PLEXA",
+        "phase": "2B",
+        "title": "Export: Photos",
+        "status": "NOT STARTED"
+      },
+      {
+        "id": "2.21",
+        "owner": "PLEXA",
+        "phase": "2B",
+        "title": "Export: SWMS",
+        "status": "NOT STARTED"
+      },
+      {
+        "id": "2.22",
+        "owner": "PLEXA",
+        "phase": "2B",
+        "title": "Export: Complete backup — store on Plexa Drive",
+        "status": "NOT STARTED"
+      },
+      {
+        "id": "2.23",
+        "owner": "PLEXA",
+        "phase": "2B",
+        "title": "Export: Commitments",
+        "status": "NOT STARTED"
+      },
+      {
+        "id": "2.24",
+        "owner": "PLEXA",
+        "phase": "2B",
+        "title": "Export: Variations",
+        "status": "NOT STARTED"
+      },
+      {
+        "id": "2.25",
+        "owner": "PLEXA",
+        "phase": "2B",
+        "title": "Export: Invoices",
+        "status": "NOT STARTED"
+      },
+      {
+        "id": "2.26",
+        "owner": "PLEXA",
+        "phase": "2B",
+        "title": "Export: Head Contract Claims & Variations",
+        "status": "NOT STARTED"
+      },
+      {
+        "id": "2.27",
+        "owner": "PLEXA",
+        "phase": "2C",
+        "title": "Create folder structure in Plexa",
+        "status": "NOT STARTED"
+      },
+      {
+        "id": "2.28",
+        "owner": "PLEXA",
+        "phase": "2C",
+        "title": "Upload Documents",
+        "status": "NOT STARTED"
+      },
+      {
+        "id": "2.29",
+        "owner": "PLEXA",
+        "phase": "2C",
+        "title": "Upload Project Directory",
+        "status": "NOT STARTED"
+      },
+      {
+        "id": "2.30",
+        "owner": "PLEXA",
+        "phase": "2C",
+        "title": "Upload & Approve SWMS (if previously approved)",
+        "status": "NOT STARTED"
+      },
+      {
+        "id": "2.31",
+        "owner": "PLEXA",
+        "phase": "2C",
+        "title": "Upload Site Photos",
+        "status": "NOT STARTED"
+      },
+      {
+        "id": "2.32",
+        "owner": "PLEXA",
+        "phase": "2C",
+        "title": "Upload Cost Codes",
+        "status": "NOT STARTED"
+      },
+      {
+        "id": "2.33",
+        "owner": "PLEXA",
+        "phase": "2C",
+        "title": "Upload Budget",
+        "status": "NOT STARTED"
+      },
+      {
+        "id": "2.34",
+        "owner": "PLEXA",
+        "phase": "2C",
+        "title": "Create Draft Commitments",
+        "status": "NOT STARTED"
+      },
+      {
+        "id": "2.35",
+        "owner": "PLEXA",
+        "phase": "2C",
+        "title": "Create Draft Head Contract Claims",
+        "status": "NOT STARTED"
+      },
+      {
+        "id": "2.36",
+        "owner": "PLEXA",
+        "phase": "2C",
+        "title": "Upload Direct & Indirect Costs",
+        "status": "NOT STARTED"
+      },
+      {
+        "id": "2.37",
+        "owner": "PLEXA",
+        "phase": "2C",
+        "title": "Upload SC Variations via Database",
+        "status": "NOT STARTED"
+      },
+      {
+        "id": "2.38",
+        "owner": "PLEXA",
+        "phase": "2C",
+        "title": "Raise Rollup Claims for all Commitments",
+        "status": "NOT STARTED"
+      },
+      {
+        "id": "2.39",
+        "owner": "PLEXA",
+        "phase": "2C",
+        "title": "Turn off external email notifications for Payment Schedules",
+        "status": "NOT STARTED"
+      },
+      {
+        "id": "2.40",
+        "owner": "PLEXA",
+        "phase": "2C",
+        "title": "Approve Claim Rollup",
+        "status": "NOT STARTED"
+      },
+      {
+        "id": "2.41",
+        "owner": "PLEXA",
+        "phase": "2C",
+        "title": "Raise and Approve Head Contract Claims",
+        "status": "NOT STARTED"
+      },
+      {
+        "id": "2.42",
+        "owner": "PLEXA + CLIENT",
+        "phase": "2C",
+        "title": "Connect Finance ERP to Plexa — test integration",
+        "status": "NOT STARTED"
+      },
+      {
+        "id": "2.43",
+        "owner": "PLEXA + CLIENT",
+        "phase": "2C",
+        "title": "Finance Reconciliation via Plexa Drive",
+        "status": "NOT STARTED"
+      },
+      {
+        "id": "3.01",
+        "owner": "PLEXA",
+        "phase": "3",
+        "title": "Schedule all HOD Workshops — confirmed in all calendars",
+        "status": "NOT STARTED"
+      },
+      {
+        "id": "3.02",
+        "owner": "PLEXA",
+        "phase": "3",
+        "title": "HOD Workshop: Site, Safety & Quality",
+        "status": "NOT STARTED"
+      },
+      {
+        "id": "3.03",
+        "owner": "PLEXA",
+        "phase": "3",
+        "title": "HOD Workshop: Document Control",
+        "status": "NOT STARTED"
+      },
+      {
+        "id": "3.04",
+        "owner": "PLEXA",
+        "phase": "3",
+        "title": "HOD Workshop: Finance & AP",
+        "status": "NOT STARTED"
+      },
+      {
+        "id": "3.05",
+        "owner": "PLEXA",
+        "phase": "3",
+        "title": "HOD Workshop: Procurement",
+        "status": "NOT STARTED"
+      },
+      {
+        "id": "3.06",
+        "owner": "PLEXA",
+        "phase": "3",
+        "title": "HOD Workshop: Program & Scheduling",
+        "status": "NOT STARTED"
+      },
+      {
+        "id": "3.07",
+        "owner": "PLEXA",
+        "phase": "3",
+        "title": "HOD Workshop: Rollout Planning",
+        "status": "NOT STARTED"
+      },
+      {
+        "id": "3.08",
+        "owner": "PLEXA",
+        "phase": "3",
+        "title": "Document all gaps identified across every workshop",
+        "status": "NOT STARTED"
+      },
+      {
+        "id": "3.09",
+        "owner": "PLEXA + CLIENT",
+        "phase": "3",
+        "title": "Complete Stakeholder Map",
+        "status": "NOT STARTED"
+      },
+      {
+        "id": "3.10",
+        "owner": "PLEXA + CLIENT",
+        "phase": "3",
+        "title": "Identify Plexa Champions",
+        "status": "NOT STARTED"
+      },
+      {
+        "id": "3.11",
+        "owner": "PLEXA + CLIENT",
+        "phase": "3",
+        "title": "Identify Resistant Users",
+        "status": "NOT STARTED"
+      },
+      {
+        "id": "3.12",
+        "owner": "PLEXA",
+        "phase": "3",
+        "title": "Define conversion strategy per resistant user",
+        "status": "NOT STARTED"
+      },
+      {
+        "id": "3.13",
+        "owner": "PLEXA + CLIENT",
+        "phase": "3",
+        "title": "Agree on rollout sequence: modules and order",
+        "status": "NOT STARTED"
+      },
+      {
+        "id": "4.01",
+        "owner": "PLEXA",
+        "phase": "4",
+        "title": "Run Module 4A — Site, Safety & Quality (Teach/Practice/Observe)",
+        "status": "NOT STARTED"
+      },
+      {
+        "id": "4.02",
+        "owner": "PLEXA",
+        "phase": "4",
+        "title": "Run Module 4B — Document Control, Workflows & Tasks",
+        "status": "NOT STARTED"
+      },
+      {
+        "id": "4.03",
+        "owner": "PLEXA",
+        "phase": "4",
+        "title": "Run Module 4C — Email & Correspondence",
+        "status": "NOT STARTED"
+      },
+      {
+        "id": "4.04",
+        "owner": "PLEXA",
+        "phase": "4",
+        "title": "Run Module 4D — Program & Scheduling",
+        "status": "NOT STARTED"
+      },
+      {
+        "id": "4.05",
+        "owner": "PLEXA",
+        "phase": "4",
+        "title": "Run Module 4E — Budget & Finance",
+        "status": "NOT STARTED"
+      },
+      {
+        "id": "4.06",
+        "owner": "PLEXA",
+        "phase": "4",
+        "title": "Run Module 4F — O&M Handover",
+        "status": "NOT STARTED"
+      },
+      {
+        "id": "4.07",
+        "owner": "PLEXA",
+        "phase": "4",
+        "title": "Run Module 4G — Tenders & Procurement",
+        "status": "NOT STARTED"
+      },
+      {
+        "id": "4.08",
+        "owner": "PLEXA + CLIENT",
+        "phase": "4",
+        "title": "Go-Live: switch projects to Plexa as system of record",
+        "status": "NOT STARTED"
+      },
+      {
+        "id": "4.09",
+        "owner": "PLEXA",
+        "phase": "4",
+        "title": "Hypercare: 2-week embedded support after go-live",
+        "status": "NOT STARTED"
+      }
+    ],
+    "client": {
+      "plexaLead": "Travis, Tony, Ayman",
+      "clientLead": "Travis, Bec, Lindsay, Phil",
+      "clientName": "Total Project Australia Pty Ltd 333",
+      "goLiveDate": "2026-06-30",
+      "accountManager": "Christian Lowe"
+    },
+    "emails": [
+      {
+        "id": "5neulkww",
+        "date": "",
+        "sent": false,
+        "week": 1,
+        "status": "Green",
+        "subject": "Week 1 — Plexa Implementation Update",
+        "summary": "",
+        "blockers": "",
+        "highlights": "",
+        "recipients": "CEO, CFO, IT Lead, Site Teams, Ops"
+      },
+      {
+        "id": "9dsr4d2l",
+        "date": "",
+        "sent": false,
+        "week": 2,
+        "status": "Green",
+        "subject": "Week 2 — Plexa Implementation Update",
+        "summary": "",
+        "blockers": "",
+        "highlights": "",
+        "recipients": "CEO, CFO, IT Lead, Site Teams, Ops"
+      },
+      {
+        "id": "f9md12g4",
+        "date": "",
+        "sent": false,
+        "week": 3,
+        "status": "Green",
+        "subject": "Week 3 — Plexa Implementation Update",
+        "summary": "",
+        "blockers": "",
+        "highlights": "",
+        "recipients": "CEO, CFO, IT Lead, Site Teams, Ops"
+      },
+      {
+        "id": "a71hqh80",
+        "date": "",
+        "sent": false,
+        "week": 4,
+        "status": "Green",
+        "subject": "Week 4 — Plexa Implementation Update",
+        "summary": "",
+        "blockers": "",
+        "highlights": "",
+        "recipients": "CEO, CFO, IT Lead, Site Teams, Ops"
+      },
+      {
+        "id": "fh39fc3u",
+        "date": "",
+        "sent": false,
+        "week": 5,
+        "status": "Green",
+        "subject": "Week 5 — Plexa Implementation Update",
+        "summary": "",
+        "blockers": "",
+        "highlights": "",
+        "recipients": "CEO, CFO, IT Lead, Site Teams, Ops"
+      },
+      {
+        "id": "ec4cvmd2",
+        "date": "",
+        "sent": false,
+        "week": 6,
+        "status": "Green",
+        "subject": "Week 6 — Plexa Implementation Update",
+        "summary": "",
+        "blockers": "",
+        "highlights": "",
+        "recipients": "CEO, CFO, IT Lead, Site Teams, Ops"
+      }
+    ],
+    "issues": [],
+    "version": 0,
+    "intranet": [],
+    "sessions": [],
+    "signOffs": [],
+    "attendees": [],
+    "champions": [],
+    "costCodes": [],
+    "startDate": "2026-05-26",
+    "contractors": [],
+    "noteHistory": {},
+    "stakeholders": [
+      {
+        "id": "8tfp1cf0",
+        "dept": "Executive",
+        "name": "Travis Mitchell",
+        "role": "CEO",
+        "email": "",
+        "phone": "",
+        "influence": "High",
+        "lastTouch": "",
+        "sentiment": "Unknown"
+      },
+      {
+        "id": "at0l8urb",
+        "dept": "Executive",
+        "name": "",
+        "role": "CFO",
+        "email": "",
+        "phone": "",
+        "influence": "High",
+        "lastTouch": "",
+        "sentiment": "Unknown"
+      },
+      {
+        "id": "rtqq08k5",
+        "dept": "IT & Systems",
+        "name": "Anthony",
+        "role": "IT Manager",
+        "email": "",
+        "phone": "",
+        "influence": "High",
+        "lastTouch": "",
+        "sentiment": "Unknown"
+      },
+      {
+        "id": "ksvepq60",
+        "dept": "Finance",
+        "name": "Rebecca",
+        "role": "Finance Manager",
+        "email": "",
+        "phone": "",
+        "influence": "High",
+        "lastTouch": "",
+        "sentiment": "Unknown"
+      },
+      {
+        "id": "v70hyce6",
+        "dept": "Site",
+        "name": "Phil Crimmins",
+        "role": "Project Manager",
+        "email": "",
+        "phone": "",
+        "influence": "High",
+        "lastTouch": "",
+        "sentiment": "Unknown"
+      }
+    ],
+    "timelineMode": "Medium (6 Weeks)",
+    "userAccounts": [],
+    "reminderTasks": [],
+    "taskOverrides": {},
+    "projectDetails": [],
+    "resistantUsers": [],
+    "trainingModules": [
+      {
+        "id": "4A",
+        "name": "Site, Safety & Quality Management",
+        "teach": "NOT STARTED",
+        "observe": "NOT STARTED",
+        "practice": "NOT STARTED",
+        "signOffDate": "",
+        "signedOffBy": ""
+      },
+      {
+        "id": "4B",
+        "name": "Document Control, Workflows & Tasks",
+        "teach": "NOT STARTED",
+        "observe": "NOT STARTED",
+        "practice": "NOT STARTED",
+        "signOffDate": "",
+        "signedOffBy": ""
+      },
+      {
+        "id": "4C",
+        "name": "Email & Correspondence",
+        "teach": "NOT STARTED",
+        "observe": "NOT STARTED",
+        "practice": "NOT STARTED",
+        "signOffDate": "",
+        "signedOffBy": ""
+      },
+      {
+        "id": "4D",
+        "name": "Program & Scheduling",
+        "teach": "NOT STARTED",
+        "observe": "NOT STARTED",
+        "practice": "NOT STARTED",
+        "signOffDate": "",
+        "signedOffBy": ""
+      },
+      {
+        "id": "4E",
+        "name": "Budget & Finance",
+        "teach": "NOT STARTED",
+        "observe": "NOT STARTED",
+        "practice": "NOT STARTED",
+        "signOffDate": "",
+        "signedOffBy": ""
+      },
+      {
+        "id": "4F",
+        "name": "O&M Handover",
+        "teach": "NOT STARTED",
+        "observe": "NOT STARTED",
+        "practice": "NOT STARTED",
+        "signOffDate": "",
+        "signedOffBy": ""
+      },
+      {
+        "id": "4G",
+        "name": "Tenders & Procurement",
+        "teach": "NOT STARTED",
+        "observe": "NOT STARTED",
+        "practice": "NOT STARTED",
+        "signOffDate": "",
+        "signedOffBy": ""
+      }
+    ]
+  },
+  "version": 0
+}

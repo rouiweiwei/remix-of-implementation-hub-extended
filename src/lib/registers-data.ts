@@ -2,22 +2,7 @@
 
 export type SessionDef = { id: string; name: string; type: "Workshop" | "Training"; module: string };
 
-export const SESSIONS: SessionDef[] = [
-  { id: "W1", name: "HOD Workshop — Site, Safety & Quality", type: "Workshop", module: "1B" },
-  { id: "W2", name: "HOD Workshop — Document Control", type: "Workshop", module: "1B" },
-  { id: "W3", name: "HOD Workshop — Finance & AP", type: "Workshop", module: "1B" },
-  { id: "W4", name: "HOD Workshop — Procurement", type: "Workshop", module: "1B" },
-  { id: "W5", name: "HOD Workshop — Program & Scheduling", type: "Workshop", module: "1B" },
-  { id: "W6", name: "HOD Workshop — Rollout Planning", type: "Workshop", module: "1B" },
-  { id: "T1", name: "Training — 4A Site, Safety & Quality", type: "Training", module: "4A" },
-  { id: "T2", name: "Training — 4B Document Control", type: "Training", module: "4B" },
-  { id: "T3", name: "Training — 4C Email & Correspondence", type: "Training", module: "4C" },
-  { id: "T4", name: "Training — 4D Program & Scheduling", type: "Training", module: "4D" },
-  { id: "T5", name: "Training — 4E Budget & Finance", type: "Training", module: "4E" },
-  { id: "T6", name: "Training — 4F O&M Handover", type: "Training", module: "4F" },
-  { id: "T7", name: "Training — 4G Tenders & Procurement", type: "Training", module: "4G" },
-];
-
+// table_name: playbook_session_topics
 export const CONTENT_TOPICS: Record<string, string[]> = {
   W1: ["Current SWMS process", "Current induction process", "Current permit process", "Future state demo on Plexa", "Gap identification", "Q&A and alignment"],
   W2: ["Current document management", "Folder structure review", "Current transmittal and markup process", "Future state demo", "Gap identification"],
@@ -34,6 +19,7 @@ export const CONTENT_TOPICS: Record<string, string[]> = {
   T7: ["", "", ""],
 };
 
+// table_name: playbook_competency_modules
 export const COMPETENCY_MODULES = [
   { id: "4A", name: "HSEQ" },
   { id: "4B", name: "Document Control" },
@@ -43,27 +29,3 @@ export const COMPETENCY_MODULES = [
   { id: "4F", name: "O&M Handover" },
   { id: "4G", name: "Procurement" },
 ];
-
-export const ATTENDEES_PER_SESSION = 20;
-export const COMPETENCY_ROWS = 40;
-export const ISSUE_ROWS = 60;
-export const EMAIL_WEEKS = 20;
-
-export type DirectoryUser = { firstName: string; lastName: string; role: string; department: string };
-
-// Mocked user directory — would normally be pulled from the auth/user-accounts system.
-export const USER_DIRECTORY: DirectoryUser[] = [
-  { firstName: "Sarah", lastName: "Mitchell", role: "Project Manager", department: "Construction" },
-  { firstName: "James", lastName: "O'Connor", role: "Site Engineer", department: "Construction" },
-  { firstName: "Priya", lastName: "Patel", role: "HSEQ Manager", department: "HSEQ" },
-  { firstName: "Liam", lastName: "Nguyen", role: "Document Controller", department: "Document Control" },
-  { firstName: "Emma", lastName: "Thompson", role: "Finance Manager", department: "Finance" },
-  { firstName: "David", lastName: "Kowalski", role: "AP Officer", department: "Finance" },
-  { firstName: "Aisha", lastName: "Rahman", role: "Procurement Lead", department: "Procurement" },
-  { firstName: "Tom", lastName: "Bennett", role: "Scheduler", department: "Program" },
-  { firstName: "Hannah", lastName: "Clarke", role: "Contracts Admin", department: "Commercial" },
-  { firstName: "Marco", lastName: "Rossi", role: "Site Supervisor", department: "Construction" },
-  { firstName: "Olivia", lastName: "Wright", role: "O&M Coordinator", department: "Operations" },
-  { firstName: "Ethan", lastName: "Singh", role: "Estimator", department: "Commercial" },
-];
-

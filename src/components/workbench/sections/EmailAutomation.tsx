@@ -8,7 +8,6 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Copy, Mail, Eye, Sparkles, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
-  ALL_SESSIONS,
   buildCompleteEmail,
   buildKickoffEmail,
   buildMailto,
@@ -34,6 +33,7 @@ export function EmailAutomationPanel({
   const dod = usePlaybook((s) => s.dod);
   const intranet = usePlaybook((s) => s.intranet);
   const sessions = usePlaybook((s) => s.sessions);
+
   const ctx = useMemo(
     () => ({ client, tasks, taskOverrides, timelineMode, startDate, issues, stakeholders, champions, dod, intranet, sessions }),
     [client, tasks, taskOverrides, timelineMode, startDate, issues, stakeholders, champions, dod, intranet, sessions]
@@ -46,8 +46,8 @@ export function EmailAutomationPanel({
   const kickoff = useMemo(() => buildKickoffEmail(ctx), [ctx]);
   const complete = useMemo(() => buildCompleteEmail(ctx), [ctx]);
 
-  const workshops = ALL_SESSIONS.filter((s) => s.type === "Workshop");
-  const trainings = ALL_SESSIONS.filter((s) => s.type === "Training");
+  const workshops = sessions.filter((s) => s.type === "Workshop");
+  const trainings = sessions.filter((s) => s.type === "Training");
 
   return (
     <div className="space-y-5">

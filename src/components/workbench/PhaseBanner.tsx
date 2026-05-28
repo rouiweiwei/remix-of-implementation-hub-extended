@@ -1,4 +1,4 @@
-import { PHASES, type PhaseId } from "@/lib/playbook-data";
+import { type PhaseId } from "@/lib/playbook-data";
 import { phaseProgress, usePlaybook, overallProgress } from "@/lib/playbook-store";
 import { cn } from "@/lib/utils";
 import { Check, CircleDashed, Loader2, OctagonAlert } from "lucide-react";
@@ -10,8 +10,10 @@ interface Props {
 
 export function PhaseBanner({ activePhase, onPickPhase }: Props) {
   const tasks = usePlaybook((s) => s.tasks);
+  const phases = usePlaybook((s) => s.phases);
   const client = usePlaybook((s) => s.client);
   const overall = overallProgress(tasks);
+  const phaseList = phases.length ? phases : [];
 
   return (
     <div className="relative overflow-hidden rounded-2xl border bg-card shadow-sm">
@@ -38,7 +40,7 @@ export function PhaseBanner({ activePhase, onPickPhase }: Props) {
         </div>
 
         <div className="flex items-stretch gap-1.5 overflow-x-auto pb-1">
-          {PHASES.map((p, i) => {
+          {phaseList.map((p, i) => {
             const prog = phaseProgress(tasks, p.id);
             const isActive = activePhase === p.id;
             const isDone = prog.status === "COMPLETE";

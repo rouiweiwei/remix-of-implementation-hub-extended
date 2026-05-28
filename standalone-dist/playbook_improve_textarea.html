@@ -519,7 +519,7 @@ function requireReact_production() {
   react_production.useTransition = function() {
     return ReactSharedInternals.H.useTransition();
   };
-  react_production.version = "19.2.5";
+  react_production.version = "19.2.6";
   return react_production;
 }
 var hasRequiredReact;
@@ -545,7 +545,7 @@ var hasRequiredScheduler_production;
 function requireScheduler_production() {
   if (hasRequiredScheduler_production) return scheduler_production;
   hasRequiredScheduler_production = 1;
-  (function(exports$1) {
+  (function(exports) {
     function push(heap, node) {
       var index2 = heap.length;
       heap.push(node);
@@ -579,15 +579,15 @@ function requireScheduler_production() {
       var diff = a.sortIndex - b.sortIndex;
       return 0 !== diff ? diff : a.id - b.id;
     }
-    exports$1.unstable_now = void 0;
+    exports.unstable_now = void 0;
     if ("object" === typeof performance && "function" === typeof performance.now) {
       var localPerformance = performance;
-      exports$1.unstable_now = function() {
+      exports.unstable_now = function() {
         return localPerformance.now();
       };
     } else {
       var localDate = Date, initialTime = localDate.now();
-      exports$1.unstable_now = function() {
+      exports.unstable_now = function() {
         return localDate.now() - initialTime;
       };
     }
@@ -614,12 +614,12 @@ function requireScheduler_production() {
     }
     var isMessageLoopRunning = false, taskTimeoutID = -1, frameInterval = 5, startTime = -1;
     function shouldYieldToHost() {
-      return needsPaint ? true : exports$1.unstable_now() - startTime < frameInterval ? false : true;
+      return needsPaint ? true : exports.unstable_now() - startTime < frameInterval ? false : true;
     }
     function performWorkUntilDeadline() {
       needsPaint = false;
       if (isMessageLoopRunning) {
-        var currentTime = exports$1.unstable_now();
+        var currentTime = exports.unstable_now();
         startTime = currentTime;
         var hasMoreWork = true;
         try {
@@ -639,7 +639,7 @@ function requireScheduler_production() {
                     var continuationCallback = callback(
                       currentTask.expirationTime <= currentTime
                     );
-                    currentTime = exports$1.unstable_now();
+                    currentTime = exports.unstable_now();
                     if ("function" === typeof continuationCallback) {
                       currentTask.callback = continuationCallback;
                       advanceTimers(currentTime);
@@ -689,27 +689,27 @@ function requireScheduler_production() {
       };
     function requestHostTimeout(callback, ms) {
       taskTimeoutID = localSetTimeout(function() {
-        callback(exports$1.unstable_now());
+        callback(exports.unstable_now());
       }, ms);
     }
-    exports$1.unstable_IdlePriority = 5;
-    exports$1.unstable_ImmediatePriority = 1;
-    exports$1.unstable_LowPriority = 4;
-    exports$1.unstable_NormalPriority = 3;
-    exports$1.unstable_Profiling = null;
-    exports$1.unstable_UserBlockingPriority = 2;
-    exports$1.unstable_cancelCallback = function(task) {
+    exports.unstable_IdlePriority = 5;
+    exports.unstable_ImmediatePriority = 1;
+    exports.unstable_LowPriority = 4;
+    exports.unstable_NormalPriority = 3;
+    exports.unstable_Profiling = null;
+    exports.unstable_UserBlockingPriority = 2;
+    exports.unstable_cancelCallback = function(task) {
       task.callback = null;
     };
-    exports$1.unstable_forceFrameRate = function(fps) {
+    exports.unstable_forceFrameRate = function(fps) {
       0 > fps || 125 < fps ? console.error(
         "forceFrameRate takes a positive int between 0 and 125, forcing frame rates higher than 125 fps is not supported"
       ) : frameInterval = 0 < fps ? Math.floor(1e3 / fps) : 5;
     };
-    exports$1.unstable_getCurrentPriorityLevel = function() {
+    exports.unstable_getCurrentPriorityLevel = function() {
       return currentPriorityLevel;
     };
-    exports$1.unstable_next = function(eventHandler) {
+    exports.unstable_next = function(eventHandler) {
       switch (currentPriorityLevel) {
         case 1:
         case 2:
@@ -727,10 +727,10 @@ function requireScheduler_production() {
         currentPriorityLevel = previousPriorityLevel;
       }
     };
-    exports$1.unstable_requestPaint = function() {
+    exports.unstable_requestPaint = function() {
       needsPaint = true;
     };
-    exports$1.unstable_runWithPriority = function(priorityLevel, eventHandler) {
+    exports.unstable_runWithPriority = function(priorityLevel, eventHandler) {
       switch (priorityLevel) {
         case 1:
         case 2:
@@ -749,8 +749,8 @@ function requireScheduler_production() {
         currentPriorityLevel = previousPriorityLevel;
       }
     };
-    exports$1.unstable_scheduleCallback = function(priorityLevel, callback, options) {
-      var currentTime = exports$1.unstable_now();
+    exports.unstable_scheduleCallback = function(priorityLevel, callback, options) {
+      var currentTime = exports.unstable_now();
       "object" === typeof options && null !== options ? (options = options.delay, options = "number" === typeof options && 0 < options ? currentTime + options : currentTime) : options = currentTime;
       switch (priorityLevel) {
         case 1:
@@ -780,8 +780,8 @@ function requireScheduler_production() {
       options > currentTime ? (priorityLevel.sortIndex = options, push(timerQueue, priorityLevel), null === peek(taskQueue) && priorityLevel === peek(timerQueue) && (isHostTimeoutScheduled ? (localClearTimeout(taskTimeoutID), taskTimeoutID = -1) : isHostTimeoutScheduled = true, requestHostTimeout(handleTimeout, options - currentTime))) : (priorityLevel.sortIndex = timeout, push(taskQueue, priorityLevel), isHostCallbackScheduled || isPerformingWork || (isHostCallbackScheduled = true, isMessageLoopRunning || (isMessageLoopRunning = true, schedulePerformWorkUntilDeadline())));
       return priorityLevel;
     };
-    exports$1.unstable_shouldYield = shouldYieldToHost;
-    exports$1.unstable_wrapCallback = function(callback) {
+    exports.unstable_shouldYield = shouldYieldToHost;
+    exports.unstable_wrapCallback = function(callback) {
       var parentPriorityLevel = currentPriorityLevel;
       return function() {
         var previousPriorityLevel = currentPriorityLevel;
@@ -951,7 +951,7 @@ function requireReactDom_production() {
   reactDom_production.useFormStatus = function() {
     return ReactSharedInternals.H.useHostTransitionStatus();
   };
-  reactDom_production.version = "19.2.5";
+  reactDom_production.version = "19.2.6";
   return reactDom_production;
 }
 var hasRequiredReactDom;
@@ -12395,12 +12395,12 @@ function requireReactDomClient_production() {
     }
   };
   var isomorphicReactPackageVersion$jscomp$inline_1840 = React2.version;
-  if ("19.2.5" !== isomorphicReactPackageVersion$jscomp$inline_1840)
+  if ("19.2.6" !== isomorphicReactPackageVersion$jscomp$inline_1840)
     throw Error(
       formatProdErrorMessage(
         527,
         isomorphicReactPackageVersion$jscomp$inline_1840,
-        "19.2.5"
+        "19.2.6"
       )
     );
   ReactDOMSharedInternals.findDOMNode = function(componentOrElement) {
@@ -12418,10 +12418,10 @@ function requireReactDomClient_production() {
   };
   var internals$jscomp$inline_2347 = {
     bundleType: 0,
-    version: "19.2.5",
+    version: "19.2.6",
     rendererPackageName: "react-dom",
     currentDispatcherRef: ReactSharedInternals,
-    reconcilerVersion: "19.2.5"
+    reconcilerVersion: "19.2.6"
   };
   if ("undefined" !== typeof __REACT_DEVTOOLS_GLOBAL_HOOK__) {
     var hook$jscomp$inline_2348 = __REACT_DEVTOOLS_GLOBAL_HOOK__;
@@ -12488,7 +12488,7 @@ function requireReactDomClient_production() {
     listenToAllSupportedEvents(container);
     return new ReactDOMHydrationRoot(initialChildren);
   };
-  reactDomClient_production.version = "19.2.5";
+  reactDomClient_production.version = "19.2.6";
   return reactDomClient_production;
 }
 var hasRequiredClient;
@@ -13235,6 +13235,20 @@ const persistImpl = (config, baseOptions) => (set, get, api) => {
 };
 const persist = persistImpl;
 const uid = () => Math.random().toString(36).slice(2, 10);
+async function ensureOrganizationUUID(apiBase, token) {
+  if (!apiBase) return null;
+  try {
+    const res = await fetch(`${apiBase.replace(/\/+$/, "")}/profile`, {
+      headers: token ? { Authorization: `Bearer ${token}` } : void 0
+    });
+    if (!res.ok) throw new Error(`Unable to fetch profile (${res.status})`);
+    const payload = await res.json();
+    return payload?.data?.result?.organization?.uuid || null;
+  } catch (error) {
+    console.error("playbook-store: ensureOrganizationUUID failed", error);
+    return null;
+  }
+}
 const initial = {
   client: {
     clientName: "Total Project Australia Pty Ltd",
@@ -13247,7 +13261,9 @@ const initial = {
   noteHistory: {},
   taskOverrides: {},
   timelineMode: "Medium (6 Weeks)",
-  startDate: (/* @__PURE__ */ new Date()).toISOString().slice(0, 10),
+  // keep startDate deterministic on the server to avoid hydration mismatches;
+  // the app can set this client-side via `setTimeline` or hydrateFromApi
+  startDate: "",
   trainingModules: TRAINING_MODULES.map((m) => ({
     id: m.id,
     name: m.name,
@@ -13261,7 +13277,7 @@ const initial = {
   attendees: [],
   signOffs: [],
   emails: [1, 2, 3, 4, 5, 6].map((w) => ({
-    id: uid(),
+    id: `email-${w}`,
     week: w,
     date: "",
     subject: `Week ${w} — Plexa Implementation Update`,
@@ -13273,8 +13289,8 @@ const initial = {
     sent: false
   })),
   issues: [],
-  stakeholders: STAKEHOLDER_SEEDS.map((s) => ({
-    id: uid(),
+  stakeholders: STAKEHOLDER_SEEDS.map((s, i) => ({
+    id: `stakeholder-${i + 1}`,
     ...s,
     email: "",
     phone: "",
@@ -13295,12 +13311,60 @@ const initial = {
   contractors: [],
   costCodes: [],
   reminderTasks: [],
-  intranet: []
+  intranet: [],
+  lastSavedNotes: {}
 };
 const usePlaybook = create()(
   persist(
     (set) => ({
       ...initial,
+      // fetch & merge an initial state payload from an API (optional)
+      hydrateFromApi: async (url) => {
+        try {
+          let fetchUrl = url;
+          const apiBase = window.apiBase;
+          const token = window.authToken;
+          if (!fetchUrl) {
+            const org = await ensureOrganizationUUID(apiBase, token);
+            if (!org) {
+              throw new Error("Organization UUID not available; cannot build playbook URL.");
+            }
+            fetchUrl = `${(apiBase || "").replace(/\/+$/, "")}/workbench/organization/${org}/custom-data/customers_playbook_v1`;
+          }
+          const res = await fetch(fetchUrl, {
+            headers: token ? { Authorization: `Bearer ${token}` } : void 0
+          });
+          if (!res.ok) throw new Error(`Failed to fetch initial playbook: ${res.status}`);
+          const json = await res.json();
+          const body = json?.data?.result?.data.state || json?.data || json;
+          const payload = body?.customers_playbook_v1 ?? body;
+          if (payload && typeof payload === "object") {
+            set((s) => {
+              const merged = { ...s, ...payload };
+              const lastSavedNotes = {};
+              const tasks = payload.tasks ?? merged.tasks ?? [];
+              if (Array.isArray(tasks)) {
+                tasks.forEach((t) => {
+                  if (t && t.id) lastSavedNotes[t.id] = t.notes || "";
+                });
+              }
+              merged.lastSavedNotes = lastSavedNotes;
+              return {
+                ...merged,
+                noteHistory: merged.noteHistory ?? s.noteHistory
+              };
+            });
+            try {
+              if (typeof window !== "undefined" && typeof window.dispatchEvent === "function") {
+                window.dispatchEvent(new CustomEvent("playbook:hydrated"));
+              }
+            } catch (e) {
+            }
+          }
+        } catch (err) {
+          console.error("playbook-store: hydrateFromApi failed", err);
+        }
+      },
       setClient: (c) => set((s) => ({ client: { ...s.client, ...c } })),
       updateTaskStatus: (id, status) => set((s) => ({
         tasks: s.tasks.map((t) => {
@@ -13311,17 +13375,33 @@ const usePlaybook = create()(
           return next;
         })
       })),
-      updateTaskNotes: (id, notes, by = "You") => set((s) => {
-        const prev = s.tasks.find((t) => t.id === id)?.notes || "";
+      // update notes in-memory; do NOT record history on each keystroke
+      updateTaskNotes: (id, notes, by = "You") => set((s) => ({ tasks: s.tasks.map((t) => t.id === id ? { ...t, notes } : t) })),
+      // commit a single task's note to history if it changed since last saved
+      commitNote: (id, by = "You") => set((s) => {
+        const curr = s.tasks.find((t) => t.id === id)?.notes || "";
+        const last = s.lastSavedNotes[id] ?? "";
+        if (curr === last) return s;
         const history = { ...s.noteHistory };
-        if (notes !== prev) {
-          const entry = { at: (/* @__PURE__ */ new Date()).toISOString(), by, text: notes };
-          history[id] = [entry, ...history[id] || []].slice(0, 20);
-        }
-        return {
-          tasks: s.tasks.map((t) => t.id === id ? { ...t, notes } : t),
-          noteHistory: history
-        };
+        const entry = { at: (/* @__PURE__ */ new Date()).toISOString(), by, text: curr };
+        history[id] = [entry, ...history[id] || []].slice(0, 20);
+        const lastSavedNotes = { ...s.lastSavedNotes, [id]: curr };
+        return { noteHistory: history, lastSavedNotes };
+      }),
+      // commit all notes that have changed since last saved (used after global save)
+      commitAllNotes: (by = "You") => set((s) => {
+        const history = { ...s.noteHistory };
+        const lastSavedNotes = { ...s.lastSavedNotes };
+        s.tasks.forEach((t) => {
+          const curr = t.notes || "";
+          const last = lastSavedNotes[t.id] ?? "";
+          if (curr !== last) {
+            const entry = { at: (/* @__PURE__ */ new Date()).toISOString(), by, text: curr };
+            history[t.id] = [entry, ...history[t.id] || []].slice(0, 20);
+            lastSavedNotes[t.id] = curr;
+          }
+        });
+        return { noteHistory: history, lastSavedNotes };
       }),
       setTimeline: (timelineMode, startDate) => set({ timelineMode, startDate }),
       setTaskSchedule: (id, patch) => set((s) => {
@@ -13791,15 +13871,27 @@ const createConfigUtils = (config) => ({
   cache: createLruCache(config.cacheSize),
   parseClassName: createParseClassName(config),
   sortModifiers: createSortModifiers(config),
+  postfixLookupClassGroupIds: createPostfixLookupClassGroupIds(config),
   ...createClassGroupUtils(config)
 });
+const createPostfixLookupClassGroupIds = (config) => {
+  const lookup = /* @__PURE__ */ Object.create(null);
+  const classGroupIds = config.postfixLookupClassGroups;
+  if (classGroupIds) {
+    for (let i = 0; i < classGroupIds.length; i++) {
+      lookup[classGroupIds[i]] = true;
+    }
+  }
+  return lookup;
+};
 const SPLIT_CLASSES_REGEX = /\s+/;
 const mergeClassList = (classList, configUtils) => {
   const {
     parseClassName,
     getClassGroupId,
     getConflictingClassGroupIds,
-    sortModifiers
+    sortModifiers,
+    postfixLookupClassGroupIds
   } = configUtils;
   const classGroupsInConflict = [];
   const classNames = classList.trim().split(SPLIT_CLASSES_REGEX);
@@ -13818,7 +13910,18 @@ const mergeClassList = (classList, configUtils) => {
       continue;
     }
     let hasPostfixModifier = !!maybePostfixModifierPosition;
-    let classGroupId = getClassGroupId(hasPostfixModifier ? baseClassName.substring(0, maybePostfixModifierPosition) : baseClassName);
+    let classGroupId;
+    if (hasPostfixModifier) {
+      const baseClassNameWithoutPostfix = baseClassName.substring(0, maybePostfixModifierPosition);
+      classGroupId = getClassGroupId(baseClassNameWithoutPostfix);
+      const classGroupIdWithPostfix = classGroupId && postfixLookupClassGroupIds[classGroupId] ? getClassGroupId(baseClassName) : void 0;
+      if (classGroupIdWithPostfix && classGroupIdWithPostfix !== classGroupId) {
+        classGroupId = classGroupIdWithPostfix;
+        hasPostfixModifier = false;
+      }
+    } else {
+      classGroupId = getClassGroupId(baseClassName);
+    }
     if (!classGroupId) {
       if (!hasPostfixModifier) {
         result = originalClassName + (result.length > 0 ? " " + result : result);
@@ -13933,6 +14036,7 @@ const isNever = () => false;
 const isShadow = (value) => shadowRegex.test(value);
 const isImage = (value) => imageRegex.test(value);
 const isAnyNonArbitrary = (value) => !isArbitraryValue(value) && !isArbitraryVariable(value);
+const isNamedContainerQuery = (value) => value.startsWith("@container") && (value[10] === "/" && value[11] !== void 0 || value[11] === "s" && value[16] !== void 0 && value.startsWith("-size/", 10) || value[11] === "n" && value[18] !== void 0 && value.startsWith("-normal/", 10));
 const isArbitrarySize = (value) => getIsArbitraryValue(value, isLabelSize, isNever);
 const isArbitraryValue = (value) => arbitraryValueRegex.test(value);
 const isArbitraryLength = (value) => getIsArbitraryValue(value, isLabelLength, isLengthOnly);
@@ -14111,6 +14215,18 @@ const getDefaultConfig = () => {
        * @deprecated since Tailwind CSS v4.0.0
        */
       container: ["container"],
+      /**
+       * Container Type
+       * @see https://tailwindcss.com/docs/responsive-design#container-queries
+       */
+      "container-type": [{
+        "@container": ["", "normal", "size", isArbitraryVariable, isArbitraryValue]
+      }],
+      /**
+       * Container Name
+       * @see https://tailwindcss.com/docs/responsive-design#named-containers
+       */
+      "container-named": [isNamedContainerQuery],
       /**
        * Columns
        * @see https://tailwindcss.com/docs/columns
@@ -15053,6 +15169,13 @@ const getDefaultConfig = () => {
        */
       indent: [{
         indent: scaleUnambiguousSpacing()
+      }],
+      /**
+       * Tab Size
+       * @see https://tailwindcss.com/docs/tab-size
+       */
+      "tab-size": [{
+        tab: [isInteger, isArbitraryVariable, isArbitraryValue]
       }],
       /**
        * Vertical Alignment
@@ -16279,6 +16402,13 @@ const getDefaultConfig = () => {
        * @see https://tailwindcss.com/docs/translate
        */
       "translate-none": ["translate-none"],
+      /**
+       * Zoom
+       * @see https://tailwindcss.com/docs/zoom
+       */
+      zoom: [{
+        zoom: [isInteger, isArbitraryVariable, isArbitraryValue]
+      }],
       // ---------------------
       // --- Interactivity ---
       // ---------------------
@@ -16344,6 +16474,34 @@ const getDefaultConfig = () => {
        */
       "scroll-behavior": [{
         scroll: ["auto", "smooth"]
+      }],
+      /**
+       * Scrollbar Thumb Color
+       * @see https://tailwindcss.com/docs/scrollbar-color
+       */
+      "scrollbar-thumb-color": [{
+        "scrollbar-thumb": scaleColor()
+      }],
+      /**
+       * Scrollbar Track Color
+       * @see https://tailwindcss.com/docs/scrollbar-color
+       */
+      "scrollbar-track-color": [{
+        "scrollbar-track": scaleColor()
+      }],
+      /**
+       * Scrollbar Gutter
+       * @see https://tailwindcss.com/docs/scrollbar-gutter
+       */
+      "scrollbar-gutter": [{
+        "scrollbar-gutter": ["auto", "stable", "both"]
+      }],
+      /**
+       * Scrollbar Width
+       * @see https://tailwindcss.com/docs/scrollbar-width
+       */
+      "scrollbar-w": [{
+        scrollbar: ["auto", "thin", "none"]
       }],
       /**
        * Scroll Margin
@@ -16603,6 +16761,7 @@ const getDefaultConfig = () => {
       }]
     },
     conflictingClassGroups: {
+      "container-named": ["container-type"],
       overflow: ["overflow-x", "overflow-y"],
       overscroll: ["overscroll-x", "overscroll-y"],
       inset: ["inset-x", "inset-y", "inset-bs", "inset-be", "start", "end", "top", "right", "bottom", "left"],
@@ -16655,6 +16814,7 @@ const getDefaultConfig = () => {
     conflictingClassGroupModifiers: {
       "font-size": ["leading"]
     },
+    postfixLookupClassGroups: ["container-type"],
     orderSensitiveModifiers: ["*", "**", "after", "backdrop", "before", "details-content", "file", "first-letter", "first-line", "marker", "placeholder", "selection"]
   };
 };
@@ -22778,15 +22938,39 @@ const SelectSeparator = reactExports.forwardRef(({ className, ...props }, ref) =
 ));
 SelectSeparator.displayName = Separator.displayName;
 const Textarea = reactExports.forwardRef(
-  ({ className, ...props }, ref) => {
+  ({ className, style, onChange, ...props }, forwardedRef) => {
+    const innerRef = reactExports.useRef(null);
+    const ref = forwardedRef || innerRef;
+    const resize = () => {
+      const el = ref.current;
+      if (!el) return;
+      el.style.height = "auto";
+      el.style.height = `${el.scrollHeight + 2}px`;
+    };
+    reactExports.useLayoutEffect(() => {
+      resize();
+    }, [props.value]);
+    reactExports.useEffect(() => {
+      const el = ref.current;
+      if (!el) return;
+      const ro = new ResizeObserver(resize);
+      ro.observe(el);
+      return () => ro.disconnect();
+    }, []);
+    const handleChange = (e) => {
+      if (onChange) onChange(e);
+      requestAnimationFrame(resize);
+    };
     return /* @__PURE__ */ jsxRuntimeExports.jsx(
       "textarea",
       {
         className: cn(
-          "flex min-h-[60px] w-full rounded-md border border-input bg-transparent px-3 py-2 text-base shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 md:text-sm",
+          "w-full rounded-md border border-input bg-transparent px-3 py-2 text-base shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 md:text-sm",
           className
         ),
         ref,
+        style: { overflow: "hidden", resize: "none", ...style },
+        onChange: handleChange,
         ...props
       }
     );
@@ -23448,6 +23632,44 @@ const TRAINING_SCHEDULE = [
     "email": "📧  WEEKLY EMAIL HOLD POINT  —  Send status update: ✅ completed this week  |  📅 planned next week  |  ⚠️ open issues  |  📸 photos from training"
   }
 ];
+function NoteEditor({ value, onSave }) {
+  const [local, setLocal] = reactExports.useState(value);
+  const timer = reactExports.useRef(null);
+  reactExports.useEffect(() => {
+    setLocal(value);
+  }, [value]);
+  reactExports.useEffect(() => () => {
+    if (timer.current) window.clearTimeout(timer.current);
+  }, []);
+  const commit = (v) => onSave(v);
+  const scheduleCommit = (v) => {
+    if (timer.current) window.clearTimeout(timer.current);
+    timer.current = window.setTimeout(() => {
+      commit(v);
+      timer.current = null;
+    }, 300);
+  };
+  return /* @__PURE__ */ jsxRuntimeExports.jsx(
+    Textarea,
+    {
+      rows: 2,
+      className: "text-xs min-h-[60px]",
+      value: local,
+      onChange: (e) => {
+        setLocal(e.target.value);
+        scheduleCommit(e.target.value);
+      },
+      onBlur: (e) => {
+        if (timer.current) {
+          window.clearTimeout(timer.current);
+          timer.current = null;
+        }
+        commit(e.target.value);
+      },
+      placeholder: "Add notes, decisions, follow-ups…"
+    }
+  );
+}
 const MODES = [
   "Quick (4 Weeks)",
   "Medium (6 Weeks)",
@@ -23616,13 +23838,11 @@ function ImplementationPlanSection({ filterPhase }) {
                 /* @__PURE__ */ jsxRuntimeExports.jsx(SelectContent, { children: STATUSES.map((s) => /* @__PURE__ */ jsxRuntimeExports.jsx(SelectItem, { value: s, children: s }, s)) })
               ] }),
               /* @__PURE__ */ jsxRuntimeExports.jsx(
-                Textarea,
+                NoteEditor,
                 {
-                  rows: 2,
-                  className: "text-xs min-h-[60px]",
+                  taskId: t.id,
                   value: t.notes || "",
-                  onChange: (e) => updateNotes(t.id, e.target.value, "You"),
-                  placeholder: "Add notes, decisions, follow-ups…"
+                  onSave: (val) => updateNotes(t.id, val, "You")
                 }
               ),
               /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-xs text-muted-foreground italic leading-relaxed pt-1.5", children: TASK_GUIDANCE[t.id] || "—" }),
@@ -25683,8 +25903,8 @@ var CRC32 = /* @__PURE__ */ (function() {
   return CRC322;
 })();
 var CFB = /* @__PURE__ */ (function _CFB() {
-  var exports$1 = {};
-  exports$1.version = "1.2.1";
+  var exports = {};
+  exports.version = "1.2.1";
   function namecmp(l, r2) {
     var L = l.split("/"), R = r2.split("/");
     for (var i2 = 0, c = 0, Z = Math.min(L.length, R.length); i2 < Z; ++i2) {
@@ -27249,12 +27469,12 @@ var CFB = /* @__PURE__ */ (function _CFB() {
   function cfb_gc(cfb) {
     rebuild_cfb(cfb, true);
   }
-  exports$1.find = find;
-  exports$1.read = read;
-  exports$1.parse = parse2;
-  exports$1.write = write;
-  exports$1.writeFile = write_file;
-  exports$1.utils = {
+  exports.find = find;
+  exports.read = read;
+  exports.parse = parse2;
+  exports.write = write;
+  exports.writeFile = write_file;
+  exports.utils = {
     cfb_new,
     cfb_add,
     cfb_del,
@@ -27269,7 +27489,7 @@ var CFB = /* @__PURE__ */ (function _CFB() {
     _inflateRaw: _inflate,
     consts
   };
-  return exports$1;
+  return exports;
 })();
 function blobify(data) {
   if (typeof data === "string") return s2ab(data);
@@ -57397,19 +57617,30 @@ function EmailLogSection() {
   );
   const upd = (i, patch) => setRows((p) => p.map((r2, idx) => idx === i ? { ...r2, ...patch } : r2));
   const [tab, setTab] = reactExports.useState("auto");
-  const ctx = usePlaybook((s) => ({
-    client: s.client,
-    tasks: s.tasks,
-    taskOverrides: s.taskOverrides,
-    timelineMode: s.timelineMode,
-    startDate: s.startDate,
-    issues: s.issues,
-    stakeholders: s.stakeholders,
-    champions: s.champions,
-    dod: s.dod,
-    intranet: s.intranet,
-    sessions: s.sessions
-  }));
+  const client2 = usePlaybook((s) => s.client);
+  const tasks = usePlaybook((s) => s.tasks);
+  const taskOverrides = usePlaybook((s) => s.taskOverrides);
+  const timelineMode = usePlaybook((s) => s.timelineMode);
+  const startDate = usePlaybook((s) => s.startDate);
+  const issues = usePlaybook((s) => s.issues);
+  const stakeholders = usePlaybook((s) => s.stakeholders);
+  const champions = usePlaybook((s) => s.champions);
+  const dod = usePlaybook((s) => s.dod);
+  const intranet = usePlaybook((s) => s.intranet);
+  const sessions = usePlaybook((s) => s.sessions);
+  const ctx = reactExports.useMemo(() => ({
+    client: client2,
+    tasks,
+    taskOverrides,
+    timelineMode,
+    startDate,
+    issues,
+    stakeholders,
+    champions,
+    dod,
+    intranet,
+    sessions
+  }), [client2, tasks, taskOverrides, timelineMode, startDate, issues, stakeholders, champions, dod, intranet, sessions]);
   const autoFill = (i) => {
     const dateAnchor = rows[i].dateSent || (/* @__PURE__ */ new Date()).toISOString().slice(0, 10);
     const fill2 = buildWeeklyAutoFill(ctx, { weekEndingDate: dateAnchor });
@@ -58946,10 +59177,10 @@ function isSameDay(a, b) {
   return isoDay(a) === isoDay(b);
 }
 function fmtShort(d) {
-  return d.toLocaleDateString(void 0, { day: "2-digit", month: "short" });
+  return d.toLocaleDateString("en-GB", { day: "2-digit", month: "short" });
 }
 function fmtLong(d) {
-  return d.toLocaleDateString(void 0, { weekday: "short", day: "2-digit", month: "short", year: "numeric" });
+  return d.toLocaleDateString("en-GB", { weekday: "short", day: "2-digit", month: "short", year: "numeric" });
 }
 function GanttSection() {
   const tasks = usePlaybook((s) => s.tasks);
@@ -59347,6 +59578,14 @@ function Workbench() {
   );
   const isOpen = (g) => g === activeGroup ? true : openGroups[g] !== false;
   const toggleGroup = (g) => setOpenGroups((prev) => ({ ...prev, [g]: !(prev[g] ?? true) }));
+  reactExports.useEffect(() => {
+    if (typeof window === "undefined") return;
+    const apiBase = window.apiBase;
+    const playbookUrl = window.playbookUrl;
+    if (apiBase || playbookUrl) {
+      usePlaybook.getState().hydrateFromApi(playbookUrl);
+    }
+  }, []);
   return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "min-h-screen bg-background", children: [
     /* @__PURE__ */ jsxRuntimeExports.jsx("header", { className: "sticky top-0 z-30 border-b bg-background/80 backdrop-blur", children: /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "w-full flex items-center justify-between px-6 h-14", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-3", children: [
@@ -59356,7 +59595,7 @@ function Workbench() {
           /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[10px] uppercase tracking-wider text-muted-foreground leading-none mt-0.5", children: "Implementation Workbench" })
         ] })
       ] }),
-      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-xs text-muted-foreground hidden md:block", children: "Version 3.0 · Standalone Build" })
+      /* @__PURE__ */ jsxRuntimeExports.jsx(HeaderSave, {})
     ] }) }),
     /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "w-full px-6 py-6", children: [
       /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -59438,10 +59677,105 @@ function Workbench() {
     ] })
   ] });
 }
+function HeaderSave() {
+  const key = "plexa-playbook-v2";
+  const [lastSaved, setLastSaved] = reactExports.useState(null);
+  const [current, setCurrent] = reactExports.useState(null);
+  const [saving, setSaving] = reactExports.useState(false);
+  const [error, setError] = reactExports.useState(null);
+  const normalizeSnapshot = (raw) => {
+    if (raw === null) return null;
+    try {
+      const parsed = JSON.parse(raw);
+      return JSON.stringify(parsed?.state ?? parsed);
+    } catch {
+      return raw;
+    }
+  };
+  const serializeState = () => {
+    try {
+      return JSON.stringify(usePlaybook.getState());
+    } catch {
+      return null;
+    }
+  };
+  reactExports.useEffect(() => {
+    if (typeof window === "undefined") return;
+    const persisted = normalizeSnapshot(localStorage.getItem(key));
+    const initial2 = serializeState();
+    setLastSaved(persisted ?? initial2);
+    setCurrent(initial2);
+    const onStorage = () => {
+      const persistedNow = normalizeSnapshot(localStorage.getItem(key));
+      setCurrent(persistedNow ?? serializeState());
+    };
+    window.addEventListener("storage", onStorage);
+    const onHydrated = () => {
+      const persistedNow = normalizeSnapshot(localStorage.getItem(key));
+      const currentNow = serializeState();
+      setLastSaved(persistedNow ?? currentNow);
+      setCurrent(currentNow);
+    };
+    window.addEventListener("playbook:hydrated", onHydrated);
+    const unsub = usePlaybook.subscribe(() => {
+      const next = serializeState();
+      if (next !== null) setCurrent(next);
+    });
+    return () => {
+      window.removeEventListener("storage", onStorage);
+      window.removeEventListener("playbook:hydrated", onHydrated);
+      unsub();
+    };
+  }, []);
+  const isDraft = current !== lastSaved && current !== null;
+  async function handleSave() {
+    setSaving(true);
+    setError(null);
+    try {
+      try {
+        usePlaybook.getState().commitAllNotes("You");
+      } catch (e) {
+      }
+      const apiBase = window.apiBase;
+      const token = window.authToken;
+      if (!apiBase) throw new Error("No apiBase configured on window.apiBase");
+      const org = await ensureOrganizationUUID(apiBase, token);
+      if (!org) throw new Error("Organization UUID not available");
+      const currentState = usePlaybook.getState();
+      const body = { data: { state: currentState } };
+      console.log("body to save", body);
+      const url = `${apiBase.replace(/\/+$/, "")}/workbench/organization/${org}/custom-data/customers_playbook_v1`;
+      const res = await fetch(url, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          ...token ? { Authorization: `Bearer ${token}` } : {}
+        },
+        body: JSON.stringify(body)
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const normalized = normalizeSnapshot(JSON.stringify(currentState));
+      setLastSaved(normalized);
+      setCurrent(normalized);
+    } catch (err) {
+      setError(err?.message || String(err));
+    } finally {
+      setSaving(false);
+    }
+  }
+  return /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex items-center gap-3", children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "text-xs text-muted-foreground hidden md:flex items-center gap-3", children: [
+      /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[10px] font-semibold uppercase tracking-wider " + (isDraft ? "text-warning" : "text-muted-foreground"), children: isDraft ? "DRAFT" : "Saved" }),
+      isDraft && /* @__PURE__ */ jsxRuntimeExports.jsx("button", { disabled: saving, onClick: handleSave, className: "inline-flex items-center gap-2 rounded-md bg-primary px-3 py-1 text-sm font-semibold text-primary-foreground", children: saving ? "Saving..." : "Save Changes" }),
+      error && /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-[11px] text-destructive", children: error })
+    ] }),
+    /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-xs text-muted-foreground hidden md:block", children: "Version 3.0 · Building better, together" })
+  ] });
+}
 ReactDOM$1.createRoot(document.getElementById("root")).render(
   /* @__PURE__ */ jsxRuntimeExports.jsx(React.StrictMode, { children: /* @__PURE__ */ jsxRuntimeExports.jsx(Workbench, {}) })
 );</script>
-    <style rel="stylesheet" crossorigin>/*! tailwindcss v4.2.4 | MIT License | https://tailwindcss.com */
+    <style rel="stylesheet" crossorigin>/*! tailwindcss v4.3.0 | MIT License | https://tailwindcss.com */
 @layer properties {
   @supports (((-webkit-hyphens: none)) and (not (margin-trim: inline))) or ((-moz-orient: inline) and (not (color: rgb(from red r g b)))) {
     *, :before, :after, ::backdrop {
@@ -59911,14 +60245,6 @@ ReactDOM$1.createRoot(document.getElementById("root")).render(
 
   .inset-y-0 {
     inset-block: calc(var(--spacing) * 0);
-  }
-
-  .start {
-    inset-inline-start: var(--spacing);
-  }
-
-  .end {
-    inset-inline-end: var(--spacing);
   }
 
   .-top-0\.5 {
@@ -60743,6 +61069,10 @@ ReactDOM$1.createRoot(document.getElementById("root")).render(
 
   .touch-none {
     touch-action: none;
+  }
+
+  .resize {
+    resize: both;
   }
 
   .resize-none {
@@ -62198,6 +62528,10 @@ ReactDOM$1.createRoot(document.getElementById("root")).render(
 
   .text-success-foreground {
     color: var(--success-foreground);
+  }
+
+  .text-warning {
+    color: var(--warning);
   }
 
   .text-warning-foreground, .text-warning-foreground\/80 {
@@ -64705,6 +65039,6 @@ ReactDOM$1.createRoot(document.getElementById("root")).render(
 }</style>
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root"></div>
   </body>
 </html>

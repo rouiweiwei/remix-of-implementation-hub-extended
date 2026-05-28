@@ -1,5 +1,4 @@
 import { usePlaybook, overallProgress, phaseProgress, calcEndDate } from "@/lib/playbook-store";
-import { PHASES, COMMANDMENTS } from "@/lib/playbook-data";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { SectionHeader, StatusBadge } from "../shared";
@@ -42,7 +41,27 @@ function MultiUserField({ label, value, onChange }: { label: string; value: stri
 
 export function CoverSection() {
   const client = usePlaybook((s) => s.client);
+  const commandments = usePlaybook((s) => s.commandments);
   const setClient = usePlaybook((s) => s.setClient);
+  const updateClient = usePlaybook((s) => s.updateClient);
+  
+  const [initial, setInitial] = useState(client);
+  const commandList = commandments.length ? commandments : [];
+  
+  // Detect if client data has changed
+  const hasChanges = JSON.stringify(client) !== JSON.stringify(initial);
+  
+  const handleSave = async () => {
+    const patch: Record<string, any> = {};
+    for (const [key, value] of Object.entries(client)) {
+      if (value !== initial[key as keyof typeof initial]) {
+        patch[key] = value;
+      }
+    }
+    await updateClient(patch);
+    setInitial(structuredClone(client));
+  };
+
   return (
     <div className="space-y-6">
       <SectionHeader title="📖 Cover" subtitle="Client information, version & implementation contents." />
@@ -56,6 +75,16 @@ export function CoverSection() {
             <MultiUserField label="Implementation Lead (Client)" value={client.clientLead} onChange={(v) => setClient({ clientLead: v })} />
             <Field label="Go-Live Target Date" type="date" value={client.goLiveDate} onChange={(v) => setClient({ goLiveDate: v })} />
             <MultiUserField label="Account Manager (Plexa)" value={client.accountManager} onChange={(v) => setClient({ accountManager: v })} />
+            
+            <div className="mt-4 pt-3 border-t flex items-center gap-2">
+              <button
+                onClick={handleSave}
+                disabled={!hasChanges}
+                className="flex-1 px-3 py-2 rounded-lg bg-primary text-primary-foreground font-medium text-sm hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+              >
+                Save Changes
+              </button>
+            </div>
           </div>
         </div>
 
@@ -77,7 +106,7 @@ export function CoverSection() {
       <div>
         <SectionHeader title="The Plexa Implementation Commandments" subtitle="Non-negotiable standards · every implementation · every time." />
         <div className="grid md:grid-cols-2 gap-3">
-          {COMMANDMENTS.map((c) => (
+          {commandList.map((c) => (
             <div key={c.n} className="rounded-xl border bg-card p-4 flex gap-3">
               <div className="flex-none w-10 h-10 rounded-lg bg-primary-soft text-primary font-bold flex items-center justify-center">{c.n}</div>
               <div>
@@ -103,6 +132,7 @@ function Field({ label, value, onChange, type = "text" }: { label: string; value
 
 export function MissionControlSection() {
   const tasks = usePlaybook((s) => s.tasks);
+  const phases = usePlaybook((s) => s.phases);
   const sessions = usePlaybook((s) => s.sessions);
   const issues = usePlaybook((s) => s.issues);
   const champions = usePlaybook((s) => s.champions);
@@ -119,15 +149,16 @@ export function MissionControlSection() {
   const blockedTasks = tasks.filter((t) => t.status === "BLOCKED");
   const dodDone = dod.filter((d) => d.confirmed).length;
 
-  const currentPhase = PHASES.find((p) => {
+  const phaseList = phases.length ? phases : [];
+  const currentPhase = phaseList.find((p) => {
     const pr = phaseProgress(tasks, p.id);
     return pr.status === "IN PROGRESS" || pr.status === "BLOCKED";
-  }) ?? PHASES.find((p) => phaseProgress(tasks, p.id).status === "NOT STARTED") ?? PHASES[PHASES.length - 1];
-  const currentProg = phaseProgress(tasks, currentPhase.id);
+  }) ?? phaseList.find((p) => phaseProgress(tasks, p.id).status === "NOT STARTED") ?? phaseList[0] ?? null;
+  const currentProg = currentPhase ? phaseProgress(tasks, currentPhase.id) : { complete: 0, total: 0, inProgress: 0, blocked: 0, status: "NOT STARTED" as const, pct: 0 };
 
-  const phaseOrder = PHASES.map((p) => p.id);
-  const currentIdx = phaseOrder.indexOf(currentPhase.id);
-  const focusPhases = phaseOrder.slice(currentIdx, currentIdx + 2);
+  const phaseOrder = phaseList.map((p) => p.id);
+  const currentIdx = currentPhase ? phaseOrder.indexOf(currentPhase.id) : -1;
+  const focusPhases = currentIdx >= 0 ? phaseOrder.slice(currentIdx, currentIdx + 2) : [];
   const nextTasks = tasks
     .filter((t) => focusPhases.includes(t.phase) && t.status !== "COMPLETE" && t.status !== "BLOCKED")
     .slice(0, 6);
@@ -200,7 +231,7 @@ export function MissionControlSection() {
               </span>
               <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Current step</span>
             </div>
-            <h3 className="mt-2 text-3xl font-bold tracking-tight">Phase {currentPhase.name} — {currentPhase.short}</h3>
+            <h3 className="mt-2 text-3xl font-bold tracking-tight">{currentPhase ? `Phase ${currentPhase.name} — ${currentPhase.short}` : "Phase data is still loading…"}</h3>
             <p className="text-sm text-muted-foreground mt-1">{currentProg.complete} of {currentProg.total} tasks complete in this phase · {currentProg.inProgress} active · {currentProg.blocked} blocked</p>
           </div>
           <div className="flex gap-6">
@@ -387,9 +418,9 @@ export function MissionControlSection() {
         <div className="mt-5">
           <div className="text-[11px] font-bold uppercase tracking-[0.15em] text-primary mb-2">Phase-by-phase breakdown</div>
           <div className="space-y-2">
-            {PHASES.map((p) => {
+            {phaseList.map((p) => {
               const prog = phaseProgress(tasks, p.id);
-              const isCurrent = p.id === currentPhase.id;
+              const isCurrent = currentPhase ? p.id === currentPhase.id : false;
               return (
                 <div key={p.id} className={cn("flex items-center gap-3 rounded-lg px-2 py-1.5", isCurrent && "bg-primary-soft")}>
                   <div className="w-20 text-sm font-semibold flex items-center gap-1.5">
@@ -431,7 +462,7 @@ export function MissionControlSection() {
         <div className="rounded-xl border bg-card p-5">
           <div className="flex items-center justify-between mb-4">
             <div className="text-[11px] font-bold uppercase tracking-[0.15em] text-primary">What's next</div>
-            <div className="text-[11px] text-muted-foreground">Phase {currentPhase.name}</div>
+            <div className="text-[11px] text-muted-foreground">{currentPhase ? `Phase ${currentPhase.name}` : "Waiting for phase data"}</div>
           </div>
           {nextTasks.length === 0 ? (
             <div className="text-sm text-muted-foreground text-center py-6">No upcoming tasks. Nice work.</div>

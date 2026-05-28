@@ -5,7 +5,7 @@ import {
   calcEndDate,
   type ScheduledTask,
 } from "@/lib/playbook-store";
-import { PHASES, type TaskStatus } from "@/lib/playbook-data";
+import { type TaskStatus } from "@/lib/playbook-data";
 import { SectionHeader } from "../shared";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -50,14 +50,15 @@ function isSameDay(a: Date, b: Date) {
   return isoDay(a) === isoDay(b);
 }
 function fmtShort(d: Date) {
-  return d.toLocaleDateString(undefined, { day: "2-digit", month: "short" });
+  return d.toLocaleDateString("en-GB", { day: "2-digit", month: "short" });
 }
 function fmtLong(d: Date) {
-  return d.toLocaleDateString(undefined, { weekday: "short", day: "2-digit", month: "short", year: "numeric" });
+  return d.toLocaleDateString("en-GB", { weekday: "short", day: "2-digit", month: "short", year: "numeric" });
 }
 
 export function GanttSection() {
   const tasks = usePlaybook((s) => s.tasks);
+  const phases = usePlaybook((s) => s.phases);
   const startDate = usePlaybook((s) => s.startDate);
   const mode = usePlaybook((s) => s.timelineMode);
   const overrides = usePlaybook((s) => s.taskOverrides);
@@ -96,12 +97,13 @@ export function GanttSection() {
   const filtered = phaseFilter === "ALL"
     ? scheduled
     : scheduled.filter((s) => s.task.phase === phaseFilter);
+  const phaseList = phases.length ? phases : [];
 
-  const grouped = PHASES.map((p) => ({
+  const grouped = phaseList.map((p) => ({
     phase: p,
     rows: filtered.filter((r) => r.task.phase === p.id),
   })).filter((g) => g.rows.length);
-
+  console.log('grouped', grouped)
   // "Today" focus
   const todaysTasks = scheduled.filter((s) => {
     const st = parseISO(s.start);
@@ -174,7 +176,7 @@ export function GanttSection() {
             className="h-9 rounded-md border bg-background px-2 text-sm"
           >
             <option value="ALL">All phases</option>
-            {PHASES.map((p) => (
+            {phaseList.map((p) => (
               <option key={p.id} value={p.id}>
                 {p.name} — {p.short}
               </option>
@@ -419,6 +421,7 @@ function TaskRowBar({
   onChange: (patch: { start?: string; end?: string }) => void;
   onReset: () => void;
 }) {
+  console.log('row', row)
   const [open, setOpen] = useState(false);
   const start = parseISO(row.start);
   const end = parseISO(row.end);

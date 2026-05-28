@@ -1,14 +1,41 @@
-import { useState } from "react";
-import { usePlaybook, calcEndDate, addBusinessDays, weeksForMode, type TimelineMode } from "@/lib/playbook-store";
-import { PHASES, type PhaseId, WORKSHOP_STEPS, RESISTANCE_PROFILES, TRAINING_MODULES } from "@/lib/playbook-data";
+import { useState, useEffect, useMemo, useRef } from "react";
+import { usePlaybook, calcEndDate, addBusinessDays, weeksForMode, type TimelineMode, type TrainingScheduleItemState } from "@/lib/playbook-store";
+import { type PhaseId } from "@/lib/playbook-data";
 import type { TaskStatus } from "@/lib/playbook-data";
 import { SectionHeader, StatusBadge } from "../shared";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { Calendar, History } from "lucide-react";
+import { Calendar, History, LoaderCircle, Save } from "lucide-react";
 import { cn } from "@/lib/utils";
+
+function NoteEditor({ value, onSave }: { value: string; onSave: (v: string) => void }) {
+  const [local, setLocal] = useState<string>(value);
+  const timer = useRef<number | null>(null);
+  useEffect(() => {
+    setLocal(value);
+  }, [value]);
+
+  useEffect(() => () => { if (timer.current) window.clearTimeout(timer.current); }, []);
+
+  const commit = (v: string) => onSave(v);
+  const scheduleCommit = (v: string) => {
+    if (timer.current) window.clearTimeout(timer.current);
+    timer.current = window.setTimeout(() => { commit(v); timer.current = null; }, 300);
+  };
+
+  return (
+    <Textarea
+      rows={2}
+      className="text-xs min-h-[60px]"
+      value={local}
+      onChange={(e) => { setLocal(e.target.value); scheduleCommit(e.target.value); }}
+      onBlur={(e) => { if (timer.current) { window.clearTimeout(timer.current); timer.current = null; } commit(e.target.value); }}
+      placeholder="Add notes, decisions, follow-ups…"
+    />
+  );
+}
 
 const MODES: TimelineMode[] = [
   "Quick (4 Weeks)",
@@ -21,12 +48,14 @@ const MODES: TimelineMode[] = [
 ];
 
 export function TimelineSection() {
+  const phases = usePlaybook((s) => s.phases);
   const startDate = usePlaybook((s) => s.startDate);
   const timelineMode = usePlaybook((s) => s.timelineMode);
   const setTimeline = usePlaybook((s) => s.setTimeline);
   const client = usePlaybook((s) => s.client);
   const setClient = usePlaybook((s) => s.setClient);
   const end = calcEndDate(startDate, timelineMode);
+  const phaseList = phases.length ? phases : [];
 
   return (
     <div className="space-y-6">
@@ -80,11 +109,11 @@ export function TimelineSection() {
         <div className="space-y-2">
           {(() => {
             const totalBizDays = weeksForMode(timelineMode) * 5;
-            const perPhase = Math.max(1, Math.floor(totalBizDays / PHASES.length));
+            const perPhase = Math.max(1, Math.floor(totalBizDays / phaseList.length));
             let cursor = 0;
-            return PHASES.map((p, i) => {
+            return phaseList.map((p, i) => {
               const phaseStart = i === 0 ? new Date(startDate) : addBusinessDays(startDate, cursor);
-              const isLast = i === PHASES.length - 1;
+              const isLast = i === phaseList.length - 1;
               const endOffset = isLast ? totalBizDays : cursor + perPhase;
               const phaseEnd = addBusinessDays(startDate, Math.max(endOffset - 1, cursor));
               cursor = endOffset;
@@ -134,14 +163,39 @@ const TASK_GUIDANCE: Record<string, string> = {
 
 export function ImplementationPlanSection({ filterPhase }: { filterPhase?: PhaseId | null }) {
   const tasks = usePlaybook((s) => s.tasks);
+  const phases = usePlaybook((s) => s.phases);
   const noteHistory = usePlaybook((s) => s.noteHistory);
+  const noteHistoryStatus = usePlaybook((s) => s.noteHistoryStatus);
   const updateStatus = usePlaybook((s) => s.updateTaskStatus);
   const updateNotes = usePlaybook((s) => s.updateTaskNotes);
+  const saveImplementationPlan = usePlaybook((s) => s.saveImplementationPlan);
+  const syncNoteHistoryFromTable = usePlaybook((s) => s.syncNoteHistoryFromTable);
   const [phaseFilter, setPhaseFilter] = useState<PhaseId | "ALL">(filterPhase || "ALL");
   const [historyOpen, setHistoryOpen] = useState<string | null>(null);
+  const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
 
   const shown = phaseFilter === "ALL" ? tasks : tasks.filter((t) => t.phase === phaseFilter);
-  const grouped = PHASES.map((p) => ({ phase: p, items: shown.filter((t) => t.phase === p.id) })).filter((g) => g.items.length);
+  const phaseList = phases.length ? phases : [];
+  const grouped = phaseList.map((p) => ({ phase: p, items: shown.filter((t) => t.phase === p.id) })).filter((g) => g.items.length);
+  const isHistoryLoading = noteHistoryStatus === "loading";
+  const isHistoryError = noteHistoryStatus === "error";
+
+  useEffect(() => {
+    void syncNoteHistoryFromTable();
+  }, [syncNoteHistoryFromTable]);
+
+  const handleSave = async () => {
+    try {
+      setSaveStatus("saving");
+      await saveImplementationPlan("You");
+      setSaveStatus("saved");
+      window.setTimeout(() => setSaveStatus("idle"), 1500);
+    } catch (error) {
+      console.error("Implementation plan save failed", error);
+      setSaveStatus("error");
+      window.setTimeout(() => setSaveStatus("idle"), 2500);
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -150,9 +204,22 @@ export function ImplementationPlanSection({ filterPhase }: { filterPhase?: Phase
           <SelectTrigger className="w-48"><SelectValue /></SelectTrigger>
           <SelectContent>
             <SelectItem value="ALL">All phases</SelectItem>
-            {PHASES.map((p) => <SelectItem key={p.id} value={p.id}>{p.name} — {p.short}</SelectItem>)}
+            {phaseList.map((p) => <SelectItem key={p.id} value={p.id}>{p.name} — {p.short}</SelectItem>)}
           </SelectContent>
         </Select>
+        <button
+          type="button"
+          onClick={handleSave}
+          disabled={saveStatus === "saving"}
+          className={cn(
+            "inline-flex h-10 items-center gap-2 rounded-md bg-primary px-3 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-60",
+            saveStatus === "saved" && "bg-success hover:bg-success",
+            saveStatus === "error" && "bg-destructive hover:bg-destructive"
+          )}
+        >
+          <Save className="h-4 w-4" />
+          {saveStatus === "saving" ? "Saving..." : saveStatus === "saved" ? "Saved" : saveStatus === "error" ? "Retry Save" : "Save Changes"}
+        </button>
       </SectionHeader>
 
       <div className="space-y-5">
@@ -186,29 +253,41 @@ export function ImplementationPlanSection({ filterPhase }: { filterPhase?: Phase
                           </SelectTrigger>
                           <SelectContent>{STATUSES.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
                         </Select>
-                        <Textarea
-                          rows={2}
-                          className="text-xs min-h-[60px]"
+                        <NoteEditor
                           value={t.notes || ""}
-                          onChange={(e) => updateNotes(t.id, e.target.value, "You")}
-                          placeholder="Add notes, decisions, follow-ups…"
+                          onSave={(val) => updateNotes(t.id, val, "You")}
                         />
                         <div className="text-xs text-muted-foreground italic leading-relaxed pt-1.5">
                           {TASK_GUIDANCE[t.id] || "—"}
                         </div>
                         <button
                           onClick={() => setHistoryOpen(showHistory ? null : t.id)}
-                          className={cn("h-8 mt-0.5 rounded-md border text-xs flex items-center justify-center gap-1", showHistory ? "bg-primary-soft text-primary border-primary/30" : "hover:bg-muted")}
-                          title="Notes audit history"
+                          className={cn(
+                            "h-8 mt-0.5 rounded-md border text-xs flex items-center justify-center gap-1",
+                            isHistoryLoading && "cursor-wait text-muted-foreground",
+                            showHistory ? "bg-primary-soft text-primary border-primary/30" : "hover:bg-muted",
+                            isHistoryError && "border-destructive/30 text-destructive hover:bg-destructive/10"
+                          )}
+                          title={isHistoryLoading ? "Loading notes audit history" : isHistoryError ? "Could not load notes audit history" : "Notes audit history"}
                         >
-                          <History className="h-3.5 w-3.5" />
-                          <span className="font-semibold">{history.length}</span>
+                          {isHistoryLoading ? (
+                            <LoaderCircle className="h-3.5 w-3.5 animate-spin" />
+                          ) : (
+                            <History className="h-3.5 w-3.5" />
+                          )}
+                          <span className="font-semibold">{isHistoryLoading ? "..." : isHistoryError ? "!" : history.length}</span>
                         </button>
                       </div>
                       {showHistory && (
                         <div className="px-3 pb-3 bg-muted/30">
                           <div className="text-[10px] font-bold uppercase tracking-[0.15em] text-primary mb-2">Audit history · who changed notes</div>
-                          {history.length === 0 ? (
+                          {isHistoryLoading ? (
+                            <div className="h-1 overflow-hidden rounded-full bg-muted">
+                              <div className="h-full w-1/3 animate-pulse rounded-full bg-primary" />
+                            </div>
+                          ) : isHistoryError ? (
+                            <div className="text-xs text-destructive">Could not load history. Reopen this tab to try again.</div>
+                          ) : history.length === 0 ? (
                             <div className="text-xs text-muted-foreground italic">No history yet. The first edit will be recorded.</div>
                           ) : (
                             <ul className="space-y-1.5">
@@ -241,6 +320,11 @@ export function ImplementationPlanSection({ filterPhase }: { filterPhase?: Phase
 }
 
 export function Phase3Section() {
+  const workshopSteps = usePlaybook((s) => s.workshopSteps);
+  const resistanceProfiles = usePlaybook((s) => s.resistanceProfiles);
+  const workshopList = workshopSteps.length ? workshopSteps : [];
+  const resistanceList = resistanceProfiles.length ? resistanceProfiles : [];
+
   return (
     <div className="space-y-6">
       <SectionHeader title="🎯 Phase 3 — Workshops" subtitle="HOD workshop agenda · change management · rollout planning." />
@@ -248,7 +332,7 @@ export function Phase3Section() {
       <div className="rounded-xl border bg-card p-5">
         <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-primary mb-3">HOD Workshop Agenda · 7-Step Format</div>
         <div className="space-y-2">
-          {WORKSHOP_STEPS.map((s) => (
+          {workshopList.map((s) => (
             <div key={s.step} className="flex items-start gap-4 rounded-lg border bg-background p-3">
               <div className="flex-none w-10 h-10 rounded-lg bg-brand-gradient text-primary-foreground font-bold flex items-center justify-center">{s.step}</div>
               <div className="flex-1">
@@ -266,7 +350,7 @@ export function Phase3Section() {
       <div>
         <SectionHeader title="Change Management" subtitle="Resistance profiles & conversion strategy." />
         <div className="grid md:grid-cols-2 gap-3">
-          {RESISTANCE_PROFILES.map((r) => (
+          {resistanceList.map((r) => (
             <div key={r.type} className="rounded-xl border bg-card p-4">
               <div className="font-semibold">{r.type}</div>
               <div className="mt-2 grid gap-2 text-xs">
@@ -293,6 +377,21 @@ const STATUS_SELECT_CLS: Record<TaskStatus, string> = {
 export function Phase4Section() {
   const modules = usePlaybook((s) => s.trainingModules);
   const updateModule = usePlaybook((s) => s.updateModule);
+  const saveTrainingModules = usePlaybook((s) => s.saveTrainingModules);
+  const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
+
+  const handleSave = async () => {
+    try {
+      setSaveStatus("saving");
+      await saveTrainingModules();
+      setSaveStatus("saved");
+      window.setTimeout(() => setSaveStatus("idle"), 1500);
+    } catch (error) {
+      console.error("Training modules save failed", error);
+      setSaveStatus("error");
+      window.setTimeout(() => setSaveStatus("idle"), 2500);
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -315,7 +414,24 @@ export function Phase4Section() {
 
       <div className="rounded-xl border bg-card overflow-hidden">
         <div className="bg-primary-soft px-4 py-3 border-b">
-          <div className="text-[10px] font-semibold uppercase tracking-wider text-primary">Training Sign-Off Tracker · Module Level</div>
+          <div className="text-[10px] font-semibold uppercase tracking-wider text-primary flex flex-wrap items-center justify-between gap-3">
+            Training Sign-Off Tracker · Module Level
+            <div className="flex justify-end">
+              <button
+                type="button"
+                onClick={handleSave}
+                disabled={saveStatus === "saving"}
+                className={cn(
+                  "inline-flex h-10 items-center gap-2 rounded-md bg-primary px-3 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-60",
+                  saveStatus === "saved" && "bg-success hover:bg-success",
+                  saveStatus === "error" && "bg-destructive hover:bg-destructive"
+                )}
+              >
+                <Save className="h-4 w-4" />
+                {saveStatus === "saving" ? "Saving..." : saveStatus === "saved" ? "Saved" : saveStatus === "error" ? "Retry Save" : "Save Changes"}
+              </button>
+            </div>
+          </div>
         </div>
         <div className="divide-y">
           <div className="grid grid-cols-[1fr_140px_140px_140px_180px_140px] gap-3 px-4 py-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground bg-muted/30">
@@ -342,16 +458,25 @@ export function Phase4Section() {
 
 // =================== TRAINING SCHEDULE ===================
 // Mirrors the "🎓 Training Schedule" tab from the Plexa Excel workbook.
-import { TRAINING_SCHEDULE } from "@/lib/training-schedule";
 
-type ItemState = { teach: boolean; practice: boolean; observe: boolean; owner: string; status: TaskStatus; date: string; facilitator: string };
+type ItemState = TrainingScheduleItemState;
 const blankItem = (): ItemState => ({ teach: false, practice: false, observe: false, owner: "PLEXA", status: "NOT STARTED", date: "", facilitator: "" });
 
 export function TrainingScheduleSection() {
-  const allItems = TRAINING_SCHEDULE.flatMap((m) => m.subs.flatMap((s) => s.items));
+  const apiSchedule = usePlaybook((s) => s.trainingSchedule);
+  const savedItems = usePlaybook((s) => s.trainingScheduleItems);
+  const saveTrainingScheduleItems = usePlaybook((s) => s.saveTrainingScheduleItems);
+  const schedule = useMemo(() => apiSchedule?.length ? apiSchedule : [], [apiSchedule]);
+  const allItems = useMemo(() => schedule.flatMap((m) => m.subs.flatMap((s) => s.items)), [schedule]);
   const [state, setState] = useState<Record<number, ItemState>>(() =>
-    Object.fromEntries(allItems.map((i) => [i.n, blankItem()]))
+    Object.fromEntries(allItems.map((i) => [i.n, savedItems[i.n] ?? blankItem()]))
   );
+  const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
+
+  useEffect(() => {
+    setState((prev) => Object.fromEntries(allItems.map((i) => [i.n, savedItems[i.n] ?? prev[i.n] ?? blankItem()])));
+  }, [allItems, savedItems]);
+
   const update = (n: number, patch: Partial<ItemState>) =>
     setState((p) => ({ ...p, [n]: { ...p[n], ...patch } }));
   const bulkApply = (nums: number[], key: "teach" | "practice" | "observe", value: boolean) =>
@@ -374,6 +499,19 @@ export function TrainingScheduleSection() {
       return next;
     });
 
+  const handleSave = async () => {
+    try {
+      setSaveStatus("saving");
+      await saveTrainingScheduleItems(state);
+      setSaveStatus("saved");
+      window.setTimeout(() => setSaveStatus("idle"), 1500);
+    } catch (error) {
+      console.error("Training schedule save failed", error);
+      setSaveStatus("error");
+      window.setTimeout(() => setSaveStatus("idle"), 2500);
+    }
+  };
+
   const total = allItems.length;
   const complete = Object.values(state).filter((s) => s.status === "COMPLETE").length;
   const inProgress = Object.values(state).filter((s) => s.status === "IN PROGRESS").length;
@@ -386,7 +524,21 @@ export function TrainingScheduleSection() {
       <SectionHeader
         title="🎓 Training Schedule"
         subtitle="Phase 4 Complete Training Register — every training item across all 8 modules. 3-part sign-off per item: TEACH → PRACTICE → OBSERVE. Nothing is complete until all three parts are signed off."
-      />
+      >
+        <button
+          type="button"
+          onClick={handleSave}
+          disabled={saveStatus === "saving"}
+          className={cn(
+            "inline-flex h-10 items-center gap-2 rounded-md bg-primary px-3 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-60",
+            saveStatus === "saved" && "bg-success hover:bg-success",
+            saveStatus === "error" && "bg-destructive hover:bg-destructive"
+          )}
+        >
+          <Save className="h-4 w-4" />
+          {saveStatus === "saving" ? "Saving..." : saveStatus === "saved" ? "Saved" : saveStatus === "error" ? "Retry Save" : "Save Changes"}
+        </button>
+      </SectionHeader>
 
       {/* Totals strip */}
       <div className="grid grid-cols-2 md:grid-cols-6 gap-2 text-center">
@@ -413,7 +565,7 @@ export function TrainingScheduleSection() {
         <span className="font-semibold">PART 3 — OBSERVE</span> (Team works independently, trainer watches)
       </div>
 
-      {TRAINING_SCHEDULE.map((mod) => (
+      {schedule.map((mod) => (
         <div key={mod.title} className="space-y-3">
           <div className="rounded-xl border-2 border-primary/40 bg-primary/10 px-4 py-3">
             <div className="text-[10px] font-semibold uppercase tracking-wider text-primary">▸ Module</div>
