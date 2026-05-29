@@ -496,9 +496,16 @@ interface PlaybookState {
 
   addIntranet: (r: Omit<IntranetResource, "id">) => void;
   updateIntranet: (id: string, patch: Partial<IntranetResource>) => void;
-  deleteIntranet: (id: string) => void;
+  deleteIntranet: (id: string) => Promise<void>;
+  syncIntranetFromTable: () => Promise<void>;
+  saveIntranet: (id: string) => Promise<void>;
+
+  postImplEmail: PostImplEmail;
+  loadPostImplEmail: () => Promise<void>;
+  savePostImplEmail: (patch: Partial<PostImplEmail>) => Promise<void>;
 
   resetAll: () => void;
+
   hydrateFromApi: (url?: string) => Promise<void>;
   fetchTables: () => Promise<void>;
   fetchTableRecords: (tableId: string, tableName: string) => Promise<any[]>;
