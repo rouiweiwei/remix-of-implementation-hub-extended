@@ -160,6 +160,7 @@ export interface ResistantUser {
 
 export interface DodItem {
   id: number;
+  _id?: string;
   cat: string;
   text: string;
   confirmed: boolean;
@@ -643,14 +644,15 @@ const normalizeTrainingScheduleItemState = (record: any): TrainingScheduleItemSt
 const trainingScheduleItemChanged = (item: TrainingScheduleItemState, snapshot?: TrainingScheduleItemState) => {
   if (!snapshot) return true;
   return (
-    item.teach !== snapshot.teach ||
-    item.practice !== snapshot.practice ||
-    item.observe !== snapshot.observe ||
-    item.owner !== snapshot.owner ||
-    item.status !== snapshot.status ||
-    item.date !== snapshot.date ||
-    item.facilitator !== snapshot.facilitator
-  );
+const normalizeDodRecord = (record: any) => ({
+  id: Number(readRecordValue(record, ["id", "ID"]) ?? record?.id ?? 0) || 0,
+  _id: record?.id,
+  cat: readRecordValue(record, ["cat", "Category"]) || "",
+  text: readRecordValue(record, ["text", "Text"]) || "",
+  confirmed: Boolean(parseJsonValue(readRecordValue(record, ["confirmed", "Confirmed"])) || false),
+  by: readRecordValue(record, ["by", "By"]) || "",
+  date: readRecordValue(record, ["date", "Date"]) || "",
+});
 };
 
 const normalizeStakeholderRecord = (record: any) => ({
