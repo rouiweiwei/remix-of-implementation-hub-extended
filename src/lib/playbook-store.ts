@@ -876,6 +876,7 @@ async function deleteRecordFromTable(tableId: string, recordId: string): Promise
     headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
   });
   if (!res.ok && res.status !== 404) throw new Error(`Failed to delete record (${res.status})`);
+}
 
 
 const initial = {
