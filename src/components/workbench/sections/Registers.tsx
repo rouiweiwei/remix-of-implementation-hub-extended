@@ -224,6 +224,7 @@ export function AttendanceSection() {
     const buf = await file.arrayBuffer();
     const wb = XLSX.read(buf, { type: "array" });
     const ws = wb.Sheets[wb.SheetNames[0]];
+    const data = XLSX.utils.sheet_to_json<Record<string, unknown>>(ws, { defval: "" });
     const imported: Omit<Attendee, "id" | "_id" | "sessionId">[] = data.map((r) => {
       const fullKey = Object.keys(r).find((k) => /full\s*name|name/i.test(k));
       const roleKey = Object.keys(r).find((k) => /role|title|position/i.test(k));
