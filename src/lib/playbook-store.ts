@@ -160,6 +160,7 @@ export interface ResistantUser {
 
 export interface DodItem {
   id: number;
+  _id?: string;
   cat: string;
   text: string;
   confirmed: boolean;
@@ -258,6 +259,22 @@ export interface ReminderTask {
   status: ReminderStatus;
   createdAt: string;       // ISO
   completedAt?: string;    // ISO
+}
+
+export interface TemplateFile {
+  id: string;
+  _id?: string;
+  templateName: string; // e.g. "Folder Structure Template"
+  uuid: string;
+  filename: string;
+  mimetype: string;
+  size_bytes: number;
+  path: string;
+  url: string;
+  path_thumbnail: string;
+  url_thumbnail: string;
+  extension: string;
+  name: string;
 }
 
 export type IntranetKind = "Recording" | "Quick-Start Guide" | "Resource";
@@ -412,7 +429,14 @@ interface PlaybookState {
   updateResistant: (id: string, patch: Partial<ResistantUser>) => void;
   deleteResistant: (id: string) => void;
 
-  toggleDod: (id: number, by: string) => void;
+  toggleDod: (id: number, by: string) => Promise<void>;
+
+  templates: TemplateFile[];
+  syncTemplatesFromTable: () => Promise<void>;
+  uploadTemplate: (templateName: string, file: File) => Promise<TemplateFile | null>;
+  deleteTemplate: (id: string) => Promise<void>;
+
+  saveTaskScheduleOverride: (taskId: string) => Promise<void>;
 
   addUser: (u: Omit<UserAccount, "id">) => void;
   updateUser: (id: string, patch: Partial<UserAccount>) => void;
@@ -630,8 +654,19 @@ const trainingScheduleItemChanged = (item: TrainingScheduleItemState, snapshot?:
   );
 };
 
+const normalizeDodRecord = (record: any) => ({
+  id: Number(readRecordValue(record, ["id", "ID"]) ?? 0) || 0,
+  _id: record?.id,
+  cat: readRecordValue(record, ["cat", "Category"]) || "",
+  text: readRecordValue(record, ["text", "Text"]) || "",
+  confirmed: Boolean(parseJsonValue(readRecordValue(record, ["confirmed", "Confirmed"])) || false),
+  by: readRecordValue(record, ["by", "By"]) || "",
+  date: readRecordValue(record, ["date", "Date"]) || "",
+});
+
 const normalizeStakeholderRecord = (record: any) => ({
   id: record?.id || `stakeholder-${Math.random().toString(36).slice(2, 8)}`,
+  _id: record?.id,
   name: readRecordValue(record, ["name", "Name"]) || "",
   role: readRecordValue(record, ["role", "Role"]) || "",
   dept: readRecordValue(record, ["dept", "Department"]) || "",
@@ -640,15 +675,6 @@ const normalizeStakeholderRecord = (record: any) => ({
   phone: readRecordValue(record, ["phone", "Phone"]) || "",
   sentiment: (readRecordValue(record, ["sentiment", "Sentiment"]) || "Unknown") as Stakeholder["sentiment"],
   lastTouch: readRecordValue(record, ["lastTouch", "Last Touch"]) || "",
-});
-
-const normalizeDodRecord = (record: any) => ({
-  id: record?.id || Number(record?.id ?? 0),
-  cat: readRecordValue(record, ["cat", "Category"]) || "",
-  text: readRecordValue(record, ["text", "Text"]) || "",
-  confirmed: Boolean(parseJsonValue(readRecordValue(record, ["confirmed", "Confirmed"])) || false),
-  by: readRecordValue(record, ["by", "By"]) || "",
-  date: readRecordValue(record, ["date", "Date"]) || "",
 });
 
 const normalizeWorkshopStepRecord = (record: any) => ({
@@ -920,6 +946,7 @@ const initial = {
   // table_name: playbook_resistant_users
   resistantUsers: [] as ResistantUser[],
   dod: [] as DodItem[],
+  templates: [] as TemplateFile[],
   // table_name: playbook_users
   userAccounts: [] as UserAccount[],
   // table_name: playbook_projects
@@ -1901,10 +1928,134 @@ export const usePlaybook = create<PlaybookState>()((set) => ({
       updateResistant: (id, patch) => set((st) => ({ resistantUsers: st.resistantUsers.map((x) => (x.id === id ? { ...x, ...patch } : x)) })),
       deleteResistant: (id) => set((st) => ({ resistantUsers: st.resistantUsers.filter((x) => x.id !== id) })),
 
-      toggleDod: (id, by) =>
-        set((s) => ({
-          dod: s.dod.map((d) => (d.id === id ? { ...d, confirmed: !d.confirmed, by: !d.confirmed ? by || "Plexa" : "", date: !d.confirmed ? new Date().toISOString().slice(0, 10) : "" } : d)),
-        })),
+      toggleDod: async (id, by) => {
+        const today = new Date().toISOString().slice(0, 10);
+        let updatedRow: DodItem | undefined;
+        set((s) => {
+          const dod = s.dod.map((d) => {
+            if (d.id !== id) return d;
+            const confirmed = !d.confirmed;
+            const next: DodItem = { ...d, confirmed, by: confirmed ? by || "Plexa" : "", date: confirmed ? today : "" };
+            updatedRow = next;
+            return next;
+          });
+          return { dod };
+        });
+        if (!updatedRow) return;
+        const tableId = usePlaybook.getState().tableMap[PLAYBOOK_TABLES.dod];
+        if (!tableId) return;
+        try {
+          const savedId = await saveRecordToTable(tableId, PLAYBOOK_TABLES.dod, updatedRow._id, {
+            id: updatedRow.id,
+            cat: updatedRow.cat,
+            text: updatedRow.text,
+            confirmed: updatedRow.confirmed,
+            by: updatedRow.by,
+            date: updatedRow.date,
+          });
+          if (savedId && !updatedRow._id) {
+            set((s) => ({ dod: s.dod.map((d) => (d.id === id ? { ...d, _id: savedId } : d)) }));
+          }
+        } catch (e) {
+          console.error("toggleDod API failed", e);
+        }
+      },
+
+      templates: [] as TemplateFile[],
+      syncTemplatesFromTable: async () => {
+        try {
+          const state = usePlaybook.getState();
+          let tableId = state.tableMap[PLAYBOOK_TABLES.templates];
+          if (!tableId) { await state.fetchTables(); tableId = usePlaybook.getState().tableMap[PLAYBOOK_TABLES.templates]; }
+          if (!tableId) return;
+          const rows = await state.fetchTableRecords(tableId, PLAYBOOK_TABLES.templates);
+          const items: TemplateFile[] = rows.map((r: any) => ({
+            id: r?.id || uid(),
+            _id: r?.id,
+            templateName: readRecordValue(r, ["templateName", "Template Name", "name", "Name"]) || "",
+            uuid: readRecordValue(r, ["uuid", "UUID"]) || "",
+            filename: readRecordValue(r, ["filename", "Filename"]) || "",
+            mimetype: readRecordValue(r, ["mimetype", "Mimetype"]) || "",
+            size_bytes: Number(readRecordValue(r, ["size_bytes", "Size"]) || 0),
+            path: readRecordValue(r, ["path", "Path"]) || "",
+            url: readRecordValue(r, ["url", "URL"]) || "",
+            path_thumbnail: readRecordValue(r, ["path_thumbnail"]) || "",
+            url_thumbnail: readRecordValue(r, ["url_thumbnail"]) || "",
+            extension: readRecordValue(r, ["extension", "Extension"]) || "",
+            name: readRecordValue(r, ["name", "Name"]) || "",
+          }));
+          set({ templates: items });
+        } catch (err) {
+          console.error("syncTemplatesFromTable failed", err);
+        }
+      },
+      uploadTemplate: async (templateName, file) => {
+        const apiBase = (window as any).apiBase as string | undefined;
+        const token = (window as any).authToken as string | undefined;
+        if (!apiBase) throw new Error("apiBase not available");
+        const form = new FormData();
+        form.append("file", file);
+        const upRes = await fetch(`${apiBase.replace(/\/+$/, "")}/attachments`, {
+          method: "POST",
+          headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+          body: form,
+        });
+        if (!upRes.ok) throw new Error(`Upload failed (${upRes.status})`);
+        const upJson = await upRes.json().catch(() => null);
+        const att = upJson?.data?.result || upJson?.data || upJson || {};
+        const fields = {
+          templateName,
+          uuid: att.uuid || "",
+          filename: att.filename || file.name,
+          mimetype: att.mimetype || file.type,
+          size_bytes: Number(att.size_bytes ?? file.size),
+          path: att.path || "",
+          url: att.url || "",
+          path_thumbnail: att.path_thumbnail || "",
+          url_thumbnail: att.url_thumbnail || "",
+          extension: att.extension || (file.name.split(".").pop() || ""),
+          name: file.name,
+        };
+        const state = usePlaybook.getState();
+        let tableId = state.tableMap[PLAYBOOK_TABLES.templates];
+        if (!tableId) { await state.fetchTables(); tableId = usePlaybook.getState().tableMap[PLAYBOOK_TABLES.templates]; }
+        if (!tableId) throw new Error("playbook_templates table not found");
+        const savedId = await saveRecordToTable(tableId, PLAYBOOK_TABLES.templates, undefined, fields);
+        const item: TemplateFile = { id: uid(), _id: savedId || undefined, ...fields };
+        set((s) => ({ templates: [...s.templates, item] }));
+        return item;
+      },
+      deleteTemplate: async (id) => {
+        const row = usePlaybook.getState().templates.find((x) => x.id === id);
+        const tableId = usePlaybook.getState().tableMap[PLAYBOOK_TABLES.templates];
+        if (row?._id && tableId) { try { await deleteRecordFromTable(tableId, row._id); } catch (e) { console.error("deleteTemplate API failed", e); } }
+        set((s) => ({ templates: s.templates.filter((x) => x.id !== id) }));
+      },
+
+      saveTaskScheduleOverride: async (taskId) => {
+        const state = usePlaybook.getState();
+        const override = state.taskOverrides[taskId];
+        if (!override) return;
+        let tableId = state.tableMap[PLAYBOOK_TABLES.taskOverrides];
+        if (!tableId) { await state.fetchTables(); tableId = usePlaybook.getState().tableMap[PLAYBOOK_TABLES.taskOverrides]; }
+        if (!tableId) return;
+        // Find existing record by taskId
+        let recordId: string | undefined;
+        try {
+          const rows = await state.fetchTableRecords(tableId, PLAYBOOK_TABLES.taskOverrides);
+          const match = rows.find((r: any) => readRecordValue(r, ["taskId", "Task ID"]) === taskId);
+          recordId = match?.id;
+        } catch {}
+        try {
+          await saveRecordToTable(tableId, PLAYBOOK_TABLES.taskOverrides, recordId, {
+            taskId,
+            start: override.start || "",
+            end: override.end || "",
+          });
+        } catch (e) {
+          console.error("saveTaskScheduleOverride failed", e);
+        }
+      },
 
       addUser: (u) => set((st) => ({ userAccounts: [...st.userAccounts, { id: uid(), ...u }] })),
       updateUser: (id, patch) => set((st) => ({ userAccounts: st.userAccounts.map((x) => (x.id === id ? { ...x, ...patch } : x)) })),

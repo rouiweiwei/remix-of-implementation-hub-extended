@@ -2060,35 +2060,27 @@ const TEMPLATE_LIBRARY: { id: string; name: string; description: string; columns
 type UploadedFile = { id: string; name: string; path: string; size: number; type: string; url: string };
 
 export function TemplatesLibrarySection() {
-  const [uploads, setUploads] = useState<Record<string, UploadedFile[]>>({});
+  const templates = usePlaybook((s) => s.templates);
+  const syncTemplatesFromTable = usePlaybook((s) => s.syncTemplatesFromTable);
+  const uploadTemplate = usePlaybook((s) => s.uploadTemplate);
+  const deleteTemplate = usePlaybook((s) => s.deleteTemplate);
   const fileInputs = useRef<Record<string, HTMLInputElement | null>>({});
   const folderInputs = useRef<Record<string, HTMLInputElement | null>>({});
+  const [busy, setBusy] = useState<Record<string, boolean>>({});
 
-  const handleFiles = (templateId: string, fileList: FileList | null) => {
+  useEffect(() => { void syncTemplatesFromTable(); }, [syncTemplatesFromTable]);
+
+  const handleFiles = async (templateName: string, fileList: FileList | null) => {
     if (!fileList || !fileList.length) return;
-    const next: UploadedFile[] = [];
-    for (const f of Array.from(fileList)) {
-      // webkitRelativePath is set when uploaded via webkitdirectory
-      const relPath = (f as File & { webkitRelativePath?: string }).webkitRelativePath || f.name;
-      next.push({
-        id: Math.random().toString(36).slice(2),
-        name: f.name,
-        path: relPath,
-        size: f.size,
-        type: f.type,
-        url: URL.createObjectURL(f),
-      });
+    setBusy((p) => ({ ...p, [templateName]: true }));
+    try {
+      for (const f of Array.from(fileList)) {
+        try { await uploadTemplate(templateName, f); }
+        catch (e) { console.error("uploadTemplate failed", e); }
+      }
+    } finally {
+      setBusy((p) => ({ ...p, [templateName]: false }));
     }
-    setUploads((prev) => ({ ...prev, [templateId]: [...(prev[templateId] || []), ...next] }));
-  };
-
-  const removeFile = (templateId: string, id: string) => {
-    setUploads((prev) => {
-      const list = prev[templateId] || [];
-      const target = list.find((f) => f.id === id);
-      if (target) URL.revokeObjectURL(target.url);
-      return { ...prev, [templateId]: list.filter((f) => f.id !== id) };
-    });
   };
 
   const fmtSize = (b: number) => b < 1024 ? `${b} B` : b < 1024 * 1024 ? `${(b / 1024).toFixed(1)} KB` : `${(b / 1024 / 1024).toFixed(1)} MB`;
@@ -2098,7 +2090,8 @@ export function TemplatesLibrarySection() {
       <SectionHeader title="📁 Templates Library" subtitle="Download ready-to-use Excel templates — or upload your own files and folders against each template." />
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
         {TEMPLATE_LIBRARY.map((t) => {
-          const files = uploads[t.id] || [];
+          const files = templates.filter((f) => f.templateName === t.name);
+          const uploading = !!busy[t.name];
           return (
             <div key={t.id} className="rounded-xl border bg-card p-4 flex flex-col gap-3 hover:shadow-md transition-shadow">
               <div className="flex items-start gap-3">
@@ -2121,14 +2114,14 @@ export function TemplatesLibrarySection() {
                 <Button size="sm" variant="outline" onClick={() => downloadXLSXTemplate(`${t.id}-template.xlsx`, t.columns, t.sample)}>
                   <Download className="h-4 w-4" /> Excel
                 </Button>
-                <Button size="sm" variant="outline" onClick={() => fileInputs.current[t.id]?.click()}>
-                  <Upload className="h-4 w-4" /> Files
+                <Button size="sm" variant="outline" disabled={uploading} onClick={() => fileInputs.current[t.id]?.click()}>
+                  <Upload className="h-4 w-4" /> {uploading ? "Uploading…" : "Files"}
                 </Button>
-                <Button size="sm" variant="outline" onClick={() => folderInputs.current[t.id]?.click()}>
+                <Button size="sm" variant="outline" disabled={uploading} onClick={() => folderInputs.current[t.id]?.click()}>
                   <Upload className="h-4 w-4" /> Folder
                 </Button>
-                <input ref={(el) => { fileInputs.current[t.id] = el; }} type="file" multiple className="hidden" onChange={(e) => { handleFiles(t.id, e.target.files); e.target.value = ""; }} />
-                <input ref={(el) => { folderInputs.current[t.id] = el; }} type="file" multiple className="hidden" {...({ webkitdirectory: "", directory: "" } as React.InputHTMLAttributes<HTMLInputElement>)} onChange={(e) => { handleFiles(t.id, e.target.files); e.target.value = ""; }} />
+                <input ref={(el) => { fileInputs.current[t.id] = el; }} type="file" multiple className="hidden" onChange={(e) => { void handleFiles(t.name, e.target.files); e.target.value = ""; }} />
+                <input ref={(el) => { folderInputs.current[t.id] = el; }} type="file" multiple className="hidden" {...({ webkitdirectory: "", directory: "" } as React.InputHTMLAttributes<HTMLInputElement>)} onChange={(e) => { void handleFiles(t.name, e.target.files); e.target.value = ""; }} />
               </div>
 
               {files.length > 0 && (
@@ -2136,10 +2129,10 @@ export function TemplatesLibrarySection() {
                   <div className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground px-1">{files.length} file{files.length === 1 ? "" : "s"} uploaded</div>
                   {files.map((f) => (
                     <div key={f.id} className="flex items-center gap-2 px-1 py-0.5 text-xs">
-                      <span className="truncate flex-1" title={f.path}>{f.path}</span>
-                      <span className="text-[10px] text-muted-foreground tabular-nums shrink-0">{fmtSize(f.size)}</span>
-                      <a href={f.url} download={f.name} className="text-primary hover:underline shrink-0" title="Download"><Download className="h-3.5 w-3.5" /></a>
-                      <button onClick={() => removeFile(t.id, f.id)} className="text-muted-foreground hover:text-destructive shrink-0" title="Remove"><Trash2 className="h-3.5 w-3.5" /></button>
+                      <span className="truncate flex-1" title={f.path || f.filename}>{f.filename || f.name}</span>
+                      <span className="text-[10px] text-muted-foreground tabular-nums shrink-0">{fmtSize(f.size_bytes)}</span>
+                      {f.url && <a href={f.url} target="_blank" rel="noreferrer" download={f.filename} className="text-primary hover:underline shrink-0" title="Download"><Download className="h-3.5 w-3.5" /></a>}
+                      <button onClick={() => void deleteTemplate(f.id)} className="text-muted-foreground hover:text-destructive shrink-0" title="Remove"><Trash2 className="h-3.5 w-3.5" /></button>
                     </div>
                   ))}
                 </div>
@@ -2148,7 +2141,7 @@ export function TemplatesLibrarySection() {
           );
         })}
       </div>
-      <p className="text-xs text-muted-foreground">Note: uploads are kept in this browser session. Connect Lovable Cloud to persist files across reloads and team members.</p>
+      <p className="text-xs text-muted-foreground">Uploads are stored via the Plexa attachments API and persisted in the playbook_templates table.</p>
     </div>
   );
 }
