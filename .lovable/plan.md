@@ -1,69 +1,76 @@
+# API Integration Plan — 11 Modules
 
-# Path B — Single-File Rewrite Plan
+I'll follow the existing pattern already used in **Training Sign-Off** and **Issues Register** (sync from table → in-memory state → per-row save that POSTs new vs PATCHes existing using `_id`, plus single-row delete that hits the API).
 
-Goal: produce one hand-written `index.html` that opens by double-click, contains all UI, logic, and sample data inline, with no build step and no network calls.
+## Scope by module
 
-This is a multi-turn rewrite. Each phase is shippable on its own — the normal app keeps working after every phase, and the final phase emits the single file.
+### 1. Templates Library — file upload + records
+- Upload via `POST {apiBase}/attachments` (multipart `file`) with `Authorization: Bearer ${authToken}`.
+- On success, persist a row in `playbook_templates` with: `uuid, filename, mimetype, size_bytes, path, url, path_thumbnail, url_thumbnail, extension, name` (name = the template title, e.g. "Folder Structure Template").
+- Add `templates` to store + sync/save/delete actions; rewrite `TemplatesLibrarySection` to use them.
 
-## Constraints I will hold to
+### 2. Attendance — fix Add Row + save/update/delete
+- Fix Add Row button so a new editable row appears immediately.
+- Wire `saveAttendee` (POST new / PATCH existing by `_id`) and `deleteAttendee` per row.
 
-- All ~25 workbench sections remain present and navigable.
-- All interactions (filters, tabs, dialogs, edits, persistence to `localStorage`, exports) keep working.
-- Mock datasets (`playbook-data.ts`, `registers-data.ts`, `email-templates.ts`, `training-schedule.ts`) are **trimmed to 2–4 representative rows per module** for the single-file output — you already approved this. The normal app keeps the full dataset.
-- No feature is removed. Where a Radix primitive has subtle a11y behavior (focus trap, typeahead in Select), the hand-rolled replacement will match the *user-visible* behavior, not necessarily every ARIA edge case.
+### 3. Content Topics — remove hardcoded `CONTENT_TOPICS`
+- Fetch from `playbook_session_topics` on hydrate; expose via store; refactor consumers (Phase 3 workshops + Content Log) to read from store instead of the constant.
+- Keep the constant only as a fallback if fetch fails.
 
-## Phase 1 — De-Tailwind-v4 the codebase
+### 4. Weekly Email Log — fix save + delete
+- Split save into POST (no `_id`) vs PATCH (has `_id`) using existing `saveEmail`.
+- Fix delete so it only removes the targeted row from state and calls the API DELETE for that row only.
 
-Replace `src/styles.css` (Tailwind v4 `@theme` / `@source` / `tw-animate-css` / `oklch` tokens) with a Tailwind **v3-compatible** stylesheet:
-- Convert OKLCH tokens to HSL equivalents (Play CDN config supports HSL via `hsl(var(--token))`).
-- Move design tokens into a plain `:root { --... }` block + matching `tailwind.config` shape.
-- Keep all utility classes used across components unchanged (`bg-primary`, `text-muted-foreground`, `bg-brand-gradient`, `bg-grid`, etc.).
-- Verify the normal dev build still renders identically.
+### 5. Issues Register — Archive button hits API
+- Toggle `archived` field via PATCH on the row's `_id` (reuse `saveIssue` with `{archived: true}`).
 
-No component code changes in this phase.
+### 6. Stakeholder Map — save/delete per row
+- Add `_id` to `Stakeholder`, add `syncStakeholdersFromTable`, `saveStakeholder` (POST/PATCH), update `deleteStakeholder` to call API.
+- Add Save + Delete action column in the UI.
 
-## Phase 2 — Replace shadcn/Radix primitives
+### 7. Champion Register — fetch + save/delete
+- Champions ← `playbook_champions`, Resistant Users ← `playbook_resistant_users`.
+- Add `_id`, sync, save (POST/PATCH), delete actions for both. Add action columns in UI.
 
-Rewrite the shadcn components that are actually imported by the workbench (audit shows: `dialog`, `tabs`, `select`, `popover`, `dropdown-menu`, `tooltip`, `accordion`, `button`, `card`, `input`, `textarea`, `label`, `badge`, `checkbox`, `switch`, `separator`, `table`, `sheet`, `scroll-area`, `progress`, `toast/sonner`) as **plain React components with no Radix dependency**.
+### 8. Definition of Done — PATCH on check/uncheck
+- On `toggleDod`, PATCH the row in `playbook_dod` with the new `confirmed`, `by`, `date` values.
 
-- Same file paths (`src/components/ui/*.tsx`), same exported names, same props the workbench uses.
-- Behavior parity for: open/close, controlled/uncontrolled, click-outside-to-close, escape-to-close, basic focus management.
-- Animations done with plain CSS transitions (no `tw-animate-css`).
-- Verify every workbench section still renders and interacts correctly in the normal app.
+### 9. Client Intranet Pack — API-backed
+- Use one table (already named via `PLAYBOOK_TABLES`) and distinguish rows by `kind`/`type` field (Recording / Quick-Start Guide / Resource).
+- Add sync/save/delete following the standard pattern.
 
-## Phase 3 — De-TanStack the routing
+### 10. Post-Implementation Email — API-backed
+- Persist the editable content to API (single record or per-field via the same custom-data pattern depending on what fits the existing module shape).
 
-The workbench is effectively a single page with internal tab state, so routing is light:
-- Replace `src/router.tsx` + `src/routes/__root.tsx` + `src/routes/index.tsx` with a minimal `App.tsx` that just renders `<Workbench />`.
-- Remove `@tanstack/react-query` usage if any (the workbench doesn't fetch — it uses `zustand/persist`).
-- Verify the normal app still boots.
+### 11. Gantt — PATCH start/deadline on date click
+- On date click in `GanttSection`, call existing `setTaskSchedule` then PATCH the task row (`playbook_tasks`) with new `startDate` / `deadline` (or override fields if that's how the table stores them).
 
-## Phase 4 — Emit the single inline `index.html`
+## Cross-cutting fixes
+- **Delete bug** in Project Details, User Accounts, Contractors, Cost Codes: ensure each `delete*` action calls the API DELETE and only removes that one row from local state (not all rows).
+- **Save POST vs PATCH**: standardise all `save*` actions to branch on presence of `_id`.
 
-This is the only phase that produces the deliverable. I will hand-author one file containing, in order:
+## Technical details
+- All API calls use `window.apiBase` + `window.authToken` (already used elsewhere in the store).
+- Records endpoint pattern (from existing code): `${apiBase}/workbench/organization/${org}/tables/${tableId}/records[/<recordId>]`.
+- Table IDs resolved via existing `tableMap` populated by `fetchTables()`.
+- New tables referenced: `playbook_templates`, `playbook_champions`, `playbook_resistant_users` — I'll add them to `PLAYBOOK_TABLES`.
 
-1. `<style>` block — all CSS tokens + utility classes the app uses, plus a small reset. No Tailwind CDN runtime (avoids the FOUC and 200 KB JIT compiler); I'll ship the *resolved* CSS for the classes actually used.
-2. CDN `<script>` tags (UMD, pinned versions) for: React 18, ReactDOM 18, Recharts, Lucide (UMD), Zustand (UMD), Babel Standalone (for JSX only — TS already stripped).
-3. `<script type="text/babel">` containing, in order:
-   - Inlined sample datasets (`PLAYBOOK_DATA`, `REGISTERS_DATA`, `EMAIL_TEMPLATES`, `TRAINING_SCHEDULE`) — 2–4 rows each, as plain `const` JS objects.
-   - The zustand store (plain JS, no TS).
-   - The hand-rolled UI primitives from Phase 2 (plain JS).
-   - Every workbench section component (plain JS, JSX).
-   - `<Workbench />` root component and `ReactDOM.createRoot(...).render(...)`.
+## Out of scope (confirm if you want included)
+- Schema/migrations on the backend side (assumes those tables already exist server-side).
+- Changing the global "Save Changes" header button behaviour.
+- Tests.
 
-Expected size: ~1.5–2.5 MB of readable JSX + CSS.
+## Estimated edits
+- `src/lib/playbook-store.ts` — large additions (~400–600 lines of new actions & syncs).
+- `src/lib/playbook-data.ts` — add new table names.
+- `src/components/workbench/sections/Registers.tsx` — most sections updated.
+- `src/components/workbench/sections/Phases.tsx` — Content Topics + Attendance fix.
+- `src/components/workbench/sections/Gantt.tsx` — PATCH on date change.
 
-Deliverable: `/mnt/documents/plexa-workbench-standalone.html`. After the file is written I'll QA it by opening it in a headless browser and checking that the main sections render without console errors. I'll then post a `<presentation-artifact>` so you can download it.
+## Questions before I start
+1. For **Post-Impl Email**, is the content stored as one record in a dedicated table, or as a field on `playbook_client`? I don't see an obvious table — please confirm the table name.
+2. For **Intranet**, confirm the table name to use (I'll default to `playbook_intranet` and a `kind` discriminator unless you tell me otherwise).
+3. For **Templates**, confirm `playbook_templates` is the correct table name.
+4. Should I keep optimistic UI updates (update local state immediately, then API), or wait for API response before updating UI? Existing pattern looks optimistic — I'll match it unless you say otherwise.
 
-## Things to know up front
-
-- **xlsx export**: if the workbench has Excel export, the inline file will use the `xlsx` UMD build (~900 KB on its own). If you'd rather drop Excel export from the standalone, the file shrinks to ~1 MB. I'll ask before Phase 4 if I find xlsx usage.
-- **Recharts** is heavy (~600 KB UMD). It stays — the Gantt and Mission Control rely on it.
-- **Persistence**: `zustand/persist` writes to `localStorage`. That works from `file://` in Chrome and Edge. Safari sometimes blocks `localStorage` on `file://` URLs — I'll note this in the file's header comment.
-- Phases 1–3 will visibly touch your normal app (you'll see CSS/components change). If anything looks off after a phase, we fix it before moving on.
-
-## How many turns
-
-Roughly: Phase 1 = 1 turn, Phase 2 = 2–3 turns, Phase 3 = 1 turn, Phase 4 = 1–2 turns. So ~5–7 build turns total before you get the downloadable file.
-
-If you approve, I'll start with Phase 1 (de-Tailwind-v4) and ship the final file at the end of Phase 4.
+Approve and I'll implement end-to-end in this turn.
