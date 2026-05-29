@@ -794,7 +794,48 @@ const normalizeIssueRecord = (record: any): Issue => ({
   closedDate: readRecordValue(record, ["closedDate", "Closed Date"]) || "",
   reportedBy: readRecordValue(record, ["reportedBy", "Reported By"]) || "",
   archived: Boolean(readRecordValue(record, ["archived", "Archived"]) || false),
+
+const normalizeChampionRecord = (record: any): Champion => ({
+  id: readRecordValue(record, ["id", "championId"]) || record?.id || uid(),
+  _id: record?.id,
+  name: readRecordValue(record, ["name", "Name"]) || "",
+  title: readRecordValue(record, ["title", "Title"]) || "",
+  dept: readRecordValue(record, ["dept", "Department"]) || "",
+  modules: readRecordValue(record, ["modules", "Modules"]) || "",
+  status: (readRecordValue(record, ["status", "Status"]) || "Identified") as Champion["status"],
 });
+
+const normalizeResistantRecord = (record: any): ResistantUser => ({
+  id: readRecordValue(record, ["id"]) || record?.id || uid(),
+  _id: record?.id,
+  name: readRecordValue(record, ["name", "Name"]) || "",
+  title: readRecordValue(record, ["title", "Title"]) || "",
+  type: readRecordValue(record, ["type", "Type"]) || "The Skeptic",
+  why: readRecordValue(record, ["why", "Why"]) || "",
+  strategy: readRecordValue(record, ["strategy", "Strategy"]) || "",
+  status: (readRecordValue(record, ["status", "Status"]) || "High Risk") as ResistantUser["status"],
+});
+
+const normalizeIntranetRecord = (record: any): IntranetResource => ({
+  id: readRecordValue(record, ["id"]) || record?.id || uid(),
+  _id: record?.id,
+  kind: (readRecordValue(record, ["kind", "Kind"]) || "Recording") as IntranetKind,
+  title: readRecordValue(record, ["title", "Title"]) || "",
+  module: readRecordValue(record, ["module", "Module"]) || "",
+  sessionId: readRecordValue(record, ["sessionId", "Session ID"]) || "",
+  url: readRecordValue(record, ["url", "URL"]) || "",
+  format: readRecordValue(record, ["format", "Format"]) || "",
+  duration: readRecordValue(record, ["duration", "Duration"]) || "",
+  presenter: readRecordValue(record, ["presenter", "Presenter"]) || "",
+  recordedOn: readRecordValue(record, ["recordedOn", "Recorded On"]) || "",
+  description: readRecordValue(record, ["description", "Description"]) || "",
+  status: (readRecordValue(record, ["status", "Status"]) || "DRAFT") as IntranetStatus,
+  fileName: readRecordValue(record, ["fileName"]) || undefined,
+  fileType: readRecordValue(record, ["fileType"]) || undefined,
+  fileSize: Number(readRecordValue(record, ["fileSize"]) || 0) || undefined,
+  fileData: readRecordValue(record, ["fileData"]) || undefined,
+});
+
 
 interface SavedSessionSnapshot {
   type: Session["type"];
