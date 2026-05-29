@@ -233,10 +233,12 @@ export function GanttSection() {
                       totalDays={totalDays}
                       today={today}
                       phaseColor={PHASE_COLOR[phase.id]}
-                      onChange={(patch) => setTaskSchedule(r.task.id, patch)}
                       onChange={(patch) => { setTaskSchedule(r.task.id, patch); void saveTaskScheduleOverride(r.task.id); }}
                       onReset={() => setTaskSchedule(r.task.id, null)}
+                    />
                   ))}
+                </div>
+              ))}
                 </div>
               ))}
               {/* Today vertical line */}
