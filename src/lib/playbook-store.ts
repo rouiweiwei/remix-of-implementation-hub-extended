@@ -401,7 +401,7 @@ interface PlaybookState {
 
   addStakeholder: (s: Omit<Stakeholder, "id">) => void;
   updateStakeholder: (id: string, patch: Partial<Stakeholder>) => void;
-  deleteStakeholder: (id: string) => void;
+  deleteStakeholder: (id: string) => Promise<void>;
 
   addChampion: (c: Omit<Champion, "id">) => void;
   updateChampion: (id: string, patch: Partial<Champion>) => void;
@@ -415,28 +415,28 @@ interface PlaybookState {
 
   addUser: (u: Omit<UserAccount, "id">) => void;
   updateUser: (id: string, patch: Partial<UserAccount>) => void;
-  deleteUser: (id: string) => void;
+  deleteUser: (id: string) => Promise<void>;
   replaceUsers: (rows: UserAccount[]) => void;
   syncUsersFromTable: () => Promise<void>;
   saveUserAccount: (id: string) => Promise<void>;
 
   addProject: (p: Omit<ProjectDetail, "id">) => void;
   updateProject: (id: string, patch: Partial<ProjectDetail>) => void;
-  deleteProject: (id: string) => void;
+  deleteProject: (id: string) => Promise<void>;
   replaceProjects: (rows: ProjectDetail[]) => void;
   syncProjectsFromTable: () => Promise<void>;
   saveProjectDetail: (id: string) => Promise<void>;
 
   addContractor: (c: Omit<Contractor, "id">) => void;
   updateContractor: (id: string, patch: Partial<Contractor>) => void;
-  deleteContractor: (id: string) => void;
+  deleteContractor: (id: string) => Promise<void>;
   replaceContractors: (rows: Contractor[]) => void;
   syncContractorsFromTable: () => Promise<void>;
   saveContractor: (id: string) => Promise<void>;
 
   addCostCode: (c: Omit<CostCode, "id">) => void;
   updateCostCode: (id: string, patch: Partial<CostCode>) => void;
-  deleteCostCode: (id: string) => void;
+  deleteCostCode: (id: string) => Promise<void>;
   replaceCostCodes: (rows: CostCode[]) => void;
   syncCostCodesFromTable: () => Promise<void>;
   saveCostCode: (id: string) => Promise<void>;
