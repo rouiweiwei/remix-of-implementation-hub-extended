@@ -794,6 +794,8 @@ const normalizeIssueRecord = (record: any): Issue => ({
   closedDate: readRecordValue(record, ["closedDate", "Closed Date"]) || "",
   reportedBy: readRecordValue(record, ["reportedBy", "Reported By"]) || "",
   archived: Boolean(readRecordValue(record, ["archived", "Archived"]) || false),
+});
+
 
 const normalizeChampionRecord = (record: any): Champion => ({
   id: readRecordValue(record, ["id", "championId"]) || record?.id || uid(),
