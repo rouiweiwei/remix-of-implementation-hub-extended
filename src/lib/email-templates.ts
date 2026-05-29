@@ -240,7 +240,7 @@ export function buildWeeklyEmail(ctx: BuildContext, opts: WeeklyOptions): Drafte
     ${section("📅 Coming next week", bulletList(comingNext.map(taskLabel)))}
     ${section("⚠️ Blockers & open queries", bulletList([
       ...blockedTasks.map((t) => `<span style="color:#ef4444;font-weight:600;">[BLOCKED]</span> ${taskLabel(t)}`),
-      ...openQueries.map((q) => `<strong style="font-family:ui-monospace,monospace;font-size:12px;color:${BRAND_PRIMARY};">${escapeHtml(q.ref || "—")}</strong> ${escapeHtml(q.description)} <span style="color:${MUTED};font-size:11px;">· ${escapeHtml(q.priority)} · owner ${escapeHtml(q.assignedTo || q.owner)}</span>`),
+      ...openQueries.map((q) => `<strong style="font-family:ui-monospace,monospace;font-size:12px;color:${BRAND_PRIMARY};">${escapeHtml(q.ref || "—")}</strong> ${escapeHtml(q.description || "")} <span style="color:${MUTED};font-size:11px;">· ${escapeHtml(q.priority || "MEDIUM")} · owner ${escapeHtml(q.assignedTo || q.owner || "")}</span>`),
     ]))}
     <p style="margin-top:20px;color:${MUTED};font-size:12px;">Reply to this email with any questions or to flag anything that needs urgent attention.</p>
   `;
