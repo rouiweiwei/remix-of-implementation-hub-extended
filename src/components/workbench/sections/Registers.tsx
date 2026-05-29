@@ -243,21 +243,21 @@ export function AttendanceSection() {
     }).filter((r) => r.firstName || r.lastName);
     mergeImported(id, imported);
   };
-
   const importFromUsers = (id: string) => {
-    const imported = userAccounts.map((u) => {
+    const imported: Omit<Attendee, "id" | "_id" | "sessionId">[] = userAccounts.map((u) => {
       const parts = String(u.name || "").trim().split(/\s+/);
       return {
         firstName: parts.shift() || "",
         lastName: parts.join(" ") || "",
         role: u.role || u.position || "",
         department: u.department || "",
-        attendance: "✅ Present",
-        signed: "⏳ Pending",
+        attendance: "✅ Present" as Attendee["attendance"],
+        signed: "⏳ Pending" as Attendee["signed"],
         notes: "",
       };
     });
     mergeImported(id, imported);
+  };
   };
 
   return (
