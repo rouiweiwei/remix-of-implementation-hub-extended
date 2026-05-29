@@ -280,6 +280,10 @@ export interface TemplateFile {
   name: string;
 }
 
+export type IntranetKind = "Recording" | "Quick-Start Guide" | "Resource";
+export type IntranetStatus = "DRAFT" | "PUBLISHED";
+
+
 export interface IntranetResource {
   id: string;
   _id?: string;
