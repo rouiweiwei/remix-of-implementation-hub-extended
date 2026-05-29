@@ -224,8 +224,7 @@ export function AttendanceSection() {
     const buf = await file.arrayBuffer();
     const wb = XLSX.read(buf, { type: "array" });
     const ws = wb.Sheets[wb.SheetNames[0]];
-    const data = XLSX.utils.sheet_to_json<Record<string, unknown>>(ws, { defval: "" });
-    const imported: Omit<Attendee, "id" | "_id">[] = data.map((r) => {
+    const imported: Omit<Attendee, "id" | "_id" | "sessionId">[] = data.map((r) => {
       const fullKey = Object.keys(r).find((k) => /full\s*name|name/i.test(k));
       const roleKey = Object.keys(r).find((k) => /role|title|position/i.test(k));
       const deptKey = Object.keys(r).find((k) => /department|dept|team/i.test(k));
@@ -236,8 +235,8 @@ export function AttendanceSection() {
         lastName,
         role: roleKey ? String(r[roleKey] ?? "") : "",
         department: deptKey ? String(r[deptKey] ?? "") : "",
-        attendance: "✅ Present",
-        signed: "⏳ Pending",
+        attendance: "✅ Present" as Attendee["attendance"],
+        signed: "⏳ Pending" as Attendee["signed"],
         notes: "",
       };
     }).filter((r) => r.firstName || r.lastName);
