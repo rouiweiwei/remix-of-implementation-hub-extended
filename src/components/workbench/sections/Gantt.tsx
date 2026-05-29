@@ -63,6 +63,7 @@ export function GanttSection() {
   const mode = usePlaybook((s) => s.timelineMode);
   const overrides = usePlaybook((s) => s.taskOverrides);
   const setTaskSchedule = usePlaybook((s) => s.setTaskSchedule);
+  const saveTaskScheduleOverride = usePlaybook((s) => s.saveTaskScheduleOverride);
 
   const [zoom, setZoom] = useState<Zoom>("week");
   const [phaseFilter, setPhaseFilter] = useState<string>("ALL");
@@ -233,8 +234,8 @@ export function GanttSection() {
                       today={today}
                       phaseColor={PHASE_COLOR[phase.id]}
                       onChange={(patch) => setTaskSchedule(r.task.id, patch)}
+                      onChange={(patch) => { setTaskSchedule(r.task.id, patch); void saveTaskScheduleOverride(r.task.id); }}
                       onReset={() => setTaskSchedule(r.task.id, null)}
-                    />
                   ))}
                 </div>
               ))}
