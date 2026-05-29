@@ -664,6 +664,19 @@ const normalizeDodRecord = (record: any) => ({
   date: readRecordValue(record, ["date", "Date"]) || "",
 });
 
+const normalizeStakeholderRecord = (record: any) => ({
+  id: record?.id || `stakeholder-${Math.random().toString(36).slice(2, 8)}`,
+  _id: record?.id,
+  name: readRecordValue(record, ["name", "Name"]) || "",
+  role: readRecordValue(record, ["role", "Role"]) || "",
+  dept: readRecordValue(record, ["dept", "Department"]) || "",
+  influence: (readRecordValue(record, ["influence", "Influence"]) || "Medium") as Stakeholder["influence"],
+  email: readRecordValue(record, ["email", "Email"]) || "",
+  phone: readRecordValue(record, ["phone", "Phone"]) || "",
+  sentiment: (readRecordValue(record, ["sentiment", "Sentiment"]) || "Unknown") as Stakeholder["sentiment"],
+  lastTouch: readRecordValue(record, ["lastTouch", "Last Touch"]) || "",
+});
+
 const normalizeWorkshopStepRecord = (record: any) => ({
   step: Number(readRecordValue(record, ["step", "Step"])) || 0,
   title: readRecordValue(record, ["title", "Title"]) || "",
