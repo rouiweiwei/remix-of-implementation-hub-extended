@@ -862,6 +862,11 @@ export function StakeholdersSection() {
   const add = usePlaybook((s) => s.addStakeholder);
   const update = usePlaybook((s) => s.updateStakeholder);
   const del = usePlaybook((s) => s.deleteStakeholder);
+  const sync = usePlaybook((s) => s.syncStakeholdersFromTable);
+  const save = usePlaybook((s) => s.saveStakeholder);
+  const [savingId, setSavingId] = useState<string | null>(null);
+  useEffect(() => { void sync(); }, [sync]);
+  const saveRow = async (id: string) => { setSavingId(id); try { await save(id); } finally { setSavingId(null); } };
 
   const byInfluence = {
     High: list.filter((s) => s.influence === "High"),
