@@ -1994,14 +1994,85 @@ export const usePlaybook = create<PlaybookState>()((set) => ({
         if (row?._id && tableId) { try { await deleteRecordFromTable(tableId, row._id); } catch (e) { console.error("deleteStakeholder API failed", e); } }
         set((st) => ({ stakeholders: st.stakeholders.filter((x) => x.id !== id) }));
       },
+      syncStakeholdersFromTable: async () => {
+        try {
+          const state = usePlaybook.getState();
+          let tableId = state.tableMap[PLAYBOOK_TABLES.stakeholders];
+          if (!tableId) { await state.fetchTables(); tableId = usePlaybook.getState().tableMap[PLAYBOOK_TABLES.stakeholders]; }
+          if (!tableId) return;
+          const rows = await state.fetchTableRecords(tableId, PLAYBOOK_TABLES.stakeholders);
+          set({ stakeholders: rows.map(normalizeStakeholderRecord) });
+        } catch (e) { console.error("syncStakeholdersFromTable failed", e); }
+      },
+      saveStakeholder: async (id) => {
+        const state = usePlaybook.getState();
+        const row = state.stakeholders.find((x) => x.id === id);
+        let tableId = state.tableMap[PLAYBOOK_TABLES.stakeholders];
+        if (!tableId) { await state.fetchTables(); tableId = usePlaybook.getState().tableMap[PLAYBOOK_TABLES.stakeholders]; }
+        if (!row || !tableId) return;
+        const fields = { name: row.name || "", role: row.role || "", dept: row.dept || "", influence: row.influence, email: row.email || "", phone: row.phone || "", sentiment: row.sentiment, lastTouch: row.lastTouch || "" };
+        const recordId = await saveRecordToTable(tableId, PLAYBOOK_TABLES.stakeholders, row._id, fields);
+        set((s) => ({ stakeholders: s.stakeholders.map((x) => (x.id === id ? { ...x, _id: recordId || x._id } : x)) }));
+      },
 
       addChampion: (c) => set((st) => ({ champions: [...st.champions, { id: uid(), ...c }] })),
       updateChampion: (id, patch) => set((st) => ({ champions: st.champions.map((x) => (x.id === id ? { ...x, ...patch } : x)) })),
-      deleteChampion: (id) => set((st) => ({ champions: st.champions.filter((x) => x.id !== id) })),
+      deleteChampion: async (id) => {
+        const row = usePlaybook.getState().champions.find((x) => x.id === id);
+        const tableId = usePlaybook.getState().tableMap[PLAYBOOK_TABLES.champions];
+        if (row?._id && tableId) { try { await deleteRecordFromTable(tableId, row._id); } catch (e) { console.error("deleteChampion API failed", e); } }
+        set((st) => ({ champions: st.champions.filter((x) => x.id !== id) }));
+      },
+      syncChampionsFromTable: async () => {
+        try {
+          const state = usePlaybook.getState();
+          let tableId = state.tableMap[PLAYBOOK_TABLES.champions];
+          if (!tableId) { await state.fetchTables(); tableId = usePlaybook.getState().tableMap[PLAYBOOK_TABLES.champions]; }
+          if (!tableId) return;
+          const rows = await state.fetchTableRecords(tableId, PLAYBOOK_TABLES.champions);
+          set({ champions: rows.map(normalizeChampionRecord) });
+        } catch (e) { console.error("syncChampionsFromTable failed", e); }
+      },
+      saveChampion: async (id) => {
+        const state = usePlaybook.getState();
+        const row = state.champions.find((x) => x.id === id);
+        let tableId = state.tableMap[PLAYBOOK_TABLES.champions];
+        if (!tableId) { await state.fetchTables(); tableId = usePlaybook.getState().tableMap[PLAYBOOK_TABLES.champions]; }
+        if (!row || !tableId) return;
+        const fields = { name: row.name || "", title: row.title || "", dept: row.dept || "", modules: row.modules || "", status: row.status };
+        const recordId = await saveRecordToTable(tableId, PLAYBOOK_TABLES.champions, row._id, fields);
+        set((s) => ({ champions: s.champions.map((x) => (x.id === id ? { ...x, _id: recordId || x._id } : x)) }));
+      },
 
       addResistant: (r) => set((st) => ({ resistantUsers: [...st.resistantUsers, { id: uid(), ...r }] })),
       updateResistant: (id, patch) => set((st) => ({ resistantUsers: st.resistantUsers.map((x) => (x.id === id ? { ...x, ...patch } : x)) })),
-      deleteResistant: (id) => set((st) => ({ resistantUsers: st.resistantUsers.filter((x) => x.id !== id) })),
+      deleteResistant: async (id) => {
+        const row = usePlaybook.getState().resistantUsers.find((x) => x.id === id);
+        const tableId = usePlaybook.getState().tableMap[PLAYBOOK_TABLES.resistantUsers];
+        if (row?._id && tableId) { try { await deleteRecordFromTable(tableId, row._id); } catch (e) { console.error("deleteResistant API failed", e); } }
+        set((st) => ({ resistantUsers: st.resistantUsers.filter((x) => x.id !== id) }));
+      },
+      syncResistantUsersFromTable: async () => {
+        try {
+          const state = usePlaybook.getState();
+          let tableId = state.tableMap[PLAYBOOK_TABLES.resistantUsers];
+          if (!tableId) { await state.fetchTables(); tableId = usePlaybook.getState().tableMap[PLAYBOOK_TABLES.resistantUsers]; }
+          if (!tableId) return;
+          const rows = await state.fetchTableRecords(tableId, PLAYBOOK_TABLES.resistantUsers);
+          set({ resistantUsers: rows.map(normalizeResistantRecord) });
+        } catch (e) { console.error("syncResistantUsersFromTable failed", e); }
+      },
+      saveResistant: async (id) => {
+        const state = usePlaybook.getState();
+        const row = state.resistantUsers.find((x) => x.id === id);
+        let tableId = state.tableMap[PLAYBOOK_TABLES.resistantUsers];
+        if (!tableId) { await state.fetchTables(); tableId = usePlaybook.getState().tableMap[PLAYBOOK_TABLES.resistantUsers]; }
+        if (!row || !tableId) return;
+        const fields = { name: row.name || "", title: row.title || "", type: row.type || "", why: row.why || "", strategy: row.strategy || "", status: row.status };
+        const recordId = await saveRecordToTable(tableId, PLAYBOOK_TABLES.resistantUsers, row._id, fields);
+        set((s) => ({ resistantUsers: s.resistantUsers.map((x) => (x.id === id ? { ...x, _id: recordId || x._id } : x)) }));
+      },
+
 
       toggleDod: async (id, by) => {
         const today = new Date().toISOString().slice(0, 10);
