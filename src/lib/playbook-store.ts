@@ -644,31 +644,19 @@ const normalizeTrainingScheduleItemState = (record: any): TrainingScheduleItemSt
 const trainingScheduleItemChanged = (item: TrainingScheduleItemState, snapshot?: TrainingScheduleItemState) => {
   if (!snapshot) return true;
   return (
-const normalizeDodRecord = (record: any) => ({
-  id: Number(readRecordValue(record, ["id", "ID"]) ?? record?.id ?? 0) || 0,
-  _id: record?.id,
-  cat: readRecordValue(record, ["cat", "Category"]) || "",
-  text: readRecordValue(record, ["text", "Text"]) || "",
-  confirmed: Boolean(parseJsonValue(readRecordValue(record, ["confirmed", "Confirmed"])) || false),
-  by: readRecordValue(record, ["by", "By"]) || "",
-  date: readRecordValue(record, ["date", "Date"]) || "",
-});
+    item.teach !== snapshot.teach ||
+    item.practice !== snapshot.practice ||
+    item.observe !== snapshot.observe ||
+    item.owner !== snapshot.owner ||
+    item.status !== snapshot.status ||
+    item.date !== snapshot.date ||
+    item.facilitator !== snapshot.facilitator
+  );
 };
 
-const normalizeStakeholderRecord = (record: any) => ({
-  id: record?.id || `stakeholder-${Math.random().toString(36).slice(2, 8)}`,
-  name: readRecordValue(record, ["name", "Name"]) || "",
-  role: readRecordValue(record, ["role", "Role"]) || "",
-  dept: readRecordValue(record, ["dept", "Department"]) || "",
-  influence: (readRecordValue(record, ["influence", "Influence"]) || "Medium") as Stakeholder["influence"],
-  email: readRecordValue(record, ["email", "Email"]) || "",
-  phone: readRecordValue(record, ["phone", "Phone"]) || "",
-  sentiment: (readRecordValue(record, ["sentiment", "Sentiment"]) || "Unknown") as Stakeholder["sentiment"],
-  lastTouch: readRecordValue(record, ["lastTouch", "Last Touch"]) || "",
-});
-
 const normalizeDodRecord = (record: any) => ({
-  id: record?.id || Number(record?.id ?? 0),
+  id: Number(readRecordValue(record, ["id", "ID"]) ?? 0) || 0,
+  _id: record?.id,
   cat: readRecordValue(record, ["cat", "Category"]) || "",
   text: readRecordValue(record, ["text", "Text"]) || "",
   confirmed: Boolean(parseJsonValue(readRecordValue(record, ["confirmed", "Confirmed"])) || false),
