@@ -36,4 +36,10 @@ export const PLAYBOOK_TABLES = {
   signoffs: "playbook_signoffs",
   emailLogs: "playbook_email_logs",
   issues: "playbook_issues",
+  templates: "playbook_templates",
+  champions: "playbook_champions",
+  resistantUsers: "playbook_resistant_users",
+  intranet: "playbook_intranet",
+  postImplEmail: "playbook_post_impl_email",
+  taskOverrides: "playbook_task_overrides",
 } as const;
