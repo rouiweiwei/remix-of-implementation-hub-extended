@@ -258,7 +258,7 @@ export function AttendanceSection() {
     });
     mergeImported(id, imported);
   };
-  };
+
 
   return (
     <div className="space-y-5">
