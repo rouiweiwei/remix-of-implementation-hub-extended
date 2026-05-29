@@ -141,6 +141,7 @@ export interface Stakeholder {
 
 export interface Champion {
   id: string;
+  _id?: string;
   name: string;
   title: string;
   dept: string;
@@ -150,6 +151,7 @@ export interface Champion {
 
 export interface ResistantUser {
   id: string;
+  _id?: string;
   name: string;
   title: string;
   type: string;
@@ -157,6 +159,7 @@ export interface ResistantUser {
   strategy: string;
   status: "High Risk" | "Engaging" | "Converted";
 }
+
 
 export interface DodItem {
   id: number;
@@ -280,24 +283,37 @@ export interface TemplateFile {
 export type IntranetKind = "Recording" | "Quick-Start Guide" | "Resource";
 export type IntranetStatus = "DRAFT" | "PUBLISHED";
 
+
 export interface IntranetResource {
   id: string;
+  _id?: string;
   kind: IntranetKind;
   title: string;
-  module: string;        // e.g. "4A", "All", "Workshop"
-  sessionId?: string;    // optional link to a Session/SessionDef id
-  url: string;           // recording link / guide link
-  format: string;        // e.g. "Video", "PDF", "Loom", "MP4", "Doc"
-  duration: string;      // e.g. "42:10" or "5 pages"
+  module: string;
+  sessionId?: string;
+  url: string;
+  format: string;
+  duration: string;
   presenter: string;
-  recordedOn: string;    // YYYY-MM-DD
+  recordedOn: string;
   description: string;
   status: IntranetStatus;
-  fileName?: string;     // attached file name
-  fileType?: string;     // MIME type
-  fileSize?: number;     // bytes
-  fileData?: string;     // base64 data URL of attachment
+  fileName?: string;
+  fileType?: string;
+  fileSize?: number;
+  fileData?: string;
 }
+
+export interface PostImplEmail {
+  _id?: string;
+  recipients: string;
+  subject: string;
+  body: string;
+  scheduleDate: string;
+  scheduled: boolean;
+}
+
+
 
 export interface CommandmentsType {
   n: string;
@@ -420,14 +436,21 @@ interface PlaybookState {
   addStakeholder: (s: Omit<Stakeholder, "id">) => void;
   updateStakeholder: (id: string, patch: Partial<Stakeholder>) => void;
   deleteStakeholder: (id: string) => Promise<void>;
+  syncStakeholdersFromTable: () => Promise<void>;
+  saveStakeholder: (id: string) => Promise<void>;
 
   addChampion: (c: Omit<Champion, "id">) => void;
   updateChampion: (id: string, patch: Partial<Champion>) => void;
-  deleteChampion: (id: string) => void;
+  deleteChampion: (id: string) => Promise<void>;
+  syncChampionsFromTable: () => Promise<void>;
+  saveChampion: (id: string) => Promise<void>;
 
   addResistant: (r: Omit<ResistantUser, "id">) => void;
   updateResistant: (id: string, patch: Partial<ResistantUser>) => void;
-  deleteResistant: (id: string) => void;
+  deleteResistant: (id: string) => Promise<void>;
+  syncResistantUsersFromTable: () => Promise<void>;
+  saveResistant: (id: string) => Promise<void>;
+
 
   toggleDod: (id: number, by: string) => Promise<void>;
 
@@ -473,9 +496,16 @@ interface PlaybookState {
 
   addIntranet: (r: Omit<IntranetResource, "id">) => void;
   updateIntranet: (id: string, patch: Partial<IntranetResource>) => void;
-  deleteIntranet: (id: string) => void;
+  deleteIntranet: (id: string) => Promise<void>;
+  syncIntranetFromTable: () => Promise<void>;
+  saveIntranet: (id: string) => Promise<void>;
+
+  postImplEmail: PostImplEmail;
+  loadPostImplEmail: () => Promise<void>;
+  savePostImplEmail: (patch: Partial<PostImplEmail>) => Promise<void>;
 
   resetAll: () => void;
+
   hydrateFromApi: (url?: string) => Promise<void>;
   fetchTables: () => Promise<void>;
   fetchTableRecords: (tableId: string, tableName: string) => Promise<any[]>;
@@ -766,6 +796,49 @@ const normalizeIssueRecord = (record: any): Issue => ({
   archived: Boolean(readRecordValue(record, ["archived", "Archived"]) || false),
 });
 
+
+const normalizeChampionRecord = (record: any): Champion => ({
+  id: readRecordValue(record, ["id", "championId"]) || record?.id || uid(),
+  _id: record?.id,
+  name: readRecordValue(record, ["name", "Name"]) || "",
+  title: readRecordValue(record, ["title", "Title"]) || "",
+  dept: readRecordValue(record, ["dept", "Department"]) || "",
+  modules: readRecordValue(record, ["modules", "Modules"]) || "",
+  status: (readRecordValue(record, ["status", "Status"]) || "Identified") as Champion["status"],
+});
+
+const normalizeResistantRecord = (record: any): ResistantUser => ({
+  id: readRecordValue(record, ["id"]) || record?.id || uid(),
+  _id: record?.id,
+  name: readRecordValue(record, ["name", "Name"]) || "",
+  title: readRecordValue(record, ["title", "Title"]) || "",
+  type: readRecordValue(record, ["type", "Type"]) || "The Skeptic",
+  why: readRecordValue(record, ["why", "Why"]) || "",
+  strategy: readRecordValue(record, ["strategy", "Strategy"]) || "",
+  status: (readRecordValue(record, ["status", "Status"]) || "High Risk") as ResistantUser["status"],
+});
+
+const normalizeIntranetRecord = (record: any): IntranetResource => ({
+  id: readRecordValue(record, ["id"]) || record?.id || uid(),
+  _id: record?.id,
+  kind: (readRecordValue(record, ["kind", "Kind"]) || "Recording") as IntranetKind,
+  title: readRecordValue(record, ["title", "Title"]) || "",
+  module: readRecordValue(record, ["module", "Module"]) || "",
+  sessionId: readRecordValue(record, ["sessionId", "Session ID"]) || "",
+  url: readRecordValue(record, ["url", "URL"]) || "",
+  format: readRecordValue(record, ["format", "Format"]) || "",
+  duration: readRecordValue(record, ["duration", "Duration"]) || "",
+  presenter: readRecordValue(record, ["presenter", "Presenter"]) || "",
+  recordedOn: readRecordValue(record, ["recordedOn", "Recorded On"]) || "",
+  description: readRecordValue(record, ["description", "Description"]) || "",
+  status: (readRecordValue(record, ["status", "Status"]) || "DRAFT") as IntranetStatus,
+  fileName: readRecordValue(record, ["fileName"]) || undefined,
+  fileType: readRecordValue(record, ["fileType"]) || undefined,
+  fileSize: Number(readRecordValue(record, ["fileSize"]) || 0) || undefined,
+  fileData: readRecordValue(record, ["fileData"]) || undefined,
+});
+
+
 interface SavedSessionSnapshot {
   type: Session["type"];
   topic: string;
@@ -959,6 +1032,8 @@ const initial = {
   reminderTasks: [] as ReminderTask[],
   // table_name: playbook_intranet
   intranet: [] as IntranetResource[],
+  postImplEmail: { recipients: "", subject: "", body: "", scheduleDate: "", scheduled: false } as PostImplEmail,
+
   lastSavedNotes: {} as Record<string, string>,
   lastSavedTaskSnapshots: {} as Record<string, SavedTaskSnapshot>,
   tableMap: {} as Record<string, string>,
@@ -1919,14 +1994,85 @@ export const usePlaybook = create<PlaybookState>()((set) => ({
         if (row?._id && tableId) { try { await deleteRecordFromTable(tableId, row._id); } catch (e) { console.error("deleteStakeholder API failed", e); } }
         set((st) => ({ stakeholders: st.stakeholders.filter((x) => x.id !== id) }));
       },
+      syncStakeholdersFromTable: async () => {
+        try {
+          const state = usePlaybook.getState();
+          let tableId = state.tableMap[PLAYBOOK_TABLES.stakeholders];
+          if (!tableId) { await state.fetchTables(); tableId = usePlaybook.getState().tableMap[PLAYBOOK_TABLES.stakeholders]; }
+          if (!tableId) return;
+          const rows = await state.fetchTableRecords(tableId, PLAYBOOK_TABLES.stakeholders);
+          set({ stakeholders: rows.map(normalizeStakeholderRecord) });
+        } catch (e) { console.error("syncStakeholdersFromTable failed", e); }
+      },
+      saveStakeholder: async (id) => {
+        const state = usePlaybook.getState();
+        const row = state.stakeholders.find((x) => x.id === id);
+        let tableId = state.tableMap[PLAYBOOK_TABLES.stakeholders];
+        if (!tableId) { await state.fetchTables(); tableId = usePlaybook.getState().tableMap[PLAYBOOK_TABLES.stakeholders]; }
+        if (!row || !tableId) return;
+        const fields = { name: row.name || "", role: row.role || "", dept: row.dept || "", influence: row.influence, email: row.email || "", phone: row.phone || "", sentiment: row.sentiment, lastTouch: row.lastTouch || "" };
+        const recordId = await saveRecordToTable(tableId, PLAYBOOK_TABLES.stakeholders, row._id, fields);
+        set((s) => ({ stakeholders: s.stakeholders.map((x) => (x.id === id ? { ...x, _id: recordId || x._id } : x)) }));
+      },
 
       addChampion: (c) => set((st) => ({ champions: [...st.champions, { id: uid(), ...c }] })),
       updateChampion: (id, patch) => set((st) => ({ champions: st.champions.map((x) => (x.id === id ? { ...x, ...patch } : x)) })),
-      deleteChampion: (id) => set((st) => ({ champions: st.champions.filter((x) => x.id !== id) })),
+      deleteChampion: async (id) => {
+        const row = usePlaybook.getState().champions.find((x) => x.id === id);
+        const tableId = usePlaybook.getState().tableMap[PLAYBOOK_TABLES.champions];
+        if (row?._id && tableId) { try { await deleteRecordFromTable(tableId, row._id); } catch (e) { console.error("deleteChampion API failed", e); } }
+        set((st) => ({ champions: st.champions.filter((x) => x.id !== id) }));
+      },
+      syncChampionsFromTable: async () => {
+        try {
+          const state = usePlaybook.getState();
+          let tableId = state.tableMap[PLAYBOOK_TABLES.champions];
+          if (!tableId) { await state.fetchTables(); tableId = usePlaybook.getState().tableMap[PLAYBOOK_TABLES.champions]; }
+          if (!tableId) return;
+          const rows = await state.fetchTableRecords(tableId, PLAYBOOK_TABLES.champions);
+          set({ champions: rows.map(normalizeChampionRecord) });
+        } catch (e) { console.error("syncChampionsFromTable failed", e); }
+      },
+      saveChampion: async (id) => {
+        const state = usePlaybook.getState();
+        const row = state.champions.find((x) => x.id === id);
+        let tableId = state.tableMap[PLAYBOOK_TABLES.champions];
+        if (!tableId) { await state.fetchTables(); tableId = usePlaybook.getState().tableMap[PLAYBOOK_TABLES.champions]; }
+        if (!row || !tableId) return;
+        const fields = { name: row.name || "", title: row.title || "", dept: row.dept || "", modules: row.modules || "", status: row.status };
+        const recordId = await saveRecordToTable(tableId, PLAYBOOK_TABLES.champions, row._id, fields);
+        set((s) => ({ champions: s.champions.map((x) => (x.id === id ? { ...x, _id: recordId || x._id } : x)) }));
+      },
 
       addResistant: (r) => set((st) => ({ resistantUsers: [...st.resistantUsers, { id: uid(), ...r }] })),
       updateResistant: (id, patch) => set((st) => ({ resistantUsers: st.resistantUsers.map((x) => (x.id === id ? { ...x, ...patch } : x)) })),
-      deleteResistant: (id) => set((st) => ({ resistantUsers: st.resistantUsers.filter((x) => x.id !== id) })),
+      deleteResistant: async (id) => {
+        const row = usePlaybook.getState().resistantUsers.find((x) => x.id === id);
+        const tableId = usePlaybook.getState().tableMap[PLAYBOOK_TABLES.resistantUsers];
+        if (row?._id && tableId) { try { await deleteRecordFromTable(tableId, row._id); } catch (e) { console.error("deleteResistant API failed", e); } }
+        set((st) => ({ resistantUsers: st.resistantUsers.filter((x) => x.id !== id) }));
+      },
+      syncResistantUsersFromTable: async () => {
+        try {
+          const state = usePlaybook.getState();
+          let tableId = state.tableMap[PLAYBOOK_TABLES.resistantUsers];
+          if (!tableId) { await state.fetchTables(); tableId = usePlaybook.getState().tableMap[PLAYBOOK_TABLES.resistantUsers]; }
+          if (!tableId) return;
+          const rows = await state.fetchTableRecords(tableId, PLAYBOOK_TABLES.resistantUsers);
+          set({ resistantUsers: rows.map(normalizeResistantRecord) });
+        } catch (e) { console.error("syncResistantUsersFromTable failed", e); }
+      },
+      saveResistant: async (id) => {
+        const state = usePlaybook.getState();
+        const row = state.resistantUsers.find((x) => x.id === id);
+        let tableId = state.tableMap[PLAYBOOK_TABLES.resistantUsers];
+        if (!tableId) { await state.fetchTables(); tableId = usePlaybook.getState().tableMap[PLAYBOOK_TABLES.resistantUsers]; }
+        if (!row || !tableId) return;
+        const fields = { name: row.name || "", title: row.title || "", type: row.type || "", why: row.why || "", strategy: row.strategy || "", status: row.status };
+        const recordId = await saveRecordToTable(tableId, PLAYBOOK_TABLES.resistantUsers, row._id, fields);
+        set((s) => ({ resistantUsers: s.resistantUsers.map((x) => (x.id === id ? { ...x, _id: recordId || x._id } : x)) }));
+      },
+
 
       toggleDod: async (id, by) => {
         const today = new Date().toISOString().slice(0, 10);
@@ -2314,7 +2460,79 @@ export const usePlaybook = create<PlaybookState>()((set) => ({
       addIntranet: (r) => set((st) => ({ intranet: [...st.intranet, { id: uid(), ...r }] })),
       updateIntranet: (id, patch) =>
         set((st) => ({ intranet: st.intranet.map((x) => (x.id === id ? { ...x, ...patch } : x)) })),
-      deleteIntranet: (id) => set((st) => ({ intranet: st.intranet.filter((x) => x.id !== id) })),
+      deleteIntranet: async (id) => {
+        const row = usePlaybook.getState().intranet.find((x) => x.id === id);
+        const tableId = usePlaybook.getState().tableMap[PLAYBOOK_TABLES.intranet];
+        if (row?._id && tableId) { try { await deleteRecordFromTable(tableId, row._id); } catch (e) { console.error("deleteIntranet API failed", e); } }
+        set((st) => ({ intranet: st.intranet.filter((x) => x.id !== id) }));
+      },
+      syncIntranetFromTable: async () => {
+        try {
+          const state = usePlaybook.getState();
+          let tableId = state.tableMap[PLAYBOOK_TABLES.intranet];
+          if (!tableId) { await state.fetchTables(); tableId = usePlaybook.getState().tableMap[PLAYBOOK_TABLES.intranet]; }
+          if (!tableId) return;
+          const rows = await state.fetchTableRecords(tableId, PLAYBOOK_TABLES.intranet);
+          set({ intranet: rows.map(normalizeIntranetRecord) });
+        } catch (e) { console.error("syncIntranetFromTable failed", e); }
+      },
+      saveIntranet: async (id) => {
+        const state = usePlaybook.getState();
+        const row = state.intranet.find((x) => x.id === id);
+        let tableId = state.tableMap[PLAYBOOK_TABLES.intranet];
+        if (!tableId) { await state.fetchTables(); tableId = usePlaybook.getState().tableMap[PLAYBOOK_TABLES.intranet]; }
+        if (!row || !tableId) return;
+        const fields = {
+          kind: row.kind, title: row.title || "", module: row.module || "", sessionId: row.sessionId || "",
+          url: row.url || "", format: row.format || "", duration: row.duration || "", presenter: row.presenter || "",
+          recordedOn: row.recordedOn || "", description: row.description || "", status: row.status,
+          fileName: row.fileName || "", fileType: row.fileType || "", fileSize: row.fileSize || 0,
+        };
+        const recordId = await saveRecordToTable(tableId, PLAYBOOK_TABLES.intranet, row._id, fields);
+        set((s) => ({ intranet: s.intranet.map((x) => (x.id === id ? { ...x, _id: recordId || x._id } : x)) }));
+      },
+
+      loadPostImplEmail: async () => {
+        try {
+          const state = usePlaybook.getState();
+          let tableId = state.tableMap[PLAYBOOK_TABLES.postImplEmail];
+          if (!tableId) { await state.fetchTables(); tableId = usePlaybook.getState().tableMap[PLAYBOOK_TABLES.postImplEmail]; }
+          if (!tableId) return;
+          const rows = await state.fetchTableRecords(tableId, PLAYBOOK_TABLES.postImplEmail);
+          const record = rows[0];
+          if (!record) return;
+          set({
+            postImplEmail: {
+              _id: record.id,
+              recipients: readRecordValue(record, ["recipients", "Recipients"]) || "",
+              subject: readRecordValue(record, ["subject", "Subject"]) || "",
+              body: readRecordValue(record, ["body", "Body"]) || "",
+              scheduleDate: readRecordValue(record, ["scheduleDate", "Schedule Date"]) || "",
+              scheduled: Boolean(parseJsonValue(readRecordValue(record, ["scheduled", "Scheduled"])) || false),
+            },
+          });
+        } catch (e) { console.error("loadPostImplEmail failed", e); }
+      },
+      savePostImplEmail: async (patch) => {
+        const state = usePlaybook.getState();
+        const merged: PostImplEmail = { ...state.postImplEmail, ...patch };
+        set({ postImplEmail: merged });
+        let tableId = state.tableMap[PLAYBOOK_TABLES.postImplEmail];
+        if (!tableId) { await state.fetchTables(); tableId = usePlaybook.getState().tableMap[PLAYBOOK_TABLES.postImplEmail]; }
+        if (!tableId) return;
+        const fields = {
+          recipients: merged.recipients || "",
+          subject: merged.subject || "",
+          body: merged.body || "",
+          scheduleDate: merged.scheduleDate || "",
+          scheduled: Boolean(merged.scheduled),
+        };
+        try {
+          const recordId = await saveRecordToTable(tableId, PLAYBOOK_TABLES.postImplEmail, merged._id, fields);
+          if (recordId && !merged._id) set((s) => ({ postImplEmail: { ...s.postImplEmail, _id: recordId } }));
+        } catch (e) { console.error("savePostImplEmail failed", e); }
+      },
+
 
       fetchTables: async () => {
         try {
