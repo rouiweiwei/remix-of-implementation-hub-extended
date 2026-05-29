@@ -1885,7 +1885,12 @@ export const usePlaybook = create<PlaybookState>()((set) => ({
 
       addStakeholder: (s) => set((st) => ({ stakeholders: [...st.stakeholders, { id: uid(), ...s }] })),
       updateStakeholder: (id, patch) => set((st) => ({ stakeholders: st.stakeholders.map((x) => (x.id === id ? { ...x, ...patch } : x)) })),
-      deleteStakeholder: (id) => set((st) => ({ stakeholders: st.stakeholders.filter((x) => x.id !== id) })),
+      deleteStakeholder: async (id) => {
+        const row = usePlaybook.getState().stakeholders.find((x) => x.id === id);
+        const tableId = usePlaybook.getState().tableMap[PLAYBOOK_TABLES.stakeholders];
+        if (row?._id && tableId) { try { await deleteRecordFromTable(tableId, row._id); } catch (e) { console.error("deleteStakeholder API failed", e); } }
+        set((st) => ({ stakeholders: st.stakeholders.filter((x) => x.id !== id) }));
+      },
 
       addChampion: (c) => set((st) => ({ champions: [...st.champions, { id: uid(), ...c }] })),
       updateChampion: (id, patch) => set((st) => ({ champions: st.champions.map((x) => (x.id === id ? { ...x, ...patch } : x)) })),
@@ -1902,7 +1907,12 @@ export const usePlaybook = create<PlaybookState>()((set) => ({
 
       addUser: (u) => set((st) => ({ userAccounts: [...st.userAccounts, { id: uid(), ...u }] })),
       updateUser: (id, patch) => set((st) => ({ userAccounts: st.userAccounts.map((x) => (x.id === id ? { ...x, ...patch } : x)) })),
-      deleteUser: (id) => set((st) => ({ userAccounts: st.userAccounts.filter((x) => x.id !== id) })),
+      deleteUser: async (id) => {
+        const row = usePlaybook.getState().userAccounts.find((x) => x.id === id);
+        const tableId = usePlaybook.getState().tableMap[PLAYBOOK_TABLES.users];
+        if (row?._id && tableId) { try { await deleteRecordFromTable(tableId, row._id); } catch (e) { console.error("deleteUser API failed", e); } }
+        set((st) => ({ userAccounts: st.userAccounts.filter((x) => x.id !== id) }));
+      },
       replaceUsers: (rows) => set({ userAccounts: rows }),
       syncUsersFromTable: async () => {
         const state = usePlaybook.getState();
@@ -1932,7 +1942,12 @@ export const usePlaybook = create<PlaybookState>()((set) => ({
 
       addProject: (p) => set((st) => ({ projectDetails: [...st.projectDetails, { id: uid(), ...p }] })),
       updateProject: (id, patch) => set((st) => ({ projectDetails: st.projectDetails.map((x) => (x.id === id ? { ...x, ...patch } : x)) })),
-      deleteProject: (id) => set((st) => ({ projectDetails: st.projectDetails.filter((x) => x.id !== id) })),
+      deleteProject: async (id) => {
+        const row = usePlaybook.getState().projectDetails.find((x) => x.id === id);
+        const tableId = usePlaybook.getState().tableMap[PLAYBOOK_TABLES.projects];
+        if (row?._id && tableId) { try { await deleteRecordFromTable(tableId, row._id); } catch (e) { console.error("deleteProject API failed", e); } }
+        set((st) => ({ projectDetails: st.projectDetails.filter((x) => x.id !== id) }));
+      },
       replaceProjects: (rows) => set({ projectDetails: rows }),
       syncProjectsFromTable: async () => {
         const state = usePlaybook.getState();
@@ -1964,7 +1979,12 @@ export const usePlaybook = create<PlaybookState>()((set) => ({
 
       addContractor: (c) => set((st) => ({ contractors: [...st.contractors, { id: uid(), ...c }] })),
       updateContractor: (id, patch) => set((st) => ({ contractors: st.contractors.map((x) => (x.id === id ? { ...x, ...patch } : x)) })),
-      deleteContractor: (id) => set((st) => ({ contractors: st.contractors.filter((x) => x.id !== id) })),
+      deleteContractor: async (id) => {
+        const row = usePlaybook.getState().contractors.find((x) => x.id === id);
+        const tableId = usePlaybook.getState().tableMap[PLAYBOOK_TABLES.contractors];
+        if (row?._id && tableId) { try { await deleteRecordFromTable(tableId, row._id); } catch (e) { console.error("deleteContractor API failed", e); } }
+        set((st) => ({ contractors: st.contractors.filter((x) => x.id !== id) }));
+      },
       replaceContractors: (rows) => set({ contractors: rows }),
       syncContractorsFromTable: async () => {
         const state = usePlaybook.getState();
@@ -1995,7 +2015,12 @@ export const usePlaybook = create<PlaybookState>()((set) => ({
 
       addCostCode: (c) => set((st) => ({ costCodes: [...st.costCodes, { id: uid(), ...c }] })),
       updateCostCode: (id, patch) => set((st) => ({ costCodes: st.costCodes.map((x) => (x.id === id ? { ...x, ...patch } : x)) })),
-      deleteCostCode: (id) => set((st) => ({ costCodes: st.costCodes.filter((x) => x.id !== id) })),
+      deleteCostCode: async (id) => {
+        const row = usePlaybook.getState().costCodes.find((x) => x.id === id);
+        const tableId = usePlaybook.getState().tableMap[PLAYBOOK_TABLES.costCodes];
+        if (row?._id && tableId) { try { await deleteRecordFromTable(tableId, row._id); } catch (e) { console.error("deleteCostCode API failed", e); } }
+        set((st) => ({ costCodes: st.costCodes.filter((x) => x.id !== id) }));
+      },
       replaceCostCodes: (rows) => set({ costCodes: rows }),
       syncCostCodesFromTable: async () => {
         const state = usePlaybook.getState();
