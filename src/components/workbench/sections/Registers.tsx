@@ -704,7 +704,6 @@ export function IssuesSection() {
 
   const upd = (id: string, patch: Partial<Issue>) => updateIssue(id, patch);
   const addRow = () => addIssue({
-    id: Math.random().toString(36).slice(2, 10),
     phase: "Phase 4",
     type: "👤 User Error",
     description: "",
