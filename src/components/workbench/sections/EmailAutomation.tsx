@@ -129,18 +129,18 @@ export function EmailAutomationPanel({
 
         <TabsContent value="workshops" className="mt-4">
           <SessionList
-            sessions={workshops}
+            sessions={workshops.map((s) => ({ ...s, name: s.topic }))}
             label="Workshop"
-            build={(s) => buildWorkshopEmail(ctx, s)}
+            build={(s) => buildWorkshopEmail(ctx, s as any)}
             onPreview={setPreview}
           />
         </TabsContent>
 
         <TabsContent value="training" className="mt-4">
           <SessionList
-            sessions={trainings}
+            sessions={trainings.map((s) => ({ ...s, name: s.topic }))}
             label="Training"
-            build={(s) => buildTrainingEmail(ctx, s)}
+            build={(s) => buildTrainingEmail(ctx, s as any)}
             onPreview={setPreview}
           />
         </TabsContent>
