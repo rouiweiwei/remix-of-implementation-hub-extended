@@ -129,18 +129,18 @@ export function EmailAutomationPanel({
 
         <TabsContent value="workshops" className="mt-4">
           <SessionList
-            sessions={workshops}
+            sessions={workshops.map((s) => ({ ...s, name: s.topic }))}
             label="Workshop"
-            build={(s) => buildWorkshopEmail(ctx, s)}
+            build={(s) => buildWorkshopEmail(ctx, s as any)}
             onPreview={setPreview}
           />
         </TabsContent>
 
         <TabsContent value="training" className="mt-4">
           <SessionList
-            sessions={trainings}
+            sessions={trainings.map((s) => ({ ...s, name: s.topic }))}
             label="Training"
-            build={(s) => buildTrainingEmail(ctx, s)}
+            build={(s) => buildTrainingEmail(ctx, s as any)}
             onPreview={setPreview}
           />
         </TabsContent>
@@ -196,7 +196,7 @@ function EmailCard({
   );
 }
 
-function SessionList<T extends { id: string; name: string; module: string }>({
+function SessionList<T extends { id: string; topic?: string; name?: string; module: string }>({
   sessions,
   label,
   build,
@@ -214,7 +214,7 @@ function SessionList<T extends { id: string; name: string; module: string }>({
           <div className="min-w-0 flex-1">
             <div className="text-sm font-semibold truncate">
               <span className="font-mono text-primary mr-2">{s.id}</span>
-              {s.name}
+              {s.topic || s.name || ""}
             </div>
             <div className="text-[11px] text-muted-foreground">{label} · Module {s.module}</div>
           </div>

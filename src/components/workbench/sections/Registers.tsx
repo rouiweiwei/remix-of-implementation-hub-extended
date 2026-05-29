@@ -193,7 +193,7 @@ export function AttendanceSection() {
   const updMeta = (id: string, patch: Partial<{ date: string; facilitator: string; location: string }>) =>
     setMeta((p) => ({ ...p, [id]: { ...p[id], ...patch } }));
   const addRow = (sessionId: string) => {
-    addAttendee({ sessionId, ...emptyAttendee(), firstName: "", lastName: "" });
+    addAttendee({ ...emptyAttendee(), sessionId });
   };
   const saveRow = async (id: string) => {
     setSavingId(id);
@@ -204,8 +204,8 @@ export function AttendanceSection() {
     }
   };
 
-  const mergeImported = (sessionId: string, imported: Omit<Attendee, "id" | "_id">[]) => {
-    imported.forEach((row) => addAttendee({ sessionId, ...row }));
+  const mergeImported = (sessionId: string, imported: Omit<Attendee, "id" | "_id" | "sessionId">[]) => {
+    imported.forEach((row) => addAttendee({ ...row, sessionId }));
   };
 
   const downloadTemplate = () => {
@@ -225,7 +225,7 @@ export function AttendanceSection() {
     const wb = XLSX.read(buf, { type: "array" });
     const ws = wb.Sheets[wb.SheetNames[0]];
     const data = XLSX.utils.sheet_to_json<Record<string, unknown>>(ws, { defval: "" });
-    const imported: Omit<Attendee, "id" | "_id">[] = data.map((r) => {
+    const imported: Omit<Attendee, "id" | "_id" | "sessionId">[] = data.map((r) => {
       const fullKey = Object.keys(r).find((k) => /full\s*name|name/i.test(k));
       const roleKey = Object.keys(r).find((k) => /role|title|position/i.test(k));
       const deptKey = Object.keys(r).find((k) => /department|dept|team/i.test(k));
@@ -236,29 +236,29 @@ export function AttendanceSection() {
         lastName,
         role: roleKey ? String(r[roleKey] ?? "") : "",
         department: deptKey ? String(r[deptKey] ?? "") : "",
-        attendance: "✅ Present",
-        signed: "⏳ Pending",
+        attendance: "✅ Present" as Attendee["attendance"],
+        signed: "⏳ Pending" as Attendee["signed"],
         notes: "",
       };
     }).filter((r) => r.firstName || r.lastName);
     mergeImported(id, imported);
   };
-
   const importFromUsers = (id: string) => {
-    const imported = userAccounts.map((u) => {
+    const imported: Omit<Attendee, "id" | "_id" | "sessionId">[] = userAccounts.map((u) => {
       const parts = String(u.name || "").trim().split(/\s+/);
       return {
         firstName: parts.shift() || "",
         lastName: parts.join(" ") || "",
         role: u.role || u.position || "",
         department: u.department || "",
-        attendance: "✅ Present",
-        signed: "⏳ Pending",
+        attendance: "✅ Present" as Attendee["attendance"],
+        signed: "⏳ Pending" as Attendee["signed"],
         notes: "",
       };
     });
     mergeImported(id, imported);
   };
+
 
   return (
     <div className="space-y-5">
@@ -278,7 +278,7 @@ export function AttendanceSection() {
             <div className="text-sm font-bold">
               <span className="font-mono text-primary mr-2">{s.id}</span>
               <span className="text-[10px] uppercase tracking-wider mr-2 text-muted-foreground">{s.type}:</span>
-              {s.name}
+              {s.topic}
             </div>
             <div className="flex flex-wrap items-center gap-1.5">
               <input
@@ -387,9 +387,7 @@ export function SignOffSection() {
   }, [syncSignOffsFromTable]);
 
   const addRow = () => {
-    const id = Math.random().toString(36).slice(2, 10);
     addSignOff({
-      id,
       person: "",
       jobTitle: "",
       module: COMPETENCY_MODULES[0]?.id || "",

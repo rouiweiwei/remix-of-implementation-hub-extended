@@ -69,9 +69,9 @@ function Workbench() {
   useEffect(() => {
     if (typeof window === "undefined") return;
 
-    window.playbookUrl = '/'
-    window.apiBase = "https://api.staging.plexapro.com";
-    window.authToken = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI3OGUwMThlNS1mZWY5LTQwMTEtYjFiMi1lZjI3OTZhYjlhMDIiLCJ0eXBlIjoiYWNjZXNzX3Rva2VuIiwianRpIjoiY2QxNTEyNDUtNzI5Yi00MTJmLTllMjQtNTgwZTczYWUwYTEyIiwiaWF0IjoxNzgwMDEwNDI4LCJleHAiOjE3ODAwMzkyMjh9.MwEDdLoy9k0tF5pYqjQWPn2KkpD4HGY9oiSowy3H-OI";
+    (window as any).playbookUrl = '/'
+    ;(window as any).apiBase = "https://api.staging.plexapro.com";
+    ;(window as any).authToken = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI3OGUwMThlNS1mZWY5LTQwMTEtYjFiMi1lZjI3OTZhYjlhMDIiLCJ0eXBlIjoiYWNjZXNzX3Rva2VuIiwianRpIjoiY2QxNTEyNDUtNzI5Yi00MTJmLTllMjQtNTgwZTczYWUwYTEyIiwiaWF0IjoxNzgwMDEwNDI4LCJleHAiOjE3ODAwMzkyMjh9.MwEDdLoy9k0tF5pYqjQWPn2KkpD4HGY9oiSowy3H-OI";
 
     const apiBase = (window as any).apiBase as string | undefined;
     const playbookUrl = (window as any).playbookUrl as string | undefined;
