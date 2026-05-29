@@ -428,7 +428,14 @@ interface PlaybookState {
   updateResistant: (id: string, patch: Partial<ResistantUser>) => void;
   deleteResistant: (id: string) => void;
 
-  toggleDod: (id: number, by: string) => void;
+  toggleDod: (id: number, by: string) => Promise<void>;
+
+  templates: TemplateFile[];
+  syncTemplatesFromTable: () => Promise<void>;
+  uploadTemplate: (templateName: string, file: File) => Promise<TemplateFile | null>;
+  deleteTemplate: (id: string) => Promise<void>;
+
+  saveTaskScheduleOverride: (taskId: string) => Promise<void>;
 
   addUser: (u: Omit<UserAccount, "id">) => void;
   updateUser: (id: string, patch: Partial<UserAccount>) => void;
