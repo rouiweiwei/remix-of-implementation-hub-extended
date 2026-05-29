@@ -239,8 +239,6 @@ export function GanttSection() {
                   ))}
                 </div>
               ))}
-                </div>
-              ))}
               {/* Today vertical line */}
               {today >= chartStart && today <= chartEnd && (
                 <div
