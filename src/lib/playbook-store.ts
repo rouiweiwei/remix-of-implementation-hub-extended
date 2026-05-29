@@ -943,6 +943,7 @@ const initial = {
   // table_name: playbook_resistant_users
   resistantUsers: [] as ResistantUser[],
   dod: [] as DodItem[],
+  templates: [] as TemplateFile[],
   // table_name: playbook_users
   userAccounts: [] as UserAccount[],
   // table_name: playbook_projects
