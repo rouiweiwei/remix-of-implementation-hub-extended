@@ -1212,7 +1212,7 @@ export function IntranetSection() {
                         <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="—" /></SelectTrigger>
                         <SelectContent>
                           <SelectItem value="none">— None —</SelectItem>
-                          {sessions.map((s) => <SelectItem key={s.id} value={s.id}>{s.id} · {s.name}</SelectItem>)}
+                          {sessions.map((s) => <SelectItem key={s.id} value={s.id}>{s.id} · {s.topic}</SelectItem>)}
                         </SelectContent>
                       </Select>
                     </div>
