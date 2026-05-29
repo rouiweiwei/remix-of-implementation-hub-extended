@@ -280,24 +280,35 @@ export interface TemplateFile {
   name: string;
 }
 
-export type IntranetKind = "Recording" | "Quick-Start Guide" | "Resource";
-export type IntranetStatus = "DRAFT" | "PUBLISHED";
-
 export interface IntranetResource {
   id: string;
+  _id?: string;
   kind: IntranetKind;
   title: string;
-  module: string;        // e.g. "4A", "All", "Workshop"
-  sessionId?: string;    // optional link to a Session/SessionDef id
-  url: string;           // recording link / guide link
-  format: string;        // e.g. "Video", "PDF", "Loom", "MP4", "Doc"
-  duration: string;      // e.g. "42:10" or "5 pages"
+  module: string;
+  sessionId?: string;
+  url: string;
+  format: string;
+  duration: string;
   presenter: string;
-  recordedOn: string;    // YYYY-MM-DD
+  recordedOn: string;
   description: string;
   status: IntranetStatus;
-  fileName?: string;     // attached file name
-  fileType?: string;     // MIME type
+  fileName?: string;
+  fileType?: string;
+  fileSize?: number;
+  fileData?: string;
+}
+
+export interface PostImplEmail {
+  _id?: string;
+  recipients: string;
+  subject: string;
+  body: string;
+  scheduleDate: string;
+  scheduled: boolean;
+}
+
   fileSize?: number;     // bytes
   fileData?: string;     // base64 data URL of attachment
 }
