@@ -548,9 +548,7 @@ export function EmailLogSection() {
   }, [syncEmailLogsFromTable]);
 
   const addRow = () => {
-    const id = Math.random().toString(36).slice(2, 10);
     addEmail({
-      id,
       week: emailLogs.length + 1,
       date: "",
       subject: "",
@@ -706,7 +704,6 @@ export function IssuesSection() {
 
   const upd = (id: string, patch: Partial<Issue>) => updateIssue(id, patch);
   const addRow = () => addIssue({
-    id: Math.random().toString(36).slice(2, 10),
     phase: "Phase 4",
     type: "👤 User Error",
     description: "",
@@ -1215,7 +1212,7 @@ export function IntranetSection() {
                         <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="—" /></SelectTrigger>
                         <SelectContent>
                           <SelectItem value="none">— None —</SelectItem>
-                          {sessions.map((s) => <SelectItem key={s.id} value={s.id}>{s.id} · {s.name}</SelectItem>)}
+                          {sessions.map((s) => <SelectItem key={s.id} value={s.id}>{s.id} · {s.topic}</SelectItem>)}
                         </SelectContent>
                       </Select>
                     </div>
@@ -1498,7 +1495,7 @@ export function ContentLogSection() {
             <div className="text-sm font-bold">
               <span className="font-mono text-primary mr-2">{s.id}</span>
               <span className="text-[10px] uppercase tracking-wider mr-2 text-muted-foreground">{s.type}:</span>
-              {s.name}
+              {s.topic}
             </div>
           </div>
           <div className="overflow-x-auto">

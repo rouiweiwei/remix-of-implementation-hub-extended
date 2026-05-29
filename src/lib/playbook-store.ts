@@ -128,6 +128,7 @@ export interface Issue {
 
 export interface Stakeholder {
   id: string;
+  _id?: string;
   name: string;
   role: string;
   dept: string;
@@ -401,7 +402,7 @@ interface PlaybookState {
 
   addStakeholder: (s: Omit<Stakeholder, "id">) => void;
   updateStakeholder: (id: string, patch: Partial<Stakeholder>) => void;
-  deleteStakeholder: (id: string) => void;
+  deleteStakeholder: (id: string) => Promise<void>;
 
   addChampion: (c: Omit<Champion, "id">) => void;
   updateChampion: (id: string, patch: Partial<Champion>) => void;
@@ -415,28 +416,28 @@ interface PlaybookState {
 
   addUser: (u: Omit<UserAccount, "id">) => void;
   updateUser: (id: string, patch: Partial<UserAccount>) => void;
-  deleteUser: (id: string) => void;
+  deleteUser: (id: string) => Promise<void>;
   replaceUsers: (rows: UserAccount[]) => void;
   syncUsersFromTable: () => Promise<void>;
   saveUserAccount: (id: string) => Promise<void>;
 
   addProject: (p: Omit<ProjectDetail, "id">) => void;
   updateProject: (id: string, patch: Partial<ProjectDetail>) => void;
-  deleteProject: (id: string) => void;
+  deleteProject: (id: string) => Promise<void>;
   replaceProjects: (rows: ProjectDetail[]) => void;
   syncProjectsFromTable: () => Promise<void>;
   saveProjectDetail: (id: string) => Promise<void>;
 
   addContractor: (c: Omit<Contractor, "id">) => void;
   updateContractor: (id: string, patch: Partial<Contractor>) => void;
-  deleteContractor: (id: string) => void;
+  deleteContractor: (id: string) => Promise<void>;
   replaceContractors: (rows: Contractor[]) => void;
   syncContractorsFromTable: () => Promise<void>;
   saveContractor: (id: string) => Promise<void>;
 
   addCostCode: (c: Omit<CostCode, "id">) => void;
   updateCostCode: (id: string, patch: Partial<CostCode>) => void;
-  deleteCostCode: (id: string) => void;
+  deleteCostCode: (id: string) => Promise<void>;
   replaceCostCodes: (rows: CostCode[]) => void;
   syncCostCodesFromTable: () => Promise<void>;
   saveCostCode: (id: string) => Promise<void>;
@@ -863,6 +864,21 @@ async function saveRecordToTable(tableId: string, tableName: string, recordId: s
   const json = await res.json().catch(() => null);
   return json?.data?.result?.records?.[0]?.id || json?.data?.result?.record?.id || json?.data?.result?.id || recordId;
 }
+
+async function deleteRecordFromTable(tableId: string, recordId: string): Promise<void> {
+  const apiBase = (window as any).apiBase as string | undefined;
+  const token = (window as any).authToken as string | undefined;
+  if (!apiBase) throw new Error("apiBase not available");
+  const org = await ensureOrganizationUUID(apiBase, token);
+  if (!org) throw new Error("Organization UUID not available");
+  const url = `${apiBase.replace(/\/+$/, "")}/workbench/organization/${org}/tables/${tableId}/records?recordIds[]=${encodeURIComponent(recordId)}`;
+  const res = await fetch(url, {
+    method: "DELETE",
+    headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+  });
+  if (!res.ok && res.status !== 404) throw new Error(`Failed to delete record (${res.status})`);
+}
+
 
 const initial = {
   client: {} as ClientInfo,
@@ -1870,7 +1886,12 @@ export const usePlaybook = create<PlaybookState>()((set) => ({
 
       addStakeholder: (s) => set((st) => ({ stakeholders: [...st.stakeholders, { id: uid(), ...s }] })),
       updateStakeholder: (id, patch) => set((st) => ({ stakeholders: st.stakeholders.map((x) => (x.id === id ? { ...x, ...patch } : x)) })),
-      deleteStakeholder: (id) => set((st) => ({ stakeholders: st.stakeholders.filter((x) => x.id !== id) })),
+      deleteStakeholder: async (id) => {
+        const row = usePlaybook.getState().stakeholders.find((x) => x.id === id);
+        const tableId = usePlaybook.getState().tableMap[PLAYBOOK_TABLES.stakeholders];
+        if (row?._id && tableId) { try { await deleteRecordFromTable(tableId, row._id); } catch (e) { console.error("deleteStakeholder API failed", e); } }
+        set((st) => ({ stakeholders: st.stakeholders.filter((x) => x.id !== id) }));
+      },
 
       addChampion: (c) => set((st) => ({ champions: [...st.champions, { id: uid(), ...c }] })),
       updateChampion: (id, patch) => set((st) => ({ champions: st.champions.map((x) => (x.id === id ? { ...x, ...patch } : x)) })),
@@ -1887,7 +1908,12 @@ export const usePlaybook = create<PlaybookState>()((set) => ({
 
       addUser: (u) => set((st) => ({ userAccounts: [...st.userAccounts, { id: uid(), ...u }] })),
       updateUser: (id, patch) => set((st) => ({ userAccounts: st.userAccounts.map((x) => (x.id === id ? { ...x, ...patch } : x)) })),
-      deleteUser: (id) => set((st) => ({ userAccounts: st.userAccounts.filter((x) => x.id !== id) })),
+      deleteUser: async (id) => {
+        const row = usePlaybook.getState().userAccounts.find((x) => x.id === id);
+        const tableId = usePlaybook.getState().tableMap[PLAYBOOK_TABLES.users];
+        if (row?._id && tableId) { try { await deleteRecordFromTable(tableId, row._id); } catch (e) { console.error("deleteUser API failed", e); } }
+        set((st) => ({ userAccounts: st.userAccounts.filter((x) => x.id !== id) }));
+      },
       replaceUsers: (rows) => set({ userAccounts: rows }),
       syncUsersFromTable: async () => {
         const state = usePlaybook.getState();
@@ -1917,7 +1943,12 @@ export const usePlaybook = create<PlaybookState>()((set) => ({
 
       addProject: (p) => set((st) => ({ projectDetails: [...st.projectDetails, { id: uid(), ...p }] })),
       updateProject: (id, patch) => set((st) => ({ projectDetails: st.projectDetails.map((x) => (x.id === id ? { ...x, ...patch } : x)) })),
-      deleteProject: (id) => set((st) => ({ projectDetails: st.projectDetails.filter((x) => x.id !== id) })),
+      deleteProject: async (id) => {
+        const row = usePlaybook.getState().projectDetails.find((x) => x.id === id);
+        const tableId = usePlaybook.getState().tableMap[PLAYBOOK_TABLES.projects];
+        if (row?._id && tableId) { try { await deleteRecordFromTable(tableId, row._id); } catch (e) { console.error("deleteProject API failed", e); } }
+        set((st) => ({ projectDetails: st.projectDetails.filter((x) => x.id !== id) }));
+      },
       replaceProjects: (rows) => set({ projectDetails: rows }),
       syncProjectsFromTable: async () => {
         const state = usePlaybook.getState();
@@ -1949,7 +1980,12 @@ export const usePlaybook = create<PlaybookState>()((set) => ({
 
       addContractor: (c) => set((st) => ({ contractors: [...st.contractors, { id: uid(), ...c }] })),
       updateContractor: (id, patch) => set((st) => ({ contractors: st.contractors.map((x) => (x.id === id ? { ...x, ...patch } : x)) })),
-      deleteContractor: (id) => set((st) => ({ contractors: st.contractors.filter((x) => x.id !== id) })),
+      deleteContractor: async (id) => {
+        const row = usePlaybook.getState().contractors.find((x) => x.id === id);
+        const tableId = usePlaybook.getState().tableMap[PLAYBOOK_TABLES.contractors];
+        if (row?._id && tableId) { try { await deleteRecordFromTable(tableId, row._id); } catch (e) { console.error("deleteContractor API failed", e); } }
+        set((st) => ({ contractors: st.contractors.filter((x) => x.id !== id) }));
+      },
       replaceContractors: (rows) => set({ contractors: rows }),
       syncContractorsFromTable: async () => {
         const state = usePlaybook.getState();
@@ -1980,7 +2016,12 @@ export const usePlaybook = create<PlaybookState>()((set) => ({
 
       addCostCode: (c) => set((st) => ({ costCodes: [...st.costCodes, { id: uid(), ...c }] })),
       updateCostCode: (id, patch) => set((st) => ({ costCodes: st.costCodes.map((x) => (x.id === id ? { ...x, ...patch } : x)) })),
-      deleteCostCode: (id) => set((st) => ({ costCodes: st.costCodes.filter((x) => x.id !== id) })),
+      deleteCostCode: async (id) => {
+        const row = usePlaybook.getState().costCodes.find((x) => x.id === id);
+        const tableId = usePlaybook.getState().tableMap[PLAYBOOK_TABLES.costCodes];
+        if (row?._id && tableId) { try { await deleteRecordFromTable(tableId, row._id); } catch (e) { console.error("deleteCostCode API failed", e); } }
+        set((st) => ({ costCodes: st.costCodes.filter((x) => x.id !== id) }));
+      },
       replaceCostCodes: (rows) => set({ costCodes: rows }),
       syncCostCodesFromTable: async () => {
         const state = usePlaybook.getState();
