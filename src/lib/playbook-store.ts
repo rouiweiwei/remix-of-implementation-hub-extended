@@ -989,6 +989,8 @@ const initial = {
   reminderTasks: [] as ReminderTask[],
   // table_name: playbook_intranet
   intranet: [] as IntranetResource[],
+  postImplEmail: { recipients: "", subject: "", body: "", scheduleDate: "", scheduled: false } as PostImplEmail,
+
   lastSavedNotes: {} as Record<string, string>,
   lastSavedTaskSnapshots: {} as Record<string, SavedTaskSnapshot>,
   tableMap: {} as Record<string, string>,
