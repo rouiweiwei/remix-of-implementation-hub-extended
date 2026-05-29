@@ -1495,7 +1495,7 @@ export function ContentLogSection() {
             <div className="text-sm font-bold">
               <span className="font-mono text-primary mr-2">{s.id}</span>
               <span className="text-[10px] uppercase tracking-wider mr-2 text-muted-foreground">{s.type}:</span>
-              {s.name}
+              {s.topic}
             </div>
           </div>
           <div className="overflow-x-auto">
