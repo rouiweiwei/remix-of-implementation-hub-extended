@@ -309,9 +309,7 @@ export interface PostImplEmail {
   scheduled: boolean;
 }
 
-  fileSize?: number;     // bytes
-  fileData?: string;     // base64 data URL of attachment
-}
+
 
 export interface CommandmentsType {
   n: string;
