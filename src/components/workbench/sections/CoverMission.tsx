@@ -204,7 +204,7 @@ export function MissionControlSection() {
   const emailsSent = emails.filter((e) => e.sent).length;
   const sessionsHeld = sessions.filter((s) => s.status === "Completed").length;
   const issuesByType: Record<string, number> = {};
-  openIssues.forEach((i) => { issuesByType[i.type] = (issuesByType[i.type] || 0) + 1; });
+  openIssues.forEach((i) => { const k = i.type || "Other"; issuesByType[k] = (issuesByType[k] || 0) + 1; });
 
   return (
     <div className="space-y-6">
