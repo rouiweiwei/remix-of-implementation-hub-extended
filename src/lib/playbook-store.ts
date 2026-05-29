@@ -864,6 +864,20 @@ async function saveRecordToTable(tableId: string, tableName: string, recordId: s
   return json?.data?.result?.records?.[0]?.id || json?.data?.result?.record?.id || json?.data?.result?.id || recordId;
 }
 
+async function deleteRecordFromTable(tableId: string, recordId: string): Promise<void> {
+  const apiBase = (window as any).apiBase as string | undefined;
+  const token = (window as any).authToken as string | undefined;
+  if (!apiBase) throw new Error("apiBase not available");
+  const org = await ensureOrganizationUUID(apiBase, token);
+  if (!org) throw new Error("Organization UUID not available");
+  const url = `${apiBase.replace(/\/+$/, "")}/workbench/organization/${org}/tables/${tableId}/records?recordIds[]=${encodeURIComponent(recordId)}`;
+  const res = await fetch(url, {
+    method: "DELETE",
+    headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+  });
+  if (!res.ok && res.status !== 404) throw new Error(`Failed to delete record (${res.status})`);
+
+
 const initial = {
   client: {} as ClientInfo,
   clientSaveStatus: "idle",
