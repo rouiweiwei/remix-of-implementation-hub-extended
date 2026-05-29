@@ -937,11 +937,11 @@ export function StakeholdersSection() {
       {/* Table */}
       <div className="rounded-xl border bg-card overflow-x-auto">
         <div className="min-w-[1100px]">
-          <div className="grid grid-cols-[1fr_1fr_140px_140px_180px_160px_140px_40px] gap-2 px-3 py-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground bg-muted/30 border-b">
+          <div className="grid grid-cols-[1fr_1fr_140px_140px_180px_160px_140px_80px] gap-2 px-3 py-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground bg-muted/30 border-b">
             <div>Name</div><div>Role · Department</div><div>Influence</div><div>Sentiment</div><div>Email</div><div>Phone</div><div>Last Touch</div><div></div>
           </div>
           {list.map((s) => (
-            <div key={s.id} className="grid grid-cols-[1fr_1fr_140px_140px_180px_160px_140px_40px] gap-2 px-3 py-2 items-center border-b last:border-0">
+            <div key={s.id} className="grid grid-cols-[1fr_1fr_140px_140px_180px_160px_140px_80px] gap-2 px-3 py-2 items-center border-b last:border-0">
               <Input className="h-8 text-sm" value={s.name} onChange={(e) => update(s.id, { name: e.target.value })} placeholder="Name" />
               <div className="flex gap-1"><Input className="h-8 text-xs" value={s.role} onChange={(e) => update(s.id, { role: e.target.value })} placeholder="Role" /><Input className="h-8 text-xs" value={s.dept} onChange={(e) => update(s.id, { dept: e.target.value })} placeholder="Dept" /></div>
               <Select value={s.influence} onValueChange={(v) => update(s.id, { influence: v as "Low" | "Medium" | "High" })}><SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="Low">Low</SelectItem><SelectItem value="Medium">Medium</SelectItem><SelectItem value="High">High</SelectItem></SelectContent></Select>
@@ -952,9 +952,13 @@ export function StakeholdersSection() {
               <Input className="h-8 text-xs" value={s.email} onChange={(e) => update(s.id, { email: e.target.value })} placeholder="Email" />
               <Input className="h-8 text-xs" value={s.phone} onChange={(e) => update(s.id, { phone: e.target.value })} placeholder="Phone" />
               <Input className="h-8 text-xs" type="date" value={s.lastTouch} onChange={(e) => update(s.id, { lastTouch: e.target.value })} />
-              <Button size="icon" variant="ghost" onClick={() => del(s.id)}><Trash2 className="h-4 w-4 text-muted-foreground" /></Button>
+              <div className="flex items-center justify-end gap-1">
+                <Button size="icon" variant="ghost" disabled={savingId === s.id} onClick={() => void saveRow(s.id)}><Save className="h-4 w-4 text-muted-foreground" /></Button>
+                <Button size="icon" variant="ghost" onClick={() => void del(s.id)}><Trash2 className="h-4 w-4 text-muted-foreground" /></Button>
+              </div>
             </div>
           ))}
+
         </div>
       </div>
     </div>
