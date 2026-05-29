@@ -1,3 +1,4 @@
+import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState, useEffect } from "react";
 import { ChevronDown } from "lucide-react";
 import { PhaseBanner } from "@/components/workbench/PhaseBanner";
@@ -7,7 +8,7 @@ import { SessionRegisterSection, AttendanceSection, SignOffSection, EmailLogSect
 import { GanttSection } from "@/components/workbench/sections/Gantt";
 import { cn } from "@/lib/utils";
 import type { PhaseId } from "@/lib/playbook-data";
-import { ensureOrganizationUUID, usePlaybook } from "@/lib/playbook-store";
+import { usePlaybook } from "@/lib/playbook-store";
 
 const NAV = [
   { id: "cover", label: "Cover", icon: "📖", group: "Overview" },
@@ -42,6 +43,9 @@ type TabId = (typeof NAV)[number]["id"];
 export function Workbench() {
   const [tab, setTab] = useState<TabId>("mission");
   const [phaseFilter, setPhaseFilter] = useState<PhaseId | null>(null);
+  const hydrationStatus = usePlaybook((s) => s.hydrationStatus);
+  const hydrationMessage = usePlaybook((s) => s.hydrationMessage);
+  const hydrateFromApi = usePlaybook((s) => s.hydrateFromApi);
 
   const groups = useMemo(() => Array.from(new Set(NAV.map((n) => n.group))), []);
   const activeGroup = NAV.find((n) => n.id === tab)?.group;
@@ -54,18 +58,44 @@ export function Workbench() {
 
   useEffect(() => {
     if (typeof window === "undefined") return;
+
     const apiBase = (window as any).apiBase as string | undefined;
     const playbookUrl = (window as any).playbookUrl as string | undefined;
-    // Only attempt hydrate when we have an API base or an explicit URL
+
     if (apiBase || playbookUrl) {
-      usePlaybook.getState().hydrateFromApi(playbookUrl).then(async () => {
-        // After hydrate completes, fetch the table mappings
-        await usePlaybook.getState().fetchTables();
-        // Then sync client data from playbook_client table
-        await usePlaybook.getState().syncClientFromTable();
-      });
+      void hydrateFromApi(playbookUrl);
     }
-  }, []);
+  }, [hydrateFromApi]);
+
+  if (hydrationStatus === "error") {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background px-6 text-center">
+        <div className="max-w-md rounded-2xl border border-destructive/30 bg-destructive/5 p-8 shadow-sm">
+          <h2 className="text-xl font-semibold tracking-tight">We could not load the data</h2>
+          <p className="mt-2 text-sm text-muted-foreground">{hydrationMessage || "The API sync did not return the expected data. Please try again later."}</p>
+          <button
+            type="button"
+            onClick={() => void hydrateFromApi((window as any).playbookUrl as string | undefined)}
+            className="mt-5 rounded-md bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground hover:bg-primary/90"
+          >
+            Try again
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (hydrationStatus !== "ready") {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background px-6 text-center">
+        <div className="max-w-md rounded-2xl border bg-card p-8 shadow-sm">
+          <div className="mx-auto mb-4 h-10 w-10 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+          <h2 className="text-xl font-semibold tracking-tight">Loading your implementation data…</h2>
+          <p className="mt-2 text-sm text-muted-foreground">We are syncing the latest response from the API before the workbench renders.</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background">
@@ -160,116 +190,10 @@ export function Workbench() {
 }
 
 function HeaderSave() {
-  const key = "plexa-playbook-v2";
-  const [lastSaved, setLastSaved] = useState<string | null>(null);
-  const [current, setCurrent] = useState<string | null>(null);
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  const normalizeSnapshot = (raw: string | null) => {
-    if (raw === null) return null;
-    try {
-      const parsed = JSON.parse(raw);
-      return JSON.stringify(parsed?.state ?? parsed);
-    } catch {
-      return raw;
-    }
-  };
-
-  const serializeState = () => {
-    try {
-      return JSON.stringify(usePlaybook.getState());
-    } catch {
-      return null;
-    }
-  };
-
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    const persisted = normalizeSnapshot(localStorage.getItem(key));
-    const initial = serializeState();
-    setLastSaved(persisted ?? initial);
-    setCurrent(initial);
-
-    const onStorage = () => {
-      const persistedNow = normalizeSnapshot(localStorage.getItem(key));
-      setCurrent(persistedNow ?? serializeState());
-    };
-    window.addEventListener("storage", onStorage);
-
-    const onHydrated = () => {
-      const persistedNow = normalizeSnapshot(localStorage.getItem(key));
-      const currentNow = serializeState();
-      setLastSaved(persistedNow ?? currentNow);
-      setCurrent(currentNow);
-    };
-    window.addEventListener("playbook:hydrated", onHydrated as EventListener);
-
-    const unsub = usePlaybook.subscribe(() => {
-      const next = serializeState();
-      if (next !== null) setCurrent(next);
-    });
-
-    return () => {
-      window.removeEventListener("storage", onStorage);
-      window.removeEventListener("playbook:hydrated", onHydrated as EventListener);
-      unsub();
-    };
-  }, []);
-
-  const isDraft = current !== lastSaved && current !== null;
-
-  async function handleSave() {
-    setSaving(true);
-    setError(null);
-    try {
-      // Commit notes before we serialize and send save payload.
-      try {
-        usePlaybook.getState().commitAllNotes("You");
-      } catch (e) {
-        // ignore commit failures
-      }
-      const apiBase = (window as any).apiBase as string | undefined;
-      const token = (window as any).authToken as string | undefined;
-      if (!apiBase) throw new Error("No apiBase configured on window.apiBase");
-      const org = await ensureOrganizationUUID(apiBase, token);
-      if (!org) throw new Error("Organization UUID not available");
-
-      const currentState = usePlaybook.getState();
-      const body = { data: { state: currentState } };
-      console.log('body to save', body);
-      const url = `${apiBase.replace(/\/+$/, "")}/workbench/organization/${org}/custom-data/customers_playbook_v1`;
-      const res = await fetch(url, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        },
-        body: JSON.stringify(body),
-      });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const normalized = normalizeSnapshot(JSON.stringify(currentState));
-      setLastSaved(normalized);
-      setCurrent(normalized);
-    } catch (err: any) {
-      setError(err?.message || String(err));
-    } finally {
-      setSaving(false);
-    }
-  }
-
   return (
     <div className="flex items-center gap-3">
       <div className="text-xs text-muted-foreground hidden md:flex items-center gap-3">
-        <div className={"text-[10px] font-semibold uppercase tracking-wider " + (isDraft ? "text-warning" : "text-muted-foreground")}>
-          {isDraft ? "DRAFT" : "Saved"}
-        </div>
-        {isDraft && (
-          <button disabled={saving} onClick={handleSave} className="inline-flex items-center gap-2 rounded-md bg-primary px-3 py-1 text-sm font-semibold text-primary-foreground">
-            {saving ? "Saving..." : "Save Changes"}
-          </button>
-        )}
-        {error && <div className="text-[11px] text-destructive">{error}</div>}
+        <div className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">API Synced</div>
       </div>
       <div className="text-xs text-muted-foreground hidden md:block">Version 3.0 · Building better, together</div>
     </div>

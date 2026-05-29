@@ -1943,7 +1943,7 @@ export const usePlaybook = create<PlaybookState>()((set) => ({
           console.error("playbook-store: syncIssuesFromTable failed", err);
         }
       },
-      saveIssue: async (id) => {
+      saveIssue: async (id: string) => {
         const state = usePlaybook.getState();
         const row = state.issues.find((x) => x.id === id);
         if (!row) return;
@@ -2119,14 +2119,14 @@ export const usePlaybook = create<PlaybookState>()((set) => ({
             id: r?.id || uid(),
             _id: r?.id,
             templateName: readRecordValue(r, ["templateName", "Template Name", "name", "Name"]) || "",
-            uuid: readRecordValue(r, ["uuid", "UUID"]) || "",
+            uuid: readRecordValue(r, ["attachmentUuid", "Attachment UUID"]) || "",
             filename: readRecordValue(r, ["filename", "Filename"]) || "",
             mimetype: readRecordValue(r, ["mimetype", "Mimetype"]) || "",
-            size_bytes: Number(readRecordValue(r, ["size_bytes", "Size"]) || 0),
+            size_bytes: Number(readRecordValue(r, ["sizeBytes", "Size"]) || 0),
             path: readRecordValue(r, ["path", "Path"]) || "",
             url: readRecordValue(r, ["url", "URL"]) || "",
-            path_thumbnail: readRecordValue(r, ["path_thumbnail"]) || "",
-            url_thumbnail: readRecordValue(r, ["url_thumbnail"]) || "",
+            path_thumbnail: readRecordValue(r, ["pathThumbnail"]) || "",
+            url_thumbnail: readRecordValue(r, ["urlThumbnail"]) || "",
             extension: readRecordValue(r, ["extension", "Extension"]) || "",
             name: readRecordValue(r, ["name", "Name"]) || "",
           }));
@@ -2151,14 +2151,14 @@ export const usePlaybook = create<PlaybookState>()((set) => ({
         const att = upJson?.data?.result || upJson?.data || upJson || {};
         const fields = {
           templateName,
-          uuid: att.uuid || "",
+          attachmentUuid: att.uuid || "",
           filename: att.filename || file.name,
           mimetype: att.mimetype || file.type,
-          size_bytes: Number(att.size_bytes ?? file.size),
+          sizeBytes: Number(att.size_bytes ?? file.size),
           path: att.path || "",
           url: att.url || "",
-          path_thumbnail: att.path_thumbnail || "",
-          url_thumbnail: att.url_thumbnail || "",
+          pathThumbnail: att.path_thumbnail || "",
+          urlThumbnail: att.url_thumbnail || "",
           extension: att.extension || (file.name.split(".").pop() || ""),
           name: file.name,
         };
@@ -2167,7 +2167,13 @@ export const usePlaybook = create<PlaybookState>()((set) => ({
         if (!tableId) { await state.fetchTables(); tableId = usePlaybook.getState().tableMap[PLAYBOOK_TABLES.templates]; }
         if (!tableId) throw new Error("playbook_templates table not found");
         const savedId = await saveRecordToTable(tableId, PLAYBOOK_TABLES.templates, undefined, fields);
-        const item: TemplateFile = { id: uid(), _id: savedId || undefined, ...fields };
+        const item: TemplateFile = { id: uid(), _id: savedId || undefined,
+            uuid: fields.attachmentUuid,
+            size_bytes: fields.sizeBytes,
+            path_thumbnail: fields.pathThumbnail,
+            url_thumbnail: fields.urlThumbnail,
+            ...fields,
+         };
         set((s) => ({ templates: [...s.templates, item] }));
         return item;
       },

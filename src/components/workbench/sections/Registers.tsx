@@ -593,7 +593,9 @@ export function EmailLogSection() {
   return (
     <div className="space-y-5">
       <SectionHeader title="📧 Weekly Client Email Log" subtitle="Auto-drafted from your live registers. Preview, copy, and send from your own inbox — or fill the weekly log table by hand.">
-        <Button size="sm" onClick={addRow}><Plus className="h-4 w-4" /> Add email log</Button>
+        {tab === "log" && (
+          <Button size="sm" onClick={addRow}><Plus className="h-4 w-4" /> Add email log</Button>
+        )}
       </SectionHeader>
 
       <div className="inline-flex rounded-lg border bg-card p-0.5">
@@ -726,9 +728,14 @@ export function IssuesSection() {
       setSavingId(null);
     }
   };
+
   const toggleArchive = (id: string) => {
     const row = rows.find((r) => r.id === id);
-    updateIssue(id, { archived: !row?.archived });
+     updateIssue(id, { archived: !row?.archived });
+    if (row) {
+      const updatedRow = { ...row, archived: !row.archived };
+      saveRow(id);
+    }
   };
 
   const active = rows.filter((r) => !r.archived);
@@ -830,10 +837,10 @@ export function IssuesSection() {
                   <Button size="sm" variant="ghost" className="h-7 px-2 mr-1" disabled={savingId === r.id} onClick={() => void saveRow(r.id)} title={r._id ? "Update saved issue" : "Save issue to table"}>
                     <Save className="h-3.5 w-3.5" />
                   </Button>
-                  <button onClick={() => toggleArchive(r.id)} className="text-muted-foreground hover:text-foreground text-xs mr-1" title={r.archived ? "Restore" : "Archive"}>
+                  <button onClick={() => toggleArchive(r.id)} className="text-muted-foreground hover:text-foreground text-xl mr-1" title={r.archived ? "Restore" : "Archive"}>
                     {r.archived ? "↺" : "📦"}
                   </button>
-                  <button onClick={() => void delRow(r.id)} className="text-muted-foreground hover:text-destructive text-sm" title="Delete row">×</button>
+                  <button onClick={() => void delRow(r.id)} className="text-muted-foreground hover:text-destructive text-xl" title="Delete row">×</button>
                 </td>
               </tr>
               );
@@ -1102,9 +1109,16 @@ export function IntranetSection() {
   const addIntranet = usePlaybook((s) => s.addIntranet);
   const updateIntranet = usePlaybook((s) => s.updateIntranet);
   const deleteIntranet = usePlaybook((s) => s.deleteIntranet);
+  const saveIntranet = usePlaybook((s) => s.saveIntranet);
+  const syncIntranetFromTable = usePlaybook((s) => s.syncIntranetFromTable);
 
   const [tab, setTab] = useState<"Recording" | "Quick-Start Guide" | "Resource">("Recording");
+  const [savingId, setSavingId] = useState<string | null>(null);
   const filtered = intranet.filter((x) => x.kind === tab);
+
+  useEffect(() => {
+    void syncIntranetFromTable();
+  }, [syncIntranetFromTable]);
 
   const add = () =>
     addIntranet({
@@ -1120,6 +1134,15 @@ export function IntranetSection() {
       description: "",
       status: "DRAFT",
     });
+
+  const saveRow = async (id: string) => {
+    setSavingId(id);
+    try {
+      await saveIntranet(id);
+    } finally {
+      setSavingId(null);
+    }
+  };
 
   const counts = {
     recordings: intranet.filter((x) => x.kind === "Recording").length,
@@ -1223,6 +1246,9 @@ export function IntranetSection() {
                         <SelectItem value="PUBLISHED">PUBLISHED</SelectItem>
                       </SelectContent>
                     </Select>
+                    <Button size="icon" variant="ghost" disabled={savingId === r.id} onClick={() => void saveRow(r.id)} className="h-7 w-7" title={r._id ? "Update intranet resource" : "Save intranet resource to table"}>
+                      <Save className="h-3.5 w-3.5" />
+                    </Button>
                     <Button size="icon" variant="ghost" className="h-7 w-7 text-destructive" onClick={() => deleteIntranet(r.id)}>
                       <Trash2 className="h-3.5 w-3.5" />
                     </Button>
