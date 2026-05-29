@@ -548,9 +548,7 @@ export function EmailLogSection() {
   }, [syncEmailLogsFromTable]);
 
   const addRow = () => {
-    const id = Math.random().toString(36).slice(2, 10);
     addEmail({
-      id,
       week: emailLogs.length + 1,
       date: "",
       subject: "",
