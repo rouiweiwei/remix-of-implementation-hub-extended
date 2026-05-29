@@ -193,7 +193,7 @@ export function AttendanceSection() {
   const updMeta = (id: string, patch: Partial<{ date: string; facilitator: string; location: string }>) =>
     setMeta((p) => ({ ...p, [id]: { ...p[id], ...patch } }));
   const addRow = (sessionId: string) => {
-    addAttendee({ sessionId, ...emptyAttendee(), firstName: "", lastName: "" });
+    addAttendee({ ...emptyAttendee(), sessionId });
   };
   const saveRow = async (id: string) => {
     setSavingId(id);
@@ -204,8 +204,8 @@ export function AttendanceSection() {
     }
   };
 
-  const mergeImported = (sessionId: string, imported: Omit<Attendee, "id" | "_id">[]) => {
-    imported.forEach((row) => addAttendee({ sessionId, ...row }));
+  const mergeImported = (sessionId: string, imported: Omit<Attendee, "id" | "_id" | "sessionId">[]) => {
+    imported.forEach((row) => addAttendee({ ...row, sessionId }));
   };
 
   const downloadTemplate = () => {
