@@ -1928,10 +1928,134 @@ export const usePlaybook = create<PlaybookState>()((set) => ({
       updateResistant: (id, patch) => set((st) => ({ resistantUsers: st.resistantUsers.map((x) => (x.id === id ? { ...x, ...patch } : x)) })),
       deleteResistant: (id) => set((st) => ({ resistantUsers: st.resistantUsers.filter((x) => x.id !== id) })),
 
-      toggleDod: (id, by) =>
-        set((s) => ({
-          dod: s.dod.map((d) => (d.id === id ? { ...d, confirmed: !d.confirmed, by: !d.confirmed ? by || "Plexa" : "", date: !d.confirmed ? new Date().toISOString().slice(0, 10) : "" } : d)),
-        })),
+      toggleDod: async (id, by) => {
+        const today = new Date().toISOString().slice(0, 10);
+        let updatedRow: DodItem | undefined;
+        set((s) => {
+          const dod = s.dod.map((d) => {
+            if (d.id !== id) return d;
+            const confirmed = !d.confirmed;
+            const next: DodItem = { ...d, confirmed, by: confirmed ? by || "Plexa" : "", date: confirmed ? today : "" };
+            updatedRow = next;
+            return next;
+          });
+          return { dod };
+        });
+        if (!updatedRow) return;
+        const tableId = usePlaybook.getState().tableMap[PLAYBOOK_TABLES.dod];
+        if (!tableId) return;
+        try {
+          const savedId = await saveRecordToTable(tableId, PLAYBOOK_TABLES.dod, updatedRow._id, {
+            id: updatedRow.id,
+            cat: updatedRow.cat,
+            text: updatedRow.text,
+            confirmed: updatedRow.confirmed,
+            by: updatedRow.by,
+            date: updatedRow.date,
+          });
+          if (savedId && !updatedRow._id) {
+            set((s) => ({ dod: s.dod.map((d) => (d.id === id ? { ...d, _id: savedId } : d)) }));
+          }
+        } catch (e) {
+          console.error("toggleDod API failed", e);
+        }
+      },
+
+      templates: [] as TemplateFile[],
+      syncTemplatesFromTable: async () => {
+        try {
+          const state = usePlaybook.getState();
+          let tableId = state.tableMap[PLAYBOOK_TABLES.templates];
+          if (!tableId) { await state.fetchTables(); tableId = usePlaybook.getState().tableMap[PLAYBOOK_TABLES.templates]; }
+          if (!tableId) return;
+          const rows = await state.fetchTableRecords(tableId, PLAYBOOK_TABLES.templates);
+          const items: TemplateFile[] = rows.map((r: any) => ({
+            id: r?.id || uid(),
+            _id: r?.id,
+            templateName: readRecordValue(r, ["templateName", "Template Name", "name", "Name"]) || "",
+            uuid: readRecordValue(r, ["uuid", "UUID"]) || "",
+            filename: readRecordValue(r, ["filename", "Filename"]) || "",
+            mimetype: readRecordValue(r, ["mimetype", "Mimetype"]) || "",
+            size_bytes: Number(readRecordValue(r, ["size_bytes", "Size"]) || 0),
+            path: readRecordValue(r, ["path", "Path"]) || "",
+            url: readRecordValue(r, ["url", "URL"]) || "",
+            path_thumbnail: readRecordValue(r, ["path_thumbnail"]) || "",
+            url_thumbnail: readRecordValue(r, ["url_thumbnail"]) || "",
+            extension: readRecordValue(r, ["extension", "Extension"]) || "",
+            name: readRecordValue(r, ["name", "Name"]) || "",
+          }));
+          set({ templates: items });
+        } catch (err) {
+          console.error("syncTemplatesFromTable failed", err);
+        }
+      },
+      uploadTemplate: async (templateName, file) => {
+        const apiBase = (window as any).apiBase as string | undefined;
+        const token = (window as any).authToken as string | undefined;
+        if (!apiBase) throw new Error("apiBase not available");
+        const form = new FormData();
+        form.append("file", file);
+        const upRes = await fetch(`${apiBase.replace(/\/+$/, "")}/attachments`, {
+          method: "POST",
+          headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+          body: form,
+        });
+        if (!upRes.ok) throw new Error(`Upload failed (${upRes.status})`);
+        const upJson = await upRes.json().catch(() => null);
+        const att = upJson?.data?.result || upJson?.data || upJson || {};
+        const fields = {
+          templateName,
+          uuid: att.uuid || "",
+          filename: att.filename || file.name,
+          mimetype: att.mimetype || file.type,
+          size_bytes: Number(att.size_bytes ?? file.size),
+          path: att.path || "",
+          url: att.url || "",
+          path_thumbnail: att.path_thumbnail || "",
+          url_thumbnail: att.url_thumbnail || "",
+          extension: att.extension || (file.name.split(".").pop() || ""),
+          name: file.name,
+        };
+        const state = usePlaybook.getState();
+        let tableId = state.tableMap[PLAYBOOK_TABLES.templates];
+        if (!tableId) { await state.fetchTables(); tableId = usePlaybook.getState().tableMap[PLAYBOOK_TABLES.templates]; }
+        if (!tableId) throw new Error("playbook_templates table not found");
+        const savedId = await saveRecordToTable(tableId, PLAYBOOK_TABLES.templates, undefined, fields);
+        const item: TemplateFile = { id: uid(), _id: savedId || undefined, ...fields };
+        set((s) => ({ templates: [...s.templates, item] }));
+        return item;
+      },
+      deleteTemplate: async (id) => {
+        const row = usePlaybook.getState().templates.find((x) => x.id === id);
+        const tableId = usePlaybook.getState().tableMap[PLAYBOOK_TABLES.templates];
+        if (row?._id && tableId) { try { await deleteRecordFromTable(tableId, row._id); } catch (e) { console.error("deleteTemplate API failed", e); } }
+        set((s) => ({ templates: s.templates.filter((x) => x.id !== id) }));
+      },
+
+      saveTaskScheduleOverride: async (taskId) => {
+        const state = usePlaybook.getState();
+        const override = state.taskOverrides[taskId];
+        if (!override) return;
+        let tableId = state.tableMap[PLAYBOOK_TABLES.taskOverrides];
+        if (!tableId) { await state.fetchTables(); tableId = usePlaybook.getState().tableMap[PLAYBOOK_TABLES.taskOverrides]; }
+        if (!tableId) return;
+        // Find existing record by taskId
+        let recordId: string | undefined;
+        try {
+          const rows = await state.fetchTableRecords(tableId, PLAYBOOK_TABLES.taskOverrides);
+          const match = rows.find((r: any) => readRecordValue(r, ["taskId", "Task ID"]) === taskId);
+          recordId = match?.id;
+        } catch {}
+        try {
+          await saveRecordToTable(tableId, PLAYBOOK_TABLES.taskOverrides, recordId, {
+            taskId,
+            start: override.start || "",
+            end: override.end || "",
+          });
+        } catch (e) {
+          console.error("saveTaskScheduleOverride failed", e);
+        }
+      },
 
       addUser: (u) => set((st) => ({ userAccounts: [...st.userAccounts, { id: uid(), ...u }] })),
       updateUser: (id, patch) => set((st) => ({ userAccounts: st.userAccounts.map((x) => (x.id === id ? { ...x, ...patch } : x)) })),
