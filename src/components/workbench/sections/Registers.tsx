@@ -972,9 +972,18 @@ export function ChampionsSection() {
   const addC = usePlaybook((s) => s.addChampion);
   const updateC = usePlaybook((s) => s.updateChampion);
   const delC = usePlaybook((s) => s.deleteChampion);
+  const saveC = usePlaybook((s) => s.saveChampion);
+  const syncC = usePlaybook((s) => s.syncChampionsFromTable);
   const addR = usePlaybook((s) => s.addResistant);
   const updateR = usePlaybook((s) => s.updateResistant);
   const delR = usePlaybook((s) => s.deleteResistant);
+  const saveR = usePlaybook((s) => s.saveResistant);
+  const syncR = usePlaybook((s) => s.syncResistantUsersFromTable);
+  const [savingId, setSavingId] = useState<string | null>(null);
+
+  useEffect(() => { void syncC(); void syncR(); }, [syncC, syncR]);
+  const saveChampionRow = async (id: string) => { setSavingId(id); try { await saveC(id); } finally { setSavingId(null); } };
+  const saveResistantRow = async (id: string) => { setSavingId(id); try { await saveR(id); } finally { setSavingId(null); } };
 
   return (
     <div className="space-y-6">
@@ -988,7 +997,7 @@ export function ChampionsSection() {
         <div className="divide-y">
           {champions.length === 0 && <div className="px-4 py-6 text-sm text-muted-foreground text-center">No champions identified yet.</div>}
           {champions.map((c) => (
-            <div key={c.id} className="grid grid-cols-[1fr_1fr_1fr_1fr_140px_40px] gap-2 px-3 py-2 items-center">
+            <div key={c.id} className="grid grid-cols-[1fr_1fr_1fr_1fr_140px_80px] gap-2 px-3 py-2 items-center">
               <Input className="h-8 text-sm" value={c.name} onChange={(e) => updateC(c.id, { name: e.target.value })} placeholder="Name" />
               <Input className="h-8 text-xs" value={c.title} onChange={(e) => updateC(c.id, { title: e.target.value })} placeholder="Title" />
               <Input className="h-8 text-xs" value={c.dept} onChange={(e) => updateC(c.id, { dept: e.target.value })} placeholder="Department" />
@@ -997,7 +1006,10 @@ export function ChampionsSection() {
                 <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
                 <SelectContent><SelectItem value="Identified">Identified</SelectItem><SelectItem value="In Training">In Training</SelectItem><SelectItem value="Certified">✓ Certified</SelectItem></SelectContent>
               </Select>
-              <Button size="icon" variant="ghost" onClick={() => delC(c.id)}><Trash2 className="h-4 w-4 text-muted-foreground" /></Button>
+              <div className="flex items-center justify-end gap-1">
+                <Button size="icon" variant="ghost" disabled={savingId === c.id} onClick={() => void saveChampionRow(c.id)}><Save className="h-4 w-4 text-muted-foreground" /></Button>
+                <Button size="icon" variant="ghost" onClick={() => void delC(c.id)}><Trash2 className="h-4 w-4 text-muted-foreground" /></Button>
+              </div>
             </div>
           ))}
         </div>
@@ -1012,7 +1024,7 @@ export function ChampionsSection() {
           {resistant.length === 0 && <div className="px-4 py-6 text-sm text-muted-foreground text-center">None logged.</div>}
           {resistant.map((r) => (
             <div key={r.id} className="p-3 space-y-2">
-              <div className="grid grid-cols-[1fr_1fr_180px_140px_40px] gap-2">
+              <div className="grid grid-cols-[1fr_1fr_180px_140px_80px] gap-2">
                 <Input className="h-8 text-sm" value={r.name} onChange={(e) => updateR(r.id, { name: e.target.value })} placeholder="Name" />
                 <Input className="h-8 text-xs" value={r.title} onChange={(e) => updateR(r.id, { title: e.target.value })} placeholder="Title" />
                 <Select value={r.type} onValueChange={(v) => updateR(r.id, { type: v })}>
@@ -1023,7 +1035,10 @@ export function ChampionsSection() {
                   <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
                   <SelectContent><SelectItem value="High Risk">High Risk</SelectItem><SelectItem value="Engaging">Engaging</SelectItem><SelectItem value="Converted">✓ Converted</SelectItem></SelectContent>
                 </Select>
-                <Button size="icon" variant="ghost" onClick={() => delR(r.id)}><Trash2 className="h-4 w-4 text-muted-foreground" /></Button>
+                <div className="flex items-center justify-end gap-1">
+                  <Button size="icon" variant="ghost" disabled={savingId === r.id} onClick={() => void saveResistantRow(r.id)}><Save className="h-4 w-4 text-muted-foreground" /></Button>
+                  <Button size="icon" variant="ghost" onClick={() => void delR(r.id)}><Trash2 className="h-4 w-4 text-muted-foreground" /></Button>
+                </div>
               </div>
               <div className="grid md:grid-cols-2 gap-2">
                 <Textarea rows={2} className="text-xs" value={r.why} onChange={(e) => updateR(r.id, { why: e.target.value })} placeholder="Why resistant?" />
@@ -1033,6 +1048,7 @@ export function ChampionsSection() {
           ))}
         </div>
       </div>
+
     </div>
   );
 }
