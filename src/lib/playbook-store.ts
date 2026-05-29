@@ -2460,7 +2460,79 @@ export const usePlaybook = create<PlaybookState>()((set) => ({
       addIntranet: (r) => set((st) => ({ intranet: [...st.intranet, { id: uid(), ...r }] })),
       updateIntranet: (id, patch) =>
         set((st) => ({ intranet: st.intranet.map((x) => (x.id === id ? { ...x, ...patch } : x)) })),
-      deleteIntranet: (id) => set((st) => ({ intranet: st.intranet.filter((x) => x.id !== id) })),
+      deleteIntranet: async (id) => {
+        const row = usePlaybook.getState().intranet.find((x) => x.id === id);
+        const tableId = usePlaybook.getState().tableMap[PLAYBOOK_TABLES.intranet];
+        if (row?._id && tableId) { try { await deleteRecordFromTable(tableId, row._id); } catch (e) { console.error("deleteIntranet API failed", e); } }
+        set((st) => ({ intranet: st.intranet.filter((x) => x.id !== id) }));
+      },
+      syncIntranetFromTable: async () => {
+        try {
+          const state = usePlaybook.getState();
+          let tableId = state.tableMap[PLAYBOOK_TABLES.intranet];
+          if (!tableId) { await state.fetchTables(); tableId = usePlaybook.getState().tableMap[PLAYBOOK_TABLES.intranet]; }
+          if (!tableId) return;
+          const rows = await state.fetchTableRecords(tableId, PLAYBOOK_TABLES.intranet);
+          set({ intranet: rows.map(normalizeIntranetRecord) });
+        } catch (e) { console.error("syncIntranetFromTable failed", e); }
+      },
+      saveIntranet: async (id) => {
+        const state = usePlaybook.getState();
+        const row = state.intranet.find((x) => x.id === id);
+        let tableId = state.tableMap[PLAYBOOK_TABLES.intranet];
+        if (!tableId) { await state.fetchTables(); tableId = usePlaybook.getState().tableMap[PLAYBOOK_TABLES.intranet]; }
+        if (!row || !tableId) return;
+        const fields = {
+          kind: row.kind, title: row.title || "", module: row.module || "", sessionId: row.sessionId || "",
+          url: row.url || "", format: row.format || "", duration: row.duration || "", presenter: row.presenter || "",
+          recordedOn: row.recordedOn || "", description: row.description || "", status: row.status,
+          fileName: row.fileName || "", fileType: row.fileType || "", fileSize: row.fileSize || 0,
+        };
+        const recordId = await saveRecordToTable(tableId, PLAYBOOK_TABLES.intranet, row._id, fields);
+        set((s) => ({ intranet: s.intranet.map((x) => (x.id === id ? { ...x, _id: recordId || x._id } : x)) }));
+      },
+
+      loadPostImplEmail: async () => {
+        try {
+          const state = usePlaybook.getState();
+          let tableId = state.tableMap[PLAYBOOK_TABLES.postImplEmail];
+          if (!tableId) { await state.fetchTables(); tableId = usePlaybook.getState().tableMap[PLAYBOOK_TABLES.postImplEmail]; }
+          if (!tableId) return;
+          const rows = await state.fetchTableRecords(tableId, PLAYBOOK_TABLES.postImplEmail);
+          const record = rows[0];
+          if (!record) return;
+          set({
+            postImplEmail: {
+              _id: record.id,
+              recipients: readRecordValue(record, ["recipients", "Recipients"]) || "",
+              subject: readRecordValue(record, ["subject", "Subject"]) || "",
+              body: readRecordValue(record, ["body", "Body"]) || "",
+              scheduleDate: readRecordValue(record, ["scheduleDate", "Schedule Date"]) || "",
+              scheduled: Boolean(parseJsonValue(readRecordValue(record, ["scheduled", "Scheduled"])) || false),
+            },
+          });
+        } catch (e) { console.error("loadPostImplEmail failed", e); }
+      },
+      savePostImplEmail: async (patch) => {
+        const state = usePlaybook.getState();
+        const merged: PostImplEmail = { ...state.postImplEmail, ...patch };
+        set({ postImplEmail: merged });
+        let tableId = state.tableMap[PLAYBOOK_TABLES.postImplEmail];
+        if (!tableId) { await state.fetchTables(); tableId = usePlaybook.getState().tableMap[PLAYBOOK_TABLES.postImplEmail]; }
+        if (!tableId) return;
+        const fields = {
+          recipients: merged.recipients || "",
+          subject: merged.subject || "",
+          body: merged.body || "",
+          scheduleDate: merged.scheduleDate || "",
+          scheduled: Boolean(merged.scheduled),
+        };
+        try {
+          const recordId = await saveRecordToTable(tableId, PLAYBOOK_TABLES.postImplEmail, merged._id, fields);
+          if (recordId && !merged._id) set((s) => ({ postImplEmail: { ...s.postImplEmail, _id: recordId } }));
+        } catch (e) { console.error("savePostImplEmail failed", e); }
+      },
+
 
       fetchTables: async () => {
         try {
