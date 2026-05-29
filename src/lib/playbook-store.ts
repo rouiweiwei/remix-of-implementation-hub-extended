@@ -141,6 +141,7 @@ export interface Stakeholder {
 
 export interface Champion {
   id: string;
+  _id?: string;
   name: string;
   title: string;
   dept: string;
@@ -150,6 +151,7 @@ export interface Champion {
 
 export interface ResistantUser {
   id: string;
+  _id?: string;
   name: string;
   title: string;
   type: string;
@@ -157,6 +159,7 @@ export interface ResistantUser {
   strategy: string;
   status: "High Risk" | "Engaging" | "Converted";
 }
+
 
 export interface DodItem {
   id: number;
