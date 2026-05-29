@@ -436,14 +436,21 @@ interface PlaybookState {
   addStakeholder: (s: Omit<Stakeholder, "id">) => void;
   updateStakeholder: (id: string, patch: Partial<Stakeholder>) => void;
   deleteStakeholder: (id: string) => Promise<void>;
+  syncStakeholdersFromTable: () => Promise<void>;
+  saveStakeholder: (id: string) => Promise<void>;
 
   addChampion: (c: Omit<Champion, "id">) => void;
   updateChampion: (id: string, patch: Partial<Champion>) => void;
-  deleteChampion: (id: string) => void;
+  deleteChampion: (id: string) => Promise<void>;
+  syncChampionsFromTable: () => Promise<void>;
+  saveChampion: (id: string) => Promise<void>;
 
   addResistant: (r: Omit<ResistantUser, "id">) => void;
   updateResistant: (id: string, patch: Partial<ResistantUser>) => void;
-  deleteResistant: (id: string) => void;
+  deleteResistant: (id: string) => Promise<void>;
+  syncResistantUsersFromTable: () => Promise<void>;
+  saveResistant: (id: string) => Promise<void>;
+
 
   toggleDod: (id: number, by: string) => Promise<void>;
 
