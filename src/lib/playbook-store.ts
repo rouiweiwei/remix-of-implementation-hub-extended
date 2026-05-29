@@ -260,6 +260,22 @@ export interface ReminderTask {
   completedAt?: string;    // ISO
 }
 
+export interface TemplateFile {
+  id: string;
+  _id?: string;
+  templateName: string; // e.g. "Folder Structure Template"
+  uuid: string;
+  filename: string;
+  mimetype: string;
+  size_bytes: number;
+  path: string;
+  url: string;
+  path_thumbnail: string;
+  url_thumbnail: string;
+  extension: string;
+  name: string;
+}
+
 export type IntranetKind = "Recording" | "Quick-Start Guide" | "Resource";
 export type IntranetStatus = "DRAFT" | "PUBLISHED";
 
