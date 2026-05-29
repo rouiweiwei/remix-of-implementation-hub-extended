@@ -387,9 +387,7 @@ export function SignOffSection() {
   }, [syncSignOffsFromTable]);
 
   const addRow = () => {
-    const id = Math.random().toString(36).slice(2, 10);
     addSignOff({
-      id,
       person: "",
       jobTitle: "",
       module: COMPETENCY_MODULES[0]?.id || "",
