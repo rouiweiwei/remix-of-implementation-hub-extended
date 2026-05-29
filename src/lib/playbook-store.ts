@@ -128,6 +128,7 @@ export interface Issue {
 
 export interface Stakeholder {
   id: string;
+  _id?: string;
   name: string;
   role: string;
   dept: string;
